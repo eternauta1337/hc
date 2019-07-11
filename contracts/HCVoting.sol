@@ -12,6 +12,14 @@ contract HCVoting is HCBase {
 
     // Percentage required for a vote to pass with either absolute or relative majority, e.g. 50%.
     uint256 public supportPct;
+    function _validateSupportPct(uint256 _supportPct) internal {
+        require(_supportPct >= 50, ERROR_INIT_SUPPORT_TOO_SMALL);
+        require(_supportPct < 100, ERROR_INIT_SUPPORT_TOO_BIG);
+    }
+    function changeSupportPct(uint256 _supportPct) external auth(MODIFY_SUPPORT_PERCENT_ROLE) {
+        _validateSupportPct(_supportPct);
+        supportPct = _supportPct;
+    }
 
     // Events.
     event VoteCasted(uint256 indexed _proposalId, address indexed _voter, bool _supports, uint256 _stake);
@@ -36,18 +44,19 @@ contract HCVoting is HCBase {
         voteToken = Token(_voteToken);
 
         // Validate and assign percentages.
-        require(_supportPct >= 50, ERROR_INIT_SUPPORT_TOO_SMALL);
-        require(_supportPct < 100, ERROR_INIT_SUPPORT_TOO_BIG);
+        _validateSupportPct(supportPct);
         supportPct = _supportPct;
 
-        // Assign periods.
-        // TODO: Require min periods?
+        _validateQueuePeriod(_queuePeriod);
         queuePeriod = _queuePeriod;
+
+        _validateBoostPeriod(_boostPeriod);
         boostPeriod = _boostPeriod;
+
+        _validateQuietEndingPeriod(_quietEndingPeriod);
         quietEndingPeriod= _quietEndingPeriod;
 
-        // Assign fees.
-        // TODO: Contain?
+        _validateCompensationFeePct(_compensationFeePct);
         compensationFeePct = _compensationFeePct;
     }
 

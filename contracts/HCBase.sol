@@ -75,18 +75,53 @@ contract HCBase is AragonApp {
 
     // Lifetime of a proposal when it is not boosted.
     uint256 public queuePeriod;
+    function _validateQueuePeriod(uint256 _queuePeriod) internal {
+        // TODO
+    }
+    function changeQueuePeriod(uint256 _supportPct) external auth(MODIFY_PERIODS_ROLE) {
+        _validateQueuePeriod(_queuePeriod);
+        queuePeriod = _queuePeriod;
+    }
 
     // Lifetime of a proposal when it is boosted.
     // Note: The effective lifetime of a proposal when it is boosted is dynamic, and can be extended
     // due to the requirement of quiet endings.
     uint256 public boostPeriod;
+    function _validateBoostPeriod(uint256 _boostPeriod) internal {
+        // TODO
+    }
+    function changeBoostPeriod(uint256 _supportPct) external auth(MODIFY_PERIODS_ROLE) {
+        _validateBoostPeriod(_boostPeriod);
+        boostPeriod = _boostPeriod;
+    }
     uint256 public quietEndingPeriod;
+    function _validateQuietEndingPeriod(uint256 _quietEndingPeriod) internal {
+        // TODO
+    }
+    function changeQuietEndingPeriod(uint256 _supportPct) external auth(MODIFY_PERIODS_ROLE) {
+        _validateQuietEndingPeriod(_quietEndingPeriod);
+        quietEndingPeriod = _quietEndingPeriod;
+    }
 
     // Time for a pended proposal to become boosted if it maintained confidence within such period.
     uint256 public pendedBoostPeriod;
+    function _validatePendedBoostPeriod(uint256 _pendedBoostPeriod) internal {
+        // TODO
+    }
+    function changePendedBoostPeriod(uint256 _supportPct) external auth(MODIFY_PERIODS_ROLE) {
+        _validatePendedBoostPeriod(_pendedBoostPeriod);
+        pendedBoostPeriod = _pendedBoostPeriod;
+    }
 
     // Compensation fee for external callers of functions that resolve and expire proposals.
     uint256 public compensationFeePct;
+    function _validateCompensationFeePct(uint256 _compensationFeePct) internal {
+        // TODO
+    }
+    function changeCompensationFeePct(uint256 _supportPct) external auth(MODIFY_COMPENSATION_FEES_ROLE) {
+        _validateCompensationFeePct(_compensationFeePct);
+        compensationFeePct = _compensationFeePct;
+    }
 
     // Multiplier used to avoid losing precision when using division or calculating percentages.
     uint256 internal constant PRECISION_MULTIPLIER = 10 ** 16;
@@ -94,6 +129,13 @@ contract HCBase is AragonApp {
     // Events.
     event ProposalCreated(uint256 indexed _proposalId, address indexed _creator, string _metadata);
     event ProposalStateChanged(uint256 indexed _proposalId, ProposalState _newState);
+
+    // Roles.
+    bytes32 public constant CREATE_VOTES_ROLE = keccak256("CREATE_VOTES_ROLE");
+    bytes32 public constant MODIFY_SUPPORT_PERCENT_ROLE = keccak256("MODIFY_SUPPORT_PERCENT_ROLE");
+    bytes32 public constant MODIFY_PERIODS_ROLE = keccak256("MODIFY_PERIODS_ROLE");
+    bytes32 public constant MODIFY_COMPENSATION_FEES_ROLE = keccak256("MODIFY_COMPENSATION_FEES_ROLE");
+    bytes32 public constant MODIFY_CONFIDENCE_THRESHOLD_ROLE = keccak256("MODIFY_CONFIDENCE_THRESHOLD_ROLE");
 
     // Error messages.
     string internal constant ERROR_SENDER_DOES_NOT_HAVE_ENOUGH_FUNDS         = "VOTING_ERROR_SENDER_DOES_NOT_HAVE_ENOUGH_FUNDS";

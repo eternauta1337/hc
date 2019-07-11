@@ -13,6 +13,13 @@ contract HCStaking is HCVoting {
     // Confidence threshold.
     // A proposal can be boosted if it's confidence, determined by staking, is above this threshold.
     uint256 public confidenceThresholdBase;
+    function _validateConfidenceThresholdBase(uint256 _confidenceThresholdBase) internal {
+        // TODO
+    }
+    function changeConfidenceThresholdBase(uint256 _supportPct) external auth(MODIFY_CONFIDENCE_THRESHOLD_ROLE) {
+        _validateConfidenceThresholdBase(_confidenceThresholdBase);
+        confidenceThresholdBase = _confidenceThresholdBase;
+    }
 
     // Events.
     event UpstakeProposal(uint256 indexed _proposalId, address indexed _staker, uint256 _amount);
@@ -34,8 +41,11 @@ contract HCStaking is HCVoting {
         internal
     {
         stakeToken = _stakeToken;
-        // TODO: Check min pendendBoostPeriod?
+
+        _validatePendedBoostPeriod(_pendedBoostPeriod);
         pendedBoostPeriod = _pendedBoostPeriod;
+
+        _validateConfidenceThresholdBase(_confidenceThresholdBase);
         confidenceThresholdBase = _confidenceThresholdBase;
     }
 

@@ -1,13 +1,28 @@
 {
   "roles": [
     {
-      "name": "Increment the counter",
-      "id": "INCREMENT_ROLE",
+      "name": "Creates new votes",
+      "id": "CREATE_VOTES_ROLE",
       "params": []
     },
     {
-      "name": "Decrement the counter",
-      "id": "DECREMENT_ROLE",
+      "name": "Modifies the percent required to approve a proposal",
+      "id": "MODIFY_SUPPORT_PERCENT_ROLE",
+      "params": []
+    },
+    {
+      "name": "Modifies time periods",
+      "id": "MODIFY_PERIODS_ROLE",
+      "params": []
+    },
+    {
+      "name": "Modifies compensation fee parameters",
+      "id": "MODIFY_COMPENSATION_FEES_ROLE",
+      "params": []
+    },
+    {
+      "name": "Modifies the confidence threshold parameter",
+      "id": "MODIFY_CONFIDENCE_THRESHOLD_ROLE",
       "params": []
     }
   ],

@@ -44,5 +44,5 @@
       "network": "mainnet"
     }
   },
-  "path": "contracts/CounterApp.sol"
+  "path": "contracts/HolographicConsensus.sol"
 }

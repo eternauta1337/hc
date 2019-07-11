@@ -1,7 +1,7 @@
 {
-  "name": "Counter",
-  "author": "Placeholder-author",
-  "description": "An application for Aragon",
+  "name": "HolographicConsensus",
+  "author": "Aragon Association",
+  "description": "Create and participate in proposals by voting, with holographic consensus that reduces the tension between scalability and resiliency of of voting in a DAO",
   "details_url": "/dist/meta/details.md",
   "source_url": "https://<placeholder-repository-url>",
   "icons": [{

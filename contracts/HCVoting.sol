@@ -59,10 +59,8 @@ contract HCVoting is HCBase {
         require(_userHasVotingPower(_proposalId, msg.sender), ERROR_INSUFFICIENT_TOKENS);
 
         Proposal storage proposal_ = proposals[_proposalId];
-        // TODO: Different errors for these
         require(!(proposal_.state == ProposalState.Expired), ERROR_PROPOSAL_IS_CLOSED);
         require(!(proposal_.state == ProposalState.Resolved), ERROR_PROPOSAL_IS_CLOSED);
-
 
         // Get the user's voting power.
         uint256 votingPower = voteToken.balanceOfAt(msg.sender, proposal_.snapshotBlock);

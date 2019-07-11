@@ -47,7 +47,7 @@ module.exports = {
       host: 'localhost',
       port: 8545,
       network_id: '*',
-      gas: 8000000,
+      gas: 100000000,
       gasPrice: 20000000000,
     },
     mainnet: {
@@ -68,7 +68,7 @@ module.exports = {
   },
   solc: {
     optimizer: {
-      enabled: true,
+      enabled: false,
       runs: 200
     }
   },

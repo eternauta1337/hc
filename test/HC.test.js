@@ -31,35 +31,33 @@ contract('HolographicConsensus', accounts => {
     appBase = await HolographicConsensus.new();
 
     // Setup constants.
-    // APP_MANAGER_ROLE = await kernelBase.APP_MANAGER_ROLE();
-    // INCREMENT_ROLE = await appBase.INCREMENT_ROLE();
-    // DECREMENT_ROLE = await appBase.DECREMENT_ROLE();
+    APP_MANAGER_ROLE = await kernelBase.APP_MANAGER_ROLE();
   })
 
   beforeEach(async () => {
-    // const daoReceipt = await daoFact.newDAO(firstAccount);
-    // const dao = Kernel.at(
-    //   daoReceipt.logs.filter(l => l.event === 'DeployDAO')[0].args.dao
-    // );
-    // const acl = ACL.at(await dao.acl());
+    const daoReceipt = await daoFact.newDAO(firstAccount);
+    const dao = Kernel.at(
+      daoReceipt.logs.filter(l => l.event === 'DeployDAO')[0].args.dao
+    );
+    const acl = ACL.at(await dao.acl());
 
-    // await acl.createPermission(
-    //   firstAccount,
-    //   dao.address,
-    //   APP_MANAGER_ROLE,
-    //   firstAccount,
-    //   {
-    //     from: firstAccount,
-    //   }
-    // );
+    await acl.createPermission(
+      firstAccount,
+      dao.address,
+      APP_MANAGER_ROLE,
+      firstAccount,
+      {
+        from: firstAccount,
+      }
+    );
 
-    // const receipt = await dao.newAppInstance(
-    //   '0x1234',
-    //   appBase.address,
-    //   '0x',
-    //   false,
-    //   { from: firstAccount }
-    // );
+    const receipt = await dao.newAppInstance(
+      '0x1234',
+      appBase.address,
+      '0x',
+      false,
+      { from: firstAccount }
+    );
 
     // app = HolographicConsensus.at(
     //   receipt.logs.filter(l => l.event === 'NewAppProxy')[0].args.proxy

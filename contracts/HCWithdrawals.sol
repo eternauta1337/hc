@@ -30,8 +30,6 @@ contract HCWithdrawals is HCCompensations {
 
         // Return the tokens to the sender.
         require(stakeToken.balanceOf(address(this)) >= senderTotalStake, ERROR_VOTING_DOES_NOT_HAVE_ENOUGH_FUNDS);
-        stakeToken.transfer(msg.sender, senderTotalStake);
-
     }
 
     function withdrawRewardFromResolvedProposal(uint256 _proposalId) public {

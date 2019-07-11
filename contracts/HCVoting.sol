@@ -26,7 +26,6 @@ contract HCVoting is HCBase {
      * External functions.
      */
 
-    // TODO: Guard for only once calling.
     function initializeVoting(
         MiniMeToken _voteToken, 
         uint256 _supportPct,
@@ -37,10 +36,8 @@ contract HCVoting is HCBase {
     ) 
         internal
     {
-        // TODO: Need to cast here or can have param type directly?
         voteToken = _voteToken;
 
-        // Validate and assign percentages.
         _validateSupportPct(supportPct);
         supportPct = _supportPct;
 
@@ -57,7 +54,6 @@ contract HCVoting is HCBase {
         compensationFeePct = _compensationFeePct;
     }
 
-    // TODO: Guard on who can vote?
     function vote(uint256 _proposalId, bool _supports) public {
         require(_proposalExists(_proposalId), ERROR_PROPOSAL_DOES_NOT_EXIST);
         require(_userHasVotingPower(_proposalId, msg.sender), ERROR_USER_HAS_NO_VOTING_POWER);
@@ -103,13 +99,13 @@ contract HCVoting is HCBase {
      * Getters.
      */
 
-    function getVote(uint256 _proposalId, address _voter) public view returns (VoteState) {
-        require(_proposalExists(_proposalId), ERROR_PROPOSAL_DOES_NOT_EXIST);
+    // function getVote(uint256 _proposalId, address _voter) public view returns (VoteState) {
+    //     require(_proposalExists(_proposalId), ERROR_PROPOSAL_DOES_NOT_EXIST);
 
-        // Retrieve the voter's vote.
-        Proposal storage proposal_ = proposals[_proposalId];
-        return proposal_.votes[_voter];
-    }
+    //     // Retrieve the voter's vote.
+    //     Proposal storage proposal_ = proposals[_proposalId];
+    //     return proposal_.votes[_voter];
+    // }
 
     /*
      * Internal functions.
@@ -147,7 +143,7 @@ contract HCVoting is HCBase {
         runScript(proposal_.executionScript, input, new address[](0));
     }
 
-    // TODO: HCBase?
+    // TODO: Move to HCBase?
     function _updateProposalState(uint256 _proposalId, ProposalState _newState) internal {
         Proposal storage proposal_ = proposals[_proposalId];
         if(proposal_.state != _newState) {
@@ -164,7 +160,6 @@ contract HCVoting is HCBase {
         if(nayPct > supportPct.mul(PRECISION_MULTIPLIER)) return VoteState.Nay;
         return VoteState.Absent;
     }
-
     function _calculateProposalRelativeSupport(Proposal storage proposal_) internal view returns(VoteState) {
         uint256 totalVoted = proposal_.yea.add(proposal_.nay);
         uint256 yeaPct = _votesToPct(proposal_.yea, totalVoted);

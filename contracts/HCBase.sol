@@ -22,8 +22,8 @@ contract HCBase is AragonApp {
     // Expired: A proposal that expired, due to lack of resolution either by queuePeriod or boostPeriod elapsing.
     enum ProposalState { Queued, Unpended, Pended, Boosted, Resolved, Expired }
 
-    struct Proposal {
     // Proposal data structure.
+    struct Proposal {
         uint256 id;
         uint256 snapshotBlock;
         uint256 votingPower;
@@ -44,39 +44,54 @@ contract HCBase is AragonApp {
         mapping (address => uint256) downstakes;
     }
 
-    function getProposal(uint256 _proposalId) public view returns (
+    // Note: getProposal() is split into multiple getProposal<X>() functions
+    // to avoid 'Stack Too Deep' errors.
+
+    function getProposalInfo(uint256 _proposalId) public view returns (
         uint256 id,
-        uint256 snapshotBlock,
         uint256 votingPower,
         bytes executionScript,
         ProposalState state,
-        uint256 lifetime,
-        uint256 startDate,
-        uint256 lastPendedDate,
-        uint256 lastRelativeSupportFlipDate,
         VoteState lastRelativeSupport,
-        uint256 resolutionCompensationFee,
-        uint256 yea,
-        uint256 nay,
-        uint256 upstake,
-        uint256 downstake
+        uint256 resolutionCompensationFee
     ) {
         require(_proposalExists(_proposalId), ERROR_PROPOSAL_DOES_NOT_EXIST);
-
         Proposal storage proposal_ = proposals[_proposalId];
         id = proposal_.id;
-        snapshotBlock = proposal_.snapshotBlock;
         votingPower = proposal_.votingPower;
         executionScript = proposal_.executionScript;
         state = proposal_.state;
+        lastRelativeSupport = proposal_.lastRelativeSupport;
+        resolutionCompensationFee = proposal_.resolutionCompensationFee;
+    }
+
+    function getProposalTimeInfo(uint256 _proposalId) public view returns (
+        uint256 snapshotBlock,
+        uint256 lifetime,
+        uint256 startDate,
+        uint256 lastPendedDate,
+        uint256 lastRelativeSupportFlipDate
+    )
+    {
+        require(_proposalExists(_proposalId), ERROR_PROPOSAL_DOES_NOT_EXIST);
+        Proposal storage proposal_ = proposals[_proposalId];
+        snapshotBlock = proposal_.snapshotBlock;
         lifetime = proposal_.lifetime;
         startDate = proposal_.startDate;
         lastPendedDate = proposal_.lastPendedDate;
         lastRelativeSupportFlipDate = proposal_.lastRelativeSupportFlipDate;
-        lastRelativeSupport = proposal_.lastRelativeSupport;
-        resolutionCompensationFee = proposal_.resolutionCompensationFee;
+    }
+
+    function getProposalVotes(uint256 _proposalId) public view returns (uint256 yea, uint256 nay) {
+        require(_proposalExists(_proposalId), ERROR_PROPOSAL_DOES_NOT_EXIST);
+        Proposal storage proposal_ = proposals[_proposalId];
         yea = proposal_.yea;
         nay = proposal_.nay;
+    }
+
+    function getProposalStakes(uint256 _proposalId) public view returns (uint256 upstake, uint256 downstake) {
+        require(_proposalExists(_proposalId), ERROR_PROPOSAL_DOES_NOT_EXIST);
+        Proposal storage proposal_ = proposals[_proposalId];
         upstake = proposal_.upstake;
         downstake = proposal_.downstake;
     }

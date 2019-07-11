@@ -33,7 +33,6 @@ contract HCStaking is HCVoting {
      * External functions.
      */
 
-    // TODO: Guard for only once calling.
     function initializeStaking(
         MiniMeToken _stakeToken, 
         uint256 _pendedBoostPeriod,

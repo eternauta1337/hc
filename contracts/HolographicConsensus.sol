@@ -1,14 +1,15 @@
-pragma solidity ^0.5.0;
+pragma solidity ^0.4.24;
 
 import "./HCWithdrawals.sol";
 
 import "@aragon/os/contracts/common/IForwarder.sol";
+import "@aragon/apps-shared-minime/contracts/MiniMeToken.sol";
 
 contract HolographicConsensus is IForwarder, HCWithdrawals {
     
     function initialize(
-        Token _voteToken, 
-        Token _stakeToken, 
+        MiniMeToken _voteToken, 
+        MiniMeToken _stakeToken, 
         uint256 _supportPct,
         uint256 _queuePeriod,
         uint256 _boostPeriod,
@@ -42,7 +43,7 @@ contract HolographicConsensus is IForwarder, HCWithdrawals {
 
     function forward(bytes _evmScript) public {
         require(canForward(msg.sender, _evmScript), ERROR_CAN_NOT_FORWARD);
-        _createProposalVote(_evmScript, "");
+        _createProposal(_evmScript, "");
     }
 
     function canForward(address _sender, bytes) public view returns (bool) {

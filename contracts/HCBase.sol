@@ -1,8 +1,12 @@
-pragma solidity ^0.5.0;
+pragma solidity ^0.4.24;
 
 import "@aragon/os/contracts/apps/AragonApp.sol";
+import "@aragon/apps-shared-minime/contracts/MiniMeToken.sol";
 
 contract HCBase is AragonApp {
+
+    // Token used for voting.
+    MiniMeToken public voteToken;
 
     // Vote state.
     // Absent: A vote that hasn't been made yet.
@@ -86,7 +90,7 @@ contract HCBase is AragonApp {
     function _validateQueuePeriod(uint256 _queuePeriod) internal {
         // TODO
     }
-    function changeQueuePeriod(uint256 _supportPct) external auth(MODIFY_PERIODS_ROLE) {
+    function changeQueuePeriod(uint256 _queuePeriod) public auth(MODIFY_PERIODS_ROLE) {
         _validateQueuePeriod(_queuePeriod);
         queuePeriod = _queuePeriod;
     }
@@ -98,7 +102,7 @@ contract HCBase is AragonApp {
     function _validateBoostPeriod(uint256 _boostPeriod) internal {
         // TODO
     }
-    function changeBoostPeriod(uint256 _supportPct) external auth(MODIFY_PERIODS_ROLE) {
+    function changeBoostPeriod(uint256 _boostPeriod) public auth(MODIFY_PERIODS_ROLE) {
         _validateBoostPeriod(_boostPeriod);
         boostPeriod = _boostPeriod;
     }
@@ -106,7 +110,7 @@ contract HCBase is AragonApp {
     function _validateQuietEndingPeriod(uint256 _quietEndingPeriod) internal {
         // TODO
     }
-    function changeQuietEndingPeriod(uint256 _supportPct) external auth(MODIFY_PERIODS_ROLE) {
+    function changeQuietEndingPeriod(uint256 _quietEndingPeriod) public auth(MODIFY_PERIODS_ROLE) {
         _validateQuietEndingPeriod(_quietEndingPeriod);
         quietEndingPeriod = _quietEndingPeriod;
     }
@@ -116,7 +120,7 @@ contract HCBase is AragonApp {
     function _validatePendedBoostPeriod(uint256 _pendedBoostPeriod) internal {
         // TODO
     }
-    function changePendedBoostPeriod(uint256 _supportPct) external auth(MODIFY_PERIODS_ROLE) {
+    function changePendedBoostPeriod(uint256 _pendedBoostPeriod) public auth(MODIFY_PERIODS_ROLE) {
         _validatePendedBoostPeriod(_pendedBoostPeriod);
         pendedBoostPeriod = _pendedBoostPeriod;
     }
@@ -126,7 +130,7 @@ contract HCBase is AragonApp {
     function _validateCompensationFeePct(uint256 _compensationFeePct) internal {
         // TODO
     }
-    function changeCompensationFeePct(uint256 _supportPct) external auth(MODIFY_COMPENSATION_FEES_ROLE) {
+    function changeCompensationFeePct(uint256 _compensationFeePct) public auth(MODIFY_COMPENSATION_FEES_ROLE) {
         _validateCompensationFeePct(_compensationFeePct);
         compensationFeePct = _compensationFeePct;
     }
@@ -168,21 +172,23 @@ contract HCBase is AragonApp {
     string internal constant ERROR_NO_STAKE_TO_WITHDRAW                      = "VOTING_ERROR_NO_STAKE_TO_WITHDRAW";
     string internal constant ERROR_INVALID_COMPENSATION_FEE                  = "VOTING_ERROR_INVALID_COMPENSATION_FEE";
     string internal constant ERROR_NO_VOTING_POWER 							 = "VOTING_NO_VOTING_POWER";
+    string internal constant ERROR_CAN_NOT_FORWARD                           = "VOTING_CAN_NOT_FORWARD";
 
     /*
      * External functions.
      */
 
-    function createProposal(bytes _executionScript, string memory _metadata) 
-        external 
+    function createProposal(bytes _executionScript, string _metadata) 
+        public 
         auth(CREATE_PROPOSALS_ROLE)
         returns (uint256 proposalId) 
     {
-        _createProposal(_executionScript, _metadata);
+        return _createProposal(_executionScript, _metadata);
     }
 
     function _createProposal(bytes _executionScript, string memory _metadata)
         internal
+        returns (uint256 proposalId) 
     {
         // Increment proposalId.
         proposalId = numProposals;
@@ -197,7 +203,7 @@ contract HCBase is AragonApp {
 
         // Avoid double voting.
 		uint256 snapshotBlock = getBlockNumber64() - 1;
-        uint256 votingPower = token.totalSupplyAt(snapshotBlock);
+        uint256 votingPower = voteToken.totalSupplyAt(snapshotBlock);
         require(votingPower > 0, ERROR_NO_VOTING_POWER);
 		proposal_.votingPower = votingPower;
 		proposal_.snapshotBlock = snapshotBlock;

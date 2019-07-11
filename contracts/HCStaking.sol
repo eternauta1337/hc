@@ -1,4 +1,4 @@
-pragma solidity ^0.5.0;
+pragma solidity ^0.4.24;
 
 import "./HCVoting.sol";
 
@@ -17,7 +17,7 @@ contract HCStaking is HCVoting {
     function _validateConfidenceThresholdBase(uint256 _confidenceThresholdBase) internal {
         // TODO
     }
-    function changeConfidenceThresholdBase(uint256 _supportPct) external auth(MODIFY_CONFIDENCE_THRESHOLD_ROLE) {
+    function changeConfidenceThresholdBase(uint256 _confidenceThresholdBase) external auth(MODIFY_CONFIDENCE_THRESHOLD_ROLE) {
         _validateConfidenceThresholdBase(_confidenceThresholdBase);
         confidenceThresholdBase = _confidenceThresholdBase;
     }

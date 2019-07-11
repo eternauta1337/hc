@@ -1,15 +1,11 @@
-pragma solidity ^0.5.0;
+pragma solidity ^0.4.24;
 
 import "./HCBase.sol";
 
 import "@aragon/os/contracts/lib/math/SafeMath.sol";
-import "@aragon/apps-shared-minime/contracts/MiniMeToken.sol";
 
 contract HCVoting is HCBase {
     using SafeMath for uint256;
-
-    // Token used for voting.
-    MiniMeToken public voteToken;
 
     // Percentage required for a vote to pass with either absolute or relative majority, e.g. 50%.
     uint256 public supportPct;
@@ -64,7 +60,7 @@ contract HCVoting is HCBase {
     // TODO: Guard on who can vote?
     function vote(uint256 _proposalId, bool _supports) public {
         require(_proposalExists(_proposalId), ERROR_PROPOSAL_DOES_NOT_EXIST);
-        require(_userHasVotingPower(msg.sender), ERROR_USER_HAS_NO_VOTING_POWER);
+        require(_userHasVotingPower(_proposalId, msg.sender), ERROR_USER_HAS_NO_VOTING_POWER);
         // TODO: Different errors for these
         require(!_proposalStateIs(_proposalId, ProposalState.Expired), ERROR_PROPOSAL_IS_CLOSED);
         require(!_proposalStateIs(_proposalId, ProposalState.Resolved), ERROR_PROPOSAL_IS_CLOSED);
@@ -146,7 +142,7 @@ contract HCVoting is HCBase {
         }
     }
 
-    function _executeProposal(Proposal storate proposal_) internal {
+    function _executeProposal(Proposal storage proposal_) internal {
         bytes memory input = new bytes(0); // TODO: Consider input for voting scripts
         runScript(proposal_.executionScript, input, new address[](0));
     }
@@ -187,7 +183,7 @@ contract HCVoting is HCBase {
     }
 
     function _userHasVotingPower(uint256 _proposalId, address _voter) internal view returns (bool) {
-        Proposal storage proposa_ = proposals[_proposalId];
+        Proposal storage proposal_ = proposals[_proposalId];
         return voteToken.balanceOfAt(_voter, proposal_.snapshotBlock) > 0;
     }
 }

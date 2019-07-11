@@ -133,7 +133,7 @@ contract HCBase is AragonApp {
     event ProposalStateChanged(uint256 indexed _proposalId, ProposalState _newState);
 
     // Roles.
-    bytes32 public constant CREATE_VOTES_ROLE = keccak256("CREATE_VOTES_ROLE");
+    bytes32 public constant CREATE_PROPOSALS_ROLE = keccak256("CREATE_PROPOSALS_ROLE");
     bytes32 public constant MODIFY_SUPPORT_PERCENT_ROLE = keccak256("MODIFY_SUPPORT_PERCENT_ROLE");
     bytes32 public constant MODIFY_PERIODS_ROLE = keccak256("MODIFY_PERIODS_ROLE");
     bytes32 public constant MODIFY_COMPENSATION_FEES_ROLE = keccak256("MODIFY_COMPENSATION_FEES_ROLE");
@@ -166,8 +166,17 @@ contract HCBase is AragonApp {
      * External functions.
      */
 
-    function createProposal(bytes _executionScript, string memory _metadata) public returns (uint256 proposalId) {
+    function createProposal(bytes _executionScript, string memory _metadata) 
+        external 
+        auth(CREATE_PROPOSALS_ROLE)
+        returns (uint256 proposalId) 
+    {
+        _createProposal(_executionScript, _metadata);
+    }
 
+    function _createProposal(bytes _executionScript, string memory _metadata)
+        internal
+    {
         // Increment proposalId.
         proposalId = numProposals;
         numProposals++;

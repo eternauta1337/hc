@@ -1,8 +1,8 @@
 {
   "roles": [
     {
-      "name": "Creates new votes",
-      "id": "CREATE_VOTES_ROLE",
+      "name": "Creates new proposals",
+      "id": "CREATE_PROPOSALS_ROLE",
       "params": []
     },
     {

@@ -1,8 +1,9 @@
 pragma solidity ^0.5.0;
 
 import "./HCWithdrawals.sol";
+import "@aragon/os/contracts/common/IForwarder.sol";
 
-contract HolographicConsensus is HCWithdrawals {
+contract HolographicConsensus is IForwarder, HCWithdrawals {
     
     function initialize(
         Token _voteToken, 
@@ -32,5 +33,19 @@ contract HolographicConsensus is HCWithdrawals {
             _pendedBoostPeriod,
             _confidenceThresholdBase
         );
+    }
+
+    function isForwarder() external pure returns (bool) {
+        return true;
+    }
+
+    function forward(bytes _evmScript) public {
+        require(canForward(msg.sender, _evmScript), ERROR_CAN_NOT_FORWARD);
+        _createProposalVote(_evmScript, "");
+    }
+
+    function canForward(address _sender, bytes) public view returns (bool) {
+        // Note that `canPerform()` implicitly does an initialization check itself
+        return canPerform(_sender, CREATE_PROPOSALS_ROLE, arr());
     }
 }

@@ -21,6 +21,8 @@ contract HCBase is AragonApp {
     struct Proposal {
     // Proposal data structure.
         uint256 id;
+        uint256 snapshotBlock;
+        uint256 votingPower;
         bytes executionScript;
         ProposalState state;
         uint256 lifetime;
@@ -40,6 +42,8 @@ contract HCBase is AragonApp {
 
     function getProposal(uint256 _proposalId) public view returns (
         uint256 id,
+        uint256 snapshotBlock,
+        uint256 votingPower,
         bytes executionScript,
         ProposalState state,
         uint256 lifetime,
@@ -57,6 +61,8 @@ contract HCBase is AragonApp {
 
         Proposal storage proposal_ = proposals[_proposalId];
         id = proposal_.id;
+        snapshotBlock = proposal_.snapshotBlock;
+        votingPower = proposal_.votingPower;
         executionScript = proposal_.executionScript;
         state = proposal_.state;
         lifetime = proposal_.lifetime;
@@ -161,6 +167,7 @@ contract HCBase is AragonApp {
     string internal constant ERROR_PROPOSAL_IS_ACTIVE                        = "VOTING_ERROR_PROPOSAL_IS_ACTIVE";
     string internal constant ERROR_NO_STAKE_TO_WITHDRAW                      = "VOTING_ERROR_NO_STAKE_TO_WITHDRAW";
     string internal constant ERROR_INVALID_COMPENSATION_FEE                  = "VOTING_ERROR_INVALID_COMPENSATION_FEE";
+    string internal constant ERROR_NO_VOTING_POWER 							 = "VOTING_NO_VOTING_POWER";
 
     /*
      * External functions.
@@ -187,6 +194,13 @@ contract HCBase is AragonApp {
         proposal_.executionScript = _executionScript;
         proposal_.startDate = now;
         proposal_.lifetime = queuePeriod;
+
+        // Avoid double voting.
+		uint256 snapshotBlock = getBlockNumber64() - 1;
+        uint256 votingPower = token.totalSupplyAt(snapshotBlock);
+        require(votingPower > 0, ERROR_NO_VOTING_POWER);
+		proposal_.votingPower = votingPower;
+		proposal_.snapshotBlock = snapshotBlock;
 
         emit ProposalCreated(proposalId, msg.sender, _metadata);
     }

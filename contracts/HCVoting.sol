@@ -1,14 +1,15 @@
 pragma solidity ^0.5.0;
 
-import "./SafeMath.sol";
-import "./Token.sol";
 import "./HCBase.sol";
+
+import "@aragon/os/contracts/lib/math/SafeMath.sol";
+import "@aragon/apps-shared-minime/contracts/MiniMeToken.sol";
 
 contract HCVoting is HCBase {
     using SafeMath for uint256;
 
     // Token used for voting.
-    Token public voteToken;
+    MiniMeToken public voteToken;
 
     // Percentage required for a vote to pass with either absolute or relative majority, e.g. 50%.
     uint256 public supportPct;
@@ -31,7 +32,7 @@ contract HCVoting is HCBase {
 
     // TODO: Guard for only once calling.
     function initializeVoting(
-        address _voteToken, 
+        MiniMeToken _voteToken, 
         uint256 _supportPct,
         uint256 _queuePeriod,
         uint256 _boostPeriod,
@@ -41,7 +42,7 @@ contract HCVoting is HCBase {
         internal
     {
         // TODO: Need to cast here or can have param type directly?
-        voteToken = Token(_voteToken);
+        voteToken = _voteToken;
 
         // Validate and assign percentages.
         _validateSupportPct(supportPct);
@@ -70,10 +71,10 @@ contract HCVoting is HCBase {
 
 
         // Get the user's voting power.
-        uint256 votingPower = voteToken.balanceOf(msg.sender);
+        Proposal storage proposal_ = proposals[_proposalId];
+        uint256 votingPower = voteToken.balanceOfAt(msg.sender, proposal_.snapshotBlock);
 
         // Has the user previously voted?
-        Proposal storage proposal_ = proposals[_proposalId];
         VoteState previousVote = proposal_.votes[msg.sender];
 
         // TODO: Can be optimized, but be careful.
@@ -161,9 +162,8 @@ contract HCVoting is HCBase {
 
     // TODO: A bit of duplicate code here
     function _calculateProposalAbsoluteSupport(Proposal storage proposal_) internal view returns(VoteState) {
-        uint256 totalSupply = voteToken.totalSupply();
-        uint256 yeaPct = _votesToPct(proposal_.yea, totalSupply);
-        uint256 nayPct = _votesToPct(proposal_.nay, totalSupply);
+        uint256 yeaPct = _votesToPct(proposal_.yea, proposal_.votingPower);
+        uint256 nayPct = _votesToPct(proposal_.nay, proposal_.votingPower);
         if(yeaPct > supportPct.mul(PRECISION_MULTIPLIER)) return VoteState.Yea;
         if(nayPct > supportPct.mul(PRECISION_MULTIPLIER)) return VoteState.Nay;
         return VoteState.Absent;
@@ -186,7 +186,8 @@ contract HCVoting is HCBase {
         return votes.mul(uint256(100).mul(PRECISION_MULTIPLIER)) / totalVotes;
     }
 
-    function _userHasVotingPower(address _voter) internal view returns (bool) {
-        return voteToken.balanceOf(_voter) > 0;
+    function _userHasVotingPower(uint256 _proposalId, address _voter) internal view returns (bool) {
+        Proposal storage proposa_ = proposals[_proposalId];
+        return voteToken.balanceOfAt(_voter, proposal_.snapshotBlock) > 0;
     }
 }

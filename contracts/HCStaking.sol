@@ -1,14 +1,15 @@
 pragma solidity ^0.5.0;
 
 import "./SafeMath.sol";
-import "./Token.sol";
 import "./HCVoting.sol";
+
+import "@aragon/apps-shared-minime/contracts/MiniMeToken.sol";
 
 contract HCStaking is HCVoting {
     using SafeMath for uint256;
 
     // Token used for staking on proposals.
-    Token public stakeToken;
+    MiniMeToken public stakeToken;
 
     // Confidence threshold.
     // A proposal can be boosted if it's confidence, determined by staking, is above this threshold.
@@ -34,7 +35,7 @@ contract HCStaking is HCVoting {
 
     // TODO: Guard for only once calling.
     function initializeStaking(
-        Token _stakeToken, 
+        MiniMeToken _stakeToken, 
         uint256 _pendedBoostPeriod,
         uint256 _confidenceThresholdBase
     ) 

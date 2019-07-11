@@ -38,7 +38,7 @@ contract HCVoting is HCBase {
     {
         voteToken = _voteToken;
 
-        _validateSupportPct(supportPct);
+        _validateSupportPct(_supportPct);
         supportPct = _supportPct;
 
         // _validateQueuePeriod(_queuePeriod);

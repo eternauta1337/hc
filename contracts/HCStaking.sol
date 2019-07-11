@@ -1,8 +1,8 @@
 pragma solidity ^0.5.0;
 
-import "./SafeMath.sol";
 import "./HCVoting.sol";
 
+import "@aragon/os/contracts/lib/math/SafeMath.sol";
 import "@aragon/apps-shared-minime/contracts/MiniMeToken.sol";
 
 contract HCStaking is HCVoting {

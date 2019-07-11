@@ -1,6 +1,7 @@
 pragma solidity ^0.5.0;
 
 import "./HCWithdrawals.sol";
+
 import "@aragon/os/contracts/common/IForwarder.sol";
 
 contract HolographicConsensus is IForwarder, HCWithdrawals {

@@ -9,7 +9,7 @@ contract HCVoting is HCBase {
 
     // Percentage required for a vote to pass with either absolute or relative majority, e.g. 50%.
     uint256 public supportPct;
-    function _validateSupportPct(uint256 _supportPct) internal {
+    function _validateSupportPct(uint256 _supportPct) internal pure {
         require(_supportPct >= 50, ERROR_INIT_SUPPORT_TOO_SMALL);
         require(_supportPct < 100, ERROR_INIT_SUPPORT_TOO_BIG);
     }

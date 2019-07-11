@@ -102,7 +102,7 @@ contract HCBase is AragonApp {
 
     // Lifetime of a proposal when it is not boosted.
     uint256 public queuePeriod;
-    function _validateQueuePeriod(uint256 _queuePeriod) internal {
+    function _validateQueuePeriod(uint256 _queuePeriod) internal pure {
         // TODO
     }
     function changeQueuePeriod(uint256 _queuePeriod) public auth(MODIFY_PERIODS_ROLE) {
@@ -114,7 +114,7 @@ contract HCBase is AragonApp {
     // Note: The effective lifetime of a proposal when it is boosted is dynamic, and can be extended
     // due to the requirement of quiet endings.
     uint256 public boostPeriod;
-    function _validateBoostPeriod(uint256 _boostPeriod) internal {
+    function _validateBoostPeriod(uint256 _boostPeriod) internal pure {
         // TODO
     }
     function changeBoostPeriod(uint256 _boostPeriod) public auth(MODIFY_PERIODS_ROLE) {
@@ -122,7 +122,7 @@ contract HCBase is AragonApp {
         boostPeriod = _boostPeriod;
     }
     uint256 public quietEndingPeriod;
-    function _validateQuietEndingPeriod(uint256 _quietEndingPeriod) internal {
+    function _validateQuietEndingPeriod(uint256 _quietEndingPeriod) internal pure {
         // TODO
     }
     function changeQuietEndingPeriod(uint256 _quietEndingPeriod) public auth(MODIFY_PERIODS_ROLE) {
@@ -132,7 +132,7 @@ contract HCBase is AragonApp {
 
     // Time for a pended proposal to become boosted if it maintained confidence within such period.
     uint256 public pendedBoostPeriod;
-    function _validatePendedBoostPeriod(uint256 _pendedBoostPeriod) internal {
+    function _validatePendedBoostPeriod(uint256 _pendedBoostPeriod) internal pure {
         // TODO
     }
     function changePendedBoostPeriod(uint256 _pendedBoostPeriod) public auth(MODIFY_PERIODS_ROLE) {
@@ -142,7 +142,7 @@ contract HCBase is AragonApp {
 
     // Compensation fee for external callers of functions that resolve and expire proposals.
     uint256 public compensationFeePct;
-    function _validateCompensationFeePct(uint256 _compensationFeePct) internal {
+    function _validateCompensationFeePct(uint256 _compensationFeePct) internal pure {
         // TODO
     }
     function changeCompensationFeePct(uint256 _compensationFeePct) public auth(MODIFY_COMPENSATION_FEES_ROLE) {

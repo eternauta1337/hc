@@ -233,9 +233,4 @@ contract HCBase is AragonApp {
     function _proposalExists(uint256 _proposalId) internal view returns (bool) {
         return _proposalId < numProposals;
     }
-
-    function _proposalStateIs(uint256 _proposalId, ProposalState _state) internal view returns (bool) {
-        Proposal storage proposal_ = proposals[_proposalId];
-        return proposal_.state == _state;
-    }
 }

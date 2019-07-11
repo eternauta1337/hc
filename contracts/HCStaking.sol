@@ -52,9 +52,9 @@ contract HCStaking is HCVoting {
     function stake(uint256 _proposalId, uint256 _amount, bool _supports) public {
         require(_proposalExists(_proposalId), ERROR_PROPOSAL_DOES_NOT_EXIST);
         // TODO: Different errors for these
-        require(!_proposalStateIs(_proposalId, ProposalState.Expired), ERROR_PROPOSAL_IS_CLOSED);
-        require(!_proposalStateIs(_proposalId, ProposalState.Resolved), ERROR_PROPOSAL_IS_CLOSED);
-        require(!_proposalStateIs(_proposalId, ProposalState.Boosted), ERROR_PROPOSAL_IS_BOOSTED);
+        require(!(proposal_.state == ProposalState.Expired), ERROR_PROPOSAL_IS_CLOSED);
+        require(!(proposal_.state == ProposalState.Resolved), ERROR_PROPOSAL_IS_CLOSED);
+        require(!(proposal_.state == ProposalState.Boosted), ERROR_PROPOSAL_IS_BOOSTED);
         require(stakeToken.balanceOf(msg.sender) >= _amount, ERROR_SENDER_DOES_NOT_HAVE_ENOUGH_FUNDS);
 
         Proposal storage proposal_ = proposals[_proposalId];
@@ -83,8 +83,8 @@ contract HCStaking is HCVoting {
     function unstake(uint256 _proposalId, uint256 _amount, bool _supports) public {
         require(_proposalExists(_proposalId), ERROR_PROPOSAL_DOES_NOT_EXIST);
         // TODO: Different errors for these
-        require(!_proposalStateIs(_proposalId, ProposalState.Expired), ERROR_PROPOSAL_IS_CLOSED);
-        require(!_proposalStateIs(_proposalId, ProposalState.Resolved), ERROR_PROPOSAL_IS_CLOSED);
+        require(!(proposal_.state == ProposalState.Expired), ERROR_PROPOSAL_IS_CLOSED);
+        require(!(proposal_.state == ProposalState.Resolved), ERROR_PROPOSAL_IS_CLOSED);
 
         Proposal storage proposal_ = proposals[_proposalId];
 

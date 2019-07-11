@@ -57,13 +57,14 @@ contract HCVoting is HCBase {
     function vote(uint256 _proposalId, bool _supports) public {
         require(_proposalExists(_proposalId), ERROR_PROPOSAL_DOES_NOT_EXIST);
         require(_userHasVotingPower(_proposalId, msg.sender), ERROR_USER_HAS_NO_VOTING_POWER);
+
+        Proposal storage proposal_ = proposals[_proposalId];
         // TODO: Different errors for these
-        require(!_proposalStateIs(_proposalId, ProposalState.Expired), ERROR_PROPOSAL_IS_CLOSED);
-        require(!_proposalStateIs(_proposalId, ProposalState.Resolved), ERROR_PROPOSAL_IS_CLOSED);
+        require(!(proposal_.state == ProposalState.Expired), ERROR_PROPOSAL_IS_CLOSED);
+        require(!(proposal_.state == ProposalState.Resolved), ERROR_PROPOSAL_IS_CLOSED);
 
 
         // Get the user's voting power.
-        Proposal storage proposal_ = proposals[_proposalId];
         uint256 votingPower = voteToken.balanceOfAt(msg.sender, proposal_.snapshotBlock);
 
         // Has the user previously voted?
@@ -99,13 +100,13 @@ contract HCVoting is HCBase {
      * Getters.
      */
 
-    // function getVote(uint256 _proposalId, address _voter) public view returns (VoteState) {
-    //     require(_proposalExists(_proposalId), ERROR_PROPOSAL_DOES_NOT_EXIST);
+    function getVote(uint256 _proposalId, address _voter) public view returns (VoteState) {
+        require(_proposalExists(_proposalId), ERROR_PROPOSAL_DOES_NOT_EXIST);
 
-    //     // Retrieve the voter's vote.
-    //     Proposal storage proposal_ = proposals[_proposalId];
-    //     return proposal_.votes[_voter];
-    // }
+        // Retrieve the voter's vote.
+        Proposal storage proposal_ = proposals[_proposalId];
+        return proposal_.votes[_voter];
+    }
 
     /*
      * Internal functions.

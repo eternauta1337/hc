@@ -1,6 +1,8 @@
 pragma solidity ^0.5.0;
 
-contract HCBase {
+import "@aragon/os/contracts/apps/AragonApp.sol";
+
+contract HCBase is AragonApp {
 
     // Vote state.
     // Absent: A vote that hasn't been made yet.

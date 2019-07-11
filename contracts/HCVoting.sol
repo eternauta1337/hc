@@ -30,7 +30,7 @@ contract HCVoting is HCBase {
         uint256 _quietEndingPeriod,
         uint256 _compensationFeePct
     ) 
-        public
+        internal
     {
         // TODO: Need to cast here or can have param type directly?
         voteToken = Token(_voteToken);

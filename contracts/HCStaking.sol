@@ -31,7 +31,7 @@ contract HCStaking is HCVoting {
         uint256 _pendedBoostPeriod,
         uint256 _confidenceThresholdBase
     ) 
-        public 
+        internal
     {
         stakeToken = _stakeToken;
         // TODO: Check min pendendBoostPeriod?

@@ -127,6 +127,7 @@ contract HCVoting is HCBase {
         VoteState absoluteSupport = _calculateProposalAbsoluteSupport(proposal_);
         if(absoluteSupport == VoteState.Yea) {
             _updateProposalState(_proposalId, ProposalState.Resolved);
+            _executeProposal(proposal_);
             return;
         }
 
@@ -142,6 +143,11 @@ contract HCVoting is HCBase {
                 emit ProposalLifetimeExtended(_proposalId, proposal_.lifetime);
             }
         }
+    }
+
+    function _executeProposal(Proposal storate proposal_) internal {
+        bytes memory input = new bytes(0); // TODO: Consider input for voting scripts
+        runScript(proposal_.executionScript, input, new address[](0));
     }
 
     // TODO: HCBase?

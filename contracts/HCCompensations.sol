@@ -24,6 +24,7 @@ contract HCCompensations is HCStaking {
 
         // Resolve the proposal.
         _updateProposalState(_proposalId, ProposalState.Resolved);
+        _executeProposal(proposal_);
     }
 
     function expireNonBoostedProposal(uint256 _proposalId) public {

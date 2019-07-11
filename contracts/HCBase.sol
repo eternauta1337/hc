@@ -21,6 +21,7 @@ contract HCBase is AragonApp {
     struct Proposal {
     // Proposal data structure.
         uint256 id;
+        bytes executionScript;
         ProposalState state;
         uint256 lifetime;
         uint256 startDate;
@@ -39,6 +40,7 @@ contract HCBase is AragonApp {
 
     function getProposal(uint256 _proposalId) public view returns (
         uint256 id,
+        bytes executionScript,
         ProposalState state,
         uint256 lifetime,
         uint256 startDate,
@@ -55,6 +57,7 @@ contract HCBase is AragonApp {
 
         Proposal storage proposal_ = proposals[_proposalId];
         id = proposal_.id;
+        executionScript = proposal_.executionScript;
         state = proposal_.state;
         lifetime = proposal_.lifetime;
         startDate = proposal_.startDate;
@@ -67,7 +70,6 @@ contract HCBase is AragonApp {
         upstake = proposal_.upstake;
         downstake = proposal_.downstake;
     }
-
 
     // Store proposals in a mapping, by numeric id.
     mapping (uint256 => Proposal) internal proposals;
@@ -164,7 +166,7 @@ contract HCBase is AragonApp {
      * External functions.
      */
 
-    function createProposal(string memory _metadata) public returns (uint256 proposalId) {
+    function createProposal(bytes _executionScript, string memory _metadata) public returns (uint256 proposalId) {
 
         // Increment proposalId.
         proposalId = numProposals;
@@ -173,6 +175,7 @@ contract HCBase is AragonApp {
         // Initialize proposal.
         Proposal storage proposal_ = proposals[proposalId];
         proposal_.id = proposalId;
+        proposal_.executionScript = _executionScript;
         proposal_.startDate = now;
         proposal_.lifetime = queuePeriod;
 

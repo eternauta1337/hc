@@ -16,9 +16,13 @@ const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
 contract('HolographicConsensus', accounts => {
 
   let APP_MANAGER_ROLE;
+  let CREATE_PROPOSALS_ROLE;
+
   let daoFact, appBase, app;
   let voteTokenContract;
   let stakeTokenContract;
+  let txParams;
+  let elapsedTime = 0;
 
   const firstAccount = accounts[0];
   const secondAccount = accounts[1];
@@ -35,6 +39,13 @@ contract('HolographicConsensus', accounts => {
   const INITIAL_VOTING_STAKE_TOKEN_BALANCE = 100000000000;
 
   before(async () => {
+
+    txParams = {
+      from: accounts[0],
+      gas: 6700000,
+      gasPrice: 1
+    };
+
     const kernelBase = await getContract('Kernel').new(true); // petrify immediately
     const aclBase = await getContract('ACL').new();
     const regFact = await EVMScriptRegistryFactory.new();
@@ -45,8 +56,9 @@ contract('HolographicConsensus', accounts => {
     );
     appBase = await HolographicConsensus.new();
 
-    // Setup constants.
+    // Get roles.
     APP_MANAGER_ROLE = await kernelBase.APP_MANAGER_ROLE();
+    CREATE_PROPOSALS_ROLE = await appBase.CREATE_PROPOSALS_ROLE();
   })
 
   beforeEach(async () => {
@@ -74,13 +86,16 @@ contract('HolographicConsensus', accounts => {
       { from: firstAccount }
     );
 
+    // Retrieve proxy.
     app = HolographicConsensus.at(
       receipt.logs.filter(l => l.event === 'NewAppProxy')[0].args.proxy
     );
 
+    // Initialize minime tokens.
     voteTokenContract = await MiniMeToken.new(ZERO_ADDRESS, ZERO_ADDRESS, 0, 'VoteToken', 18, 'ANT', false, { from: accounts[0] });
     stakeTokenContract = await MiniMeToken.new(ZERO_ADDRESS, ZERO_ADDRESS, 0, 'StakeToken', 18, 'GEN', false, { from: accounts[0] });
 
+    // Initialize app proxy.
     await app.initialize(
       voteTokenContract.address, 
       stakeTokenContract.address, 
@@ -94,24 +109,14 @@ contract('HolographicConsensus', accounts => {
       { from: accounts[0] }
     );
 
-    // await acl.createPermission(
-    //   ANY_ADDRESS,
-    //   app.address,
-    //   INCREMENT_ROLE,
-    //   firstAccount,
-    //   {
-    //     from: firstAccount,
-    //   }
-    // );
-    // await acl.createPermission(
-    //   ANY_ADDRESS,
-    //   app.address,
-    //   DECREMENT_ROLE,
-    //   firstAccount,
-    //   {
-    //     from: firstAccount,
-    //   }
-    // );
+    // Setup permissions.
+    await acl.createPermission(
+      ANY_ADDRESS,
+      app.address,
+      CREATE_PROPOSALS_ROLE,
+      firstAccount,
+      { from: firstAccount }
+    );
   });
 
   it('Tokens get deployed correctly', async () => {
@@ -127,5 +132,46 @@ contract('HolographicConsensus', accounts => {
     expect((await app.boostPeriod()).toString()).to.equal(`${BOOST_PERIOD_SECS}`);
     expect((await app.quietEndingPeriod()).toString()).to.equal(`${QUIET_ENDING_PERIOD_SECS}`);
     expect((await app.compensationFeePct()).toString()).to.equal(`${COMPENSATION_FEE_PERCENT}`);
+  });
+
+  describe('When creating proposals', () => {
+
+    const proposalCreationReceipts = [];
+
+    const NUM_PROPOSALS = 8;
+    
+    beforeEach(async () => {
+
+      // Mint some vote tokens!
+      await voteTokenContract.generateTokens(accounts[0], 1  , { ...txParams });
+      await voteTokenContract.generateTokens(accounts[1], 1  , { ...txParams });
+      await voteTokenContract.generateTokens(accounts[2], 1  , { ...txParams });
+      await voteTokenContract.generateTokens(accounts[3], 10 , { ...txParams });
+      await voteTokenContract.generateTokens(accounts[4], 10 , { ...txParams });
+      await voteTokenContract.generateTokens(accounts[5], 10 , { ...txParams });
+      await voteTokenContract.generateTokens(accounts[6], 100, { ...txParams });
+      await voteTokenContract.generateTokens(accounts[7], 100, { ...txParams });
+      await voteTokenContract.generateTokens(accounts[8], 100, { ...txParams });
+      // Note: No tokens for account 9 =(
+      // Note: Vote token total supply should be 333.
+
+      // Create a few proposals.
+      for(let i = 0; i < NUM_PROPOSALS; i++) {
+        const receipt = await app.createProposal(
+          ``,
+          `DAOs should rule the world ${i}`,
+          { ...txParams }
+        );
+        proposalCreationReceipts.push(receipt);
+      }
+
+      // Reset elapsed time since proposals will have startDate set to now.
+      elapsedTime = 0;
+    });
+
+    it('numProposals should increase', async () => {
+        // expect((await votingContract.numProposals()).toString()).to.equal(`${NUM_PROPOSALS}`);
+    });
+
   });
 })

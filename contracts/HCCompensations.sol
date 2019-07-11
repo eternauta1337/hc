@@ -18,8 +18,7 @@ contract HCCompensations is HCStaking {
 
         // Compensate the caller.
         uint256 fee = _calculateCompensationFee(_proposalId, proposal_.startDate.add(proposal_.lifetime));
-        proposal_.resolutionCompensationFee = fee;
-        require(stakeToken.balanceOf(address(this)) >= fee, ERROR_VOTING_DOES_NOT_HAVE_ENOUGH_FUNDS);
+        require(stakeToken.balanceOf(address(this)) >= fee, ERROR_INSUFFICIENT_TOKENS);
         stakeToken.transfer(msg.sender, fee);
 
         // Resolve the proposal.
@@ -38,8 +37,7 @@ contract HCCompensations is HCStaking {
 
         // Compensate the caller.
         uint256 fee = _calculateCompensationFee(_proposalId, proposal_.startDate.add(proposal_.lifetime));
-        proposal_.resolutionCompensationFee = fee;
-        require(stakeToken.balanceOf(address(this)) >= fee, ERROR_VOTING_DOES_NOT_HAVE_ENOUGH_FUNDS);
+        require(stakeToken.balanceOf(address(this)) >= fee, ERROR_INSUFFICIENT_TOKENS);
         stakeToken.transfer(msg.sender, fee);
 
         // Update the proposal's state and emit an event.
@@ -48,7 +46,6 @@ contract HCCompensations is HCStaking {
 
     function boostProposal(uint256 _proposalId) public {
         require(_proposalExists(_proposalId), ERROR_PROPOSAL_DOES_NOT_EXIST);
-        // TODO: Different errors for these
         require(!(proposal_.state == ProposalState.Expired), ERROR_PROPOSAL_IS_CLOSED);
         require(!(proposal_.state == ProposalState.Resolved), ERROR_PROPOSAL_IS_CLOSED);
         require(!(proposal_.state == ProposalState.Boosted), ERROR_PROPOSAL_IS_BOOSTED);
@@ -58,13 +55,12 @@ contract HCCompensations is HCStaking {
         require(proposal_.state == ProposalState.Pended);
 
         // Require that the proposal has had enough confidence for a period of time.
-        require(_proposalHasEnoughConfidence(proposal_), ERROR_PROPOSAL_DOESNT_HAVE_ENOUGH_CONFIDENCE);
+        require(_proposalHasEnoughConfidence(_proposalId), ERROR_PROPOSAL_DOESNT_HAVE_ENOUGH_CONFIDENCE);
         require(now >= proposal_.lastPendedDate.add(pendedBoostPeriod), ERROR_PROPOSAL_HASNT_HAD_CONFIDENCE_ENOUGH_TIME);
 
         // Compensate the caller.
         uint256 fee = _calculateCompensationFee(_proposalId, proposal_.lastPendedDate.add(pendedBoostPeriod));
-        proposal_.resolutionCompensationFee = fee;
-        require(stakeToken.balanceOf(address(this)) >= fee, ERROR_VOTING_DOES_NOT_HAVE_ENOUGH_FUNDS);
+        require(stakeToken.balanceOf(address(this)) >= fee, ERROR_INSUFFICIENT_TOKENS);
         stakeToken.transfer(msg.sender, fee);
 
         // Boost the proposal.
@@ -82,7 +78,6 @@ contract HCCompensations is HCStaking {
         // This is necessary because the fee depends on the time since expiration.
         // If the proposal hasn't expired, the calculation would yield a negative fee.
         Proposal storage proposal_ = proposals[_proposalId];
-        require(now >= _cutoffDate, ERROR_INVALID_COMPENSATION_FEE);
 
         // Calculate fee.
         /* 
@@ -95,6 +90,7 @@ contract HCCompensations is HCStaking {
            | /
            |/______________> time elapsed since resolution
         */
+        // Note: this assumes that now > _cutoffDate, and it is the responsibility of the calling function to verify that.
         _fee = now.sub(_cutoffDate).div(compensationFeePct);
         uint256 max = proposal_.upstake.mul(PRECISION_MULTIPLIER).div(compensationFeePct);
         if(_fee.mul(PRECISION_MULTIPLIER) > max) _fee = max.div(PRECISION_MULTIPLIER);

@@ -14,11 +14,11 @@ contract HCStaking is HCVoting {
     // Confidence threshold.
     // A proposal can be boosted if it's confidence, determined by staking, is above this threshold.
     uint256 public confidenceThresholdBase;
-    function _validateConfidenceThresholdBase(uint256 _confidenceThresholdBase) internal pure {
-        // TODO
-    }
+    // function _validateConfidenceThresholdBase(uint256 _confidenceThresholdBase) internal pure {
+    //     // TODO
+    // }
     function changeConfidenceThresholdBase(uint256 _confidenceThresholdBase) external auth(MODIFY_CONFIDENCE_THRESHOLD_ROLE) {
-        _validateConfidenceThresholdBase(_confidenceThresholdBase);
+        // _validateConfidenceThresholdBase(_confidenceThresholdBase);
         confidenceThresholdBase = _confidenceThresholdBase;
     }
 
@@ -42,20 +42,19 @@ contract HCStaking is HCVoting {
     {
         stakeToken = _stakeToken;
 
-        _validatePendedBoostPeriod(_pendedBoostPeriod);
+        // _validatePendedBoostPeriod(_pendedBoostPeriod);
         pendedBoostPeriod = _pendedBoostPeriod;
 
-        _validateConfidenceThresholdBase(_confidenceThresholdBase);
+        // _validateConfidenceThresholdBase(_confidenceThresholdBase);
         confidenceThresholdBase = _confidenceThresholdBase;
     }
 
     function stake(uint256 _proposalId, uint256 _amount, bool _supports) public {
         require(_proposalExists(_proposalId), ERROR_PROPOSAL_DOES_NOT_EXIST);
-        // TODO: Different errors for these
         require(!(proposal_.state == ProposalState.Expired), ERROR_PROPOSAL_IS_CLOSED);
         require(!(proposal_.state == ProposalState.Resolved), ERROR_PROPOSAL_IS_CLOSED);
         require(!(proposal_.state == ProposalState.Boosted), ERROR_PROPOSAL_IS_BOOSTED);
-        require(stakeToken.balanceOf(msg.sender) >= _amount, ERROR_SENDER_DOES_NOT_HAVE_ENOUGH_FUNDS);
+        require(stakeToken.balanceOf(msg.sender) >= _amount, ERROR_INSUFFICIENT_TOKENS);
 
         Proposal storage proposal_ = proposals[_proposalId];
 
@@ -82,7 +81,6 @@ contract HCStaking is HCVoting {
 
     function unstake(uint256 _proposalId, uint256 _amount, bool _supports) public {
         require(_proposalExists(_proposalId), ERROR_PROPOSAL_DOES_NOT_EXIST);
-        // TODO: Different errors for these
         require(!(proposal_.state == ProposalState.Expired), ERROR_PROPOSAL_IS_CLOSED);
         require(!(proposal_.state == ProposalState.Resolved), ERROR_PROPOSAL_IS_CLOSED);
 
@@ -105,7 +103,7 @@ contract HCStaking is HCVoting {
         else proposal_.downstakes[msg.sender] = proposal_.downstakes[msg.sender].sub(_amount);
 
         // Return the tokens to the sender.
-        require(stakeToken.balanceOf(address(this)) >= _amount, ERROR_VOTING_DOES_NOT_HAVE_ENOUGH_FUNDS);
+        require(stakeToken.balanceOf(address(this)) >= _amount, ERROR_INSUFFICIENT_TOKENS);
         stakeToken.transfer(msg.sender, _amount);
 
         // Emit corresponding event.
@@ -148,7 +146,7 @@ contract HCStaking is HCVoting {
         // If the proposal has enough confidence and it was in queue or unpended, pend it.
 		// If it doesn't, unpend it.
         Proposal storage proposal_ = proposals[_proposalId];
-        if(_proposalHasEnoughConfidence(proposal_)) {
+        if(_proposalHasEnoughConfidence(_proposalId)) {
             if(proposal_.state == ProposalState.Queued || proposal_.state == ProposalState.Unpended) {
                 proposal_.lastPendedDate = now;
                 _updateProposalState(_proposalId, ProposalState.Pended);
@@ -167,8 +165,8 @@ contract HCStaking is HCVoting {
      * Utility functions.
      */
 
-    function _proposalHasEnoughConfidence(Proposal storage proposal_) internal view returns (bool _hasConfidence) {
-        uint256 currentConfidence = getConfidence(proposal_.id);
+    function _proposalHasEnoughConfidence(uint256 _proposalId) internal view returns (bool _hasConfidence) {
+        uint256 currentConfidence = getConfidence(_proposalId);
         // TODO: The threshold should be elevated to the power of the number of currently boosted proposals.
         uint256 confidenceThreshold = confidenceThresholdBase.mul(PRECISION_MULTIPLIER);
         _hasConfidence = currentConfidence >= confidenceThreshold;

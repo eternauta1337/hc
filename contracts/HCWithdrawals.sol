@@ -10,9 +10,6 @@ contract HCWithdrawals is HCCompensations {
 
         // Require the proposal's state to not be resolved or boosted.
         Proposal storage proposal_ = proposals[_proposalId];
-        // TODO: This changed, it needs to be expired
-        require(proposal_.state != ProposalState.Resolved);
-        require(proposal_.state != ProposalState.Boosted);
 
         // Calculate the amount of that the user has staked.
         uint256 senderUpstake = proposal_.upstakes[msg.sender];
@@ -20,16 +17,13 @@ contract HCWithdrawals is HCCompensations {
         uint256 senderTotalStake = senderUpstake.add(senderDownstake);
         require(senderTotalStake > 0, ERROR_NO_STAKE_TO_WITHDRAW);
 
-        // Remove the stake from the proposal.
-        proposal_.upstake = proposal_.upstake.sub(senderUpstake);
-        proposal_.downstake = proposal_.downstake.sub(senderDownstake);
-
         // Remove the stake from the sender.
         proposal_.upstakes[msg.sender] = 0;
         proposal_.downstakes[msg.sender] = 0;
 
         // Return the tokens to the sender.
-        require(stakeToken.balanceOf(address(this)) >= senderTotalStake, ERROR_VOTING_DOES_NOT_HAVE_ENOUGH_FUNDS);
+        require(stakeToken.balanceOf(address(this)) >= senderTotalStake, ERROR_INSUFFICIENT_TOKENS);
+        stakeToken.transfer(msg.sender, senderTotalStake);
     }
 
     function withdrawRewardFromResolvedProposal(uint256 _proposalId) public {
@@ -52,7 +46,7 @@ contract HCWithdrawals is HCCompensations {
         uint256 total = winningStake.add(reward);
 
         // Transfer the tokens to the winner.
-        require(stakeToken.balanceOf(address(this)) >= total, ERROR_VOTING_DOES_NOT_HAVE_ENOUGH_FUNDS);
+        require(stakeToken.balanceOf(address(this)) >= total, ERROR_INSUFFICIENT_TOKENS);
         stakeToken.transfer(msg.sender, total);
     }
 }

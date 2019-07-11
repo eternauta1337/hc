@@ -10,8 +10,8 @@ contract HCVoting is HCBase {
     // Percentage required for a vote to pass with either absolute or relative majority, e.g. 50%.
     uint256 public supportPct;
     function _validateSupportPct(uint256 _supportPct) internal pure {
-        require(_supportPct >= 50, ERROR_INIT_SUPPORT_TOO_SMALL);
-        require(_supportPct < 100, ERROR_INIT_SUPPORT_TOO_BIG);
+        require(_supportPct >= 50, ERROR_INVALID_SUPPORT_PCT);
+        require(_supportPct < 100, ERROR_INVALID_SUPPORT_PCT);
     }
     function changeSupportPct(uint256 _supportPct) external auth(MODIFY_SUPPORT_PERCENT_ROLE) {
         _validateSupportPct(_supportPct);
@@ -41,22 +41,22 @@ contract HCVoting is HCBase {
         _validateSupportPct(supportPct);
         supportPct = _supportPct;
 
-        _validateQueuePeriod(_queuePeriod);
+        // _validateQueuePeriod(_queuePeriod);
         queuePeriod = _queuePeriod;
 
-        _validateBoostPeriod(_boostPeriod);
+        // _validateBoostPeriod(_boostPeriod);
         boostPeriod = _boostPeriod;
 
-        _validateQuietEndingPeriod(_quietEndingPeriod);
+        // _validateQuietEndingPeriod(_quietEndingPeriod);
         quietEndingPeriod= _quietEndingPeriod;
 
-        _validateCompensationFeePct(_compensationFeePct);
+        // _validateCompensationFeePct(_compensationFeePct);
         compensationFeePct = _compensationFeePct;
     }
 
     function vote(uint256 _proposalId, bool _supports) public {
         require(_proposalExists(_proposalId), ERROR_PROPOSAL_DOES_NOT_EXIST);
-        require(_userHasVotingPower(_proposalId, msg.sender), ERROR_USER_HAS_NO_VOTING_POWER);
+        require(_userHasVotingPower(_proposalId, msg.sender), ERROR_INSUFFICIENT_TOKENS);
 
         Proposal storage proposal_ = proposals[_proposalId];
         // TODO: Different errors for these
@@ -118,7 +118,7 @@ contract HCVoting is HCBase {
         // no matter if it is boosted or not.
         // Note: boosted proposals cannot auto-resolve.
         Proposal storage proposal_ = proposals[_proposalId];
-        VoteState absoluteSupport = _calculateProposalAbsoluteSupport(proposal_);
+        VoteState absoluteSupport = _calculateProposalSupport(proposal_, false);
         if(absoluteSupport == VoteState.Yea) {
             _updateProposalState(_proposalId, ProposalState.Resolved);
             _executeProposal(proposal_);
@@ -129,7 +129,7 @@ contract HCVoting is HCBase {
         // and possible extensions to its lifetime.
         if(proposal_.state == ProposalState.Boosted) {
             VoteState currentSupport = proposal_.lastRelativeSupport;
-            VoteState newSupport = _calculateProposalRelativeSupport(proposal_);
+            VoteState newSupport = _calculateProposalSupport(proposal_, true);
             if(newSupport != currentSupport) {
                 proposal_.lastRelativeSupportFlipDate = now;
                 proposal_.lastRelativeSupport = newSupport;
@@ -153,18 +153,10 @@ contract HCVoting is HCBase {
         }
     }
 
-    // TODO: A bit of duplicate code here
-    function _calculateProposalAbsoluteSupport(Proposal storage proposal_) internal view returns(VoteState) {
-        uint256 yeaPct = _votesToPct(proposal_.yea, proposal_.votingPower);
-        uint256 nayPct = _votesToPct(proposal_.nay, proposal_.votingPower);
-        if(yeaPct > supportPct.mul(PRECISION_MULTIPLIER)) return VoteState.Yea;
-        if(nayPct > supportPct.mul(PRECISION_MULTIPLIER)) return VoteState.Nay;
-        return VoteState.Absent;
-    }
-    function _calculateProposalRelativeSupport(Proposal storage proposal_) internal view returns(VoteState) {
-        uint256 totalVoted = proposal_.yea.add(proposal_.nay);
-        uint256 yeaPct = _votesToPct(proposal_.yea, totalVoted);
-        uint256 nayPct = _votesToPct(proposal_.nay, totalVoted);
+    function _calculateProposalSupport(Proposal storage proposal_, bool _relative) internal view returns (VoteState) {
+        uint total = _relative ? proposal_.yea.add(proposal_.nay) : proposal_.votingPower;
+        uint256 yeaPct = _votesToPct(proposal_.yea, total);
+        uint256 nayPct = _votesToPct(proposal_.nay, total);
         if(yeaPct > supportPct.mul(PRECISION_MULTIPLIER)) return VoteState.Yea;
         if(nayPct > supportPct.mul(PRECISION_MULTIPLIER)) return VoteState.Nay;
         return VoteState.Absent;

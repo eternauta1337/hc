@@ -24,7 +24,6 @@ contract HCBase is AragonApp {
 
     // Proposal data structure.
     struct Proposal {
-        uint256 id;
         uint256 snapshotBlock;
         uint256 votingPower;
         bytes executionScript;
@@ -34,7 +33,6 @@ contract HCBase is AragonApp {
         uint256 lastPendedDate;
         uint256 lastRelativeSupportFlipDate;
         VoteState lastRelativeSupport;
-        uint256 resolutionCompensationFee;
         uint256 yea;
         uint256 nay;
         uint256 upstake;
@@ -48,21 +46,17 @@ contract HCBase is AragonApp {
     // to avoid 'Stack Too Deep' errors.
 
     function getProposalInfo(uint256 _proposalId) public view returns (
-        uint256 id,
         uint256 votingPower,
         bytes executionScript,
         ProposalState state,
-        VoteState lastRelativeSupport,
-        uint256 resolutionCompensationFee
+        VoteState lastRelativeSupport
     ) {
         require(_proposalExists(_proposalId), ERROR_PROPOSAL_DOES_NOT_EXIST);
         Proposal storage proposal_ = proposals[_proposalId];
-        id = proposal_.id;
         votingPower = proposal_.votingPower;
         executionScript = proposal_.executionScript;
         state = proposal_.state;
         lastRelativeSupport = proposal_.lastRelativeSupport;
-        resolutionCompensationFee = proposal_.resolutionCompensationFee;
     }
 
     function getProposalTimeInfo(uint256 _proposalId) public view returns (
@@ -102,11 +96,11 @@ contract HCBase is AragonApp {
 
     // Lifetime of a proposal when it is not boosted.
     uint256 public queuePeriod;
-    function _validateQueuePeriod(uint256 _queuePeriod) internal pure {
-        // TODO
-    }
+    // function _validateQueuePeriod(uint256 _queuePeriod) internal pure {
+    //     // TODO
+    // }
     function changeQueuePeriod(uint256 _queuePeriod) public auth(MODIFY_PERIODS_ROLE) {
-        _validateQueuePeriod(_queuePeriod);
+        // _validateQueuePeriod(_queuePeriod);
         queuePeriod = _queuePeriod;
     }
 
@@ -114,39 +108,39 @@ contract HCBase is AragonApp {
     // Note: The effective lifetime of a proposal when it is boosted is dynamic, and can be extended
     // due to the requirement of quiet endings.
     uint256 public boostPeriod;
-    function _validateBoostPeriod(uint256 _boostPeriod) internal pure {
-        // TODO
-    }
+    // function _validateBoostPeriod(uint256 _boostPeriod) internal pure {
+    //     // TODO
+    // }
     function changeBoostPeriod(uint256 _boostPeriod) public auth(MODIFY_PERIODS_ROLE) {
-        _validateBoostPeriod(_boostPeriod);
+        // _validateBoostPeriod(_boostPeriod);
         boostPeriod = _boostPeriod;
     }
     uint256 public quietEndingPeriod;
-    function _validateQuietEndingPeriod(uint256 _quietEndingPeriod) internal pure {
-        // TODO
-    }
+    // function _validateQuietEndingPeriod(uint256 _quietEndingPeriod) internal pure {
+    //     // TODO
+    // }
     function changeQuietEndingPeriod(uint256 _quietEndingPeriod) public auth(MODIFY_PERIODS_ROLE) {
-        _validateQuietEndingPeriod(_quietEndingPeriod);
+        // _validateQuietEndingPeriod(_quietEndingPeriod);
         quietEndingPeriod = _quietEndingPeriod;
     }
 
     // Time for a pended proposal to become boosted if it maintained confidence within such period.
     uint256 public pendedBoostPeriod;
-    function _validatePendedBoostPeriod(uint256 _pendedBoostPeriod) internal pure {
-        // TODO
-    }
+    // function _validatePendedBoostPeriod(uint256 _pendedBoostPeriod) internal pure {
+    //     // TODO
+    // }
     function changePendedBoostPeriod(uint256 _pendedBoostPeriod) public auth(MODIFY_PERIODS_ROLE) {
-        _validatePendedBoostPeriod(_pendedBoostPeriod);
+        // _validatePendedBoostPeriod(_pendedBoostPeriod);
         pendedBoostPeriod = _pendedBoostPeriod;
     }
 
     // Compensation fee for external callers of functions that resolve and expire proposals.
     uint256 public compensationFeePct;
-    function _validateCompensationFeePct(uint256 _compensationFeePct) internal pure {
-        // TODO
-    }
+    // function _validateCompensationFeePct(uint256 _compensationFeePct) internal pure {
+    //     // TODO
+    // }
     function changeCompensationFeePct(uint256 _compensationFeePct) public auth(MODIFY_COMPENSATION_FEES_ROLE) {
-        _validateCompensationFeePct(_compensationFeePct);
+        // _validateCompensationFeePct(_compensationFeePct);
         compensationFeePct = _compensationFeePct;
     }
 
@@ -165,30 +159,23 @@ contract HCBase is AragonApp {
     bytes32 public constant MODIFY_CONFIDENCE_THRESHOLD_ROLE = keccak256("MODIFY_CONFIDENCE_THRESHOLD_ROLE");
 
     // Error messages.
-    string internal constant ERROR_SENDER_DOES_NOT_HAVE_ENOUGH_FUNDS         = "VOTING_ERROR_SENDER_DOES_NOT_HAVE_ENOUGH_FUNDS";
-    string internal constant ERROR_INSUFFICIENT_ALLOWANCE                    = "VOTING_ERROR_INSUFFICIENT_ALLOWANCE";
-    string internal constant ERROR_SENDER_DOES_NOT_HAVE_REQUIRED_STAKE       = "VOTING_ERROR_SENDER_DOES_NOT_HAVE_REQUIRED_STAKE ";
-    string internal constant ERROR_PROPOSAL_DOES_NOT_HAVE_REQUIRED_STAKE     = "VOTING_ERROR_PROPOSAL_DOES_NOT_HAVE_REQUIRED_STAKE ";
-    string internal constant ERROR_PROPOSAL_DOESNT_HAVE_ENOUGH_CONFIDENCE    = "VOTING_ERROR_PROPOSAL_DOESNT_HAVE_ENOUGH_CONFIDENCE";
-    string internal constant ERROR_PROPOSAL_IS_NOT_FINALIZED                 = "VOTING_ERROR_PROPOSAL_IS_NOT_FINALIZED";
-    string internal constant ERROR_PROPOSAL_IS_NOT_BOOSTED                   = "VOTING_ERROR_PROPOSAL_IS_NOT_BOOSTED";
-    string internal constant ERROR_PROPOSAL_IS_BOOSTED                       = "VOTING_ERROR_PROPOSAL_IS_BOOSTED";
-    string internal constant ERROR_NO_WINNING_STAKE                          = "VOTING_ERROR_NO_WINNING_STAKE";
-    string internal constant ERROR_PROPOSAL_HASNT_HAD_CONFIDENCE_ENOUGH_TIME = "VOTING_ERROR_PROPOSAL_HASNT_HAD_CONFIDENCE_ENOUGH_TIME";
-    string internal constant ERROR_PROPOSAL_DOES_NOT_EXIST                   = "VOTING_ERROR_PROPOSAL_DOES_NOT_EXIST";
-    string internal constant ERROR_PROPOSAL_IS_CLOSED                        = "VOTING_ERROR_PROPOSAL_IS_CLOSED";
-    string internal constant ERROR_INIT_SUPPORT_TOO_SMALL                    = "VOTING_ERROR_INIT_SUPPORT_TOO_SMALL";
-    string internal constant ERROR_INIT_SUPPORT_TOO_BIG                      = "VOTING_ERROR_INIT_SUPPORT_TOO_BIG";
-    string internal constant ERROR_USER_HAS_NO_VOTING_POWER                  = "VOTING_ERROR_USER_HAS_NO_VOTING_POWER";
-    string internal constant ERROR_NOT_ENOUGH_ABSOLUTE_SUPPORT               = "VOTING_ERROR_NOT_ENOUGH_ABSOLUTE_SUPPORT";
-    string internal constant ERROR_NOT_ENOUGH_RELATIVE_SUPPORT               = "VOTING_ERROR_NOT_ENOUGH_RELATIVE_SUPPORT";
-    string internal constant ERROR_VOTING_DOES_NOT_HAVE_ENOUGH_FUNDS         = "VOTING_ERROR_VOTING_DOES_NOT_HAVE_ENOUGH_FUNDS";
-    string internal constant ERROR_PROPOSAL_IS_ACTIVE                        = "VOTING_ERROR_PROPOSAL_IS_ACTIVE";
-    string internal constant ERROR_NO_STAKE_TO_WITHDRAW                      = "VOTING_ERROR_NO_STAKE_TO_WITHDRAW";
-    string internal constant ERROR_INVALID_COMPENSATION_FEE                  = "VOTING_ERROR_INVALID_COMPENSATION_FEE";
-    string internal constant ERROR_NO_VOTING_POWER 							 = "VOTING_NO_VOTING_POWER";
-    string internal constant ERROR_CAN_NOT_FORWARD                           = "VOTING_CAN_NOT_FORWARD";
-
+    string internal constant ERROR_INSUFFICIENT_ALLOWANCE                    = "INSUFFICIENT_ALLOWANCE";
+    string internal constant ERROR_SENDER_DOES_NOT_HAVE_REQUIRED_STAKE       = "SENDER_DOES_NOT_HAVE_REQUIRED_STAKE ";
+    string internal constant ERROR_PROPOSAL_DOES_NOT_HAVE_REQUIRED_STAKE     = "PROPOSAL_DOES_NOT_HAVE_REQUIRED_STAKE ";
+    string internal constant ERROR_PROPOSAL_DOESNT_HAVE_ENOUGH_CONFIDENCE    = "PROPOSAL_DOESNT_HAVE_ENOUGH_CONFIDENCE";
+    string internal constant ERROR_PROPOSAL_IS_NOT_BOOSTED                   = "PROPOSAL_IS_NOT_BOOSTED";
+    string internal constant ERROR_PROPOSAL_IS_BOOSTED                       = "PROPOSAL_IS_BOOSTED";
+    string internal constant ERROR_NO_WINNING_STAKE                          = "NO_WINNING_STAKE";
+    string internal constant ERROR_PROPOSAL_HASNT_HAD_CONFIDENCE_ENOUGH_TIME = "PROPOSAL_HASNT_HAD_CONFIDENCE_ENOUGH_TIME";
+    string internal constant ERROR_PROPOSAL_DOES_NOT_EXIST                   = "PROPOSAL_DOES_NOT_EXIST";
+    string internal constant ERROR_PROPOSAL_IS_CLOSED                        = "PROPOSAL_IS_CLOSED";
+    string internal constant ERROR_INVALID_SUPPORT_PCT                       = "ERROR_INVALID_SUPPORT_PCT";
+    string internal constant ERROR_NOT_ENOUGH_SUPPORT                        = "NOT_ENOUGH_SUPPORT";
+    string internal constant ERROR_PROPOSAL_IS_ACTIVE                        = "PROPOSAL_IS_ACTIVE";
+    string internal constant ERROR_NO_STAKE_TO_WITHDRAW                      = "NO_STAKE_TO_WITHDRAW";
+    string internal constant ERROR_CAN_NOT_FORWARD                           = "CAN_NOT_FORWARD";
+    string internal constant ERROR_INSUFFICIENT_TOKENS                       = "INSUFFICIENT_TOKENS";
+    
     /*
      * External functions.
      */
@@ -211,7 +198,6 @@ contract HCBase is AragonApp {
 
         // Initialize proposal.
         Proposal storage proposal_ = proposals[proposalId];
-        proposal_.id = proposalId;
         proposal_.executionScript = _executionScript;
         proposal_.startDate = now;
         proposal_.lifetime = queuePeriod;
@@ -219,7 +205,7 @@ contract HCBase is AragonApp {
         // Avoid double voting.
 		uint256 snapshotBlock = getBlockNumber64() - 1;
         uint256 votingPower = voteToken.totalSupplyAt(snapshotBlock);
-        require(votingPower > 0, ERROR_NO_VOTING_POWER);
+        require(votingPower > 0, ERROR_INSUFFICIENT_TOKENS);
 		proposal_.votingPower = votingPower;
 		proposal_.snapshotBlock = snapshotBlock;
 

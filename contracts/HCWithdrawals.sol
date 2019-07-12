@@ -6,10 +6,9 @@ contract HCWithdrawals is HCCompensations {
     
     function withdrawStakeFromExpiredQueuedProposal(uint256 _proposalId) public {
         require(_proposalExists(_proposalId), ERROR_PROPOSAL_DOES_NOT_EXIST);
-        require(proposal_.state == ProposalState.Expired, ERROR_PROPOSAL_IS_ACTIVE);
 
-        // Require the proposal's state to not be resolved or boosted.
         Proposal storage proposal_ = proposals[_proposalId];
+        require(proposal_.state == ProposalState.Expired, ERROR_PROPOSAL_IS_ACTIVE);
 
         // Calculate the amount of that the user has staked.
         uint256 senderUpstake = proposal_.upstakes[msg.sender];
@@ -28,10 +27,11 @@ contract HCWithdrawals is HCCompensations {
 
     function withdrawRewardFromResolvedProposal(uint256 _proposalId) public {
         require(_proposalExists(_proposalId), ERROR_PROPOSAL_DOES_NOT_EXIST);
+
+        Proposal storage proposal_ = proposals[_proposalId];
         require(proposal_.state == ProposalState.Resolved, ERROR_PROPOSAL_IS_ACTIVE);
 
         // Get proposal outcome.
-        Proposal storage proposal_ = proposals[_proposalId];
         bool supported = proposal_.yea > proposal_.nay;
 
         // Retrieve the sender's winning stake.

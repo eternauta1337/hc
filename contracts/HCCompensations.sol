@@ -10,10 +10,11 @@ contract HCCompensations is HCStaking {
 
     function resolveBoostedProposal(uint256 _proposalId) public {
         require(_proposalExists(_proposalId), ERROR_PROPOSAL_DOES_NOT_EXIST);
+
+        Proposal storage proposal_ = proposals[_proposalId];
         require(proposal_.state == ProposalState.Boosted, ERROR_PROPOSAL_IS_NOT_BOOSTED);
 
         // Verify that the proposal lifetime has ended.
-        Proposal storage proposal_ = proposals[_proposalId];
         require(now >= proposal_.startDate.add(proposal_.lifetime), ERROR_PROPOSAL_IS_ACTIVE);
 
         // Compensate the caller.
@@ -28,11 +29,12 @@ contract HCCompensations is HCStaking {
 
     function expireNonBoostedProposal(uint256 _proposalId) public {
         require(_proposalExists(_proposalId), ERROR_PROPOSAL_DOES_NOT_EXIST);
-        require(!(proposal_.state == ProposalState.Boosted), ERROR_PROPOSAL_IS_BOOSTED);
-        require(!(proposal_.state == ProposalState.Expired), ERROR_PROPOSAL_IS_CLOSED);
+
+        Proposal storage proposal_ = proposals[_proposalId];
+        require(proposal_.state != ProposalState.Boosted, ERROR_PROPOSAL_IS_BOOSTED);
+        require(proposal_.state != ProposalState.Expired, ERROR_PROPOSAL_IS_CLOSED);
 
         // Verify that the proposal's lifetime has ended.
-        Proposal storage proposal_ = proposals[_proposalId];
         require(now >= proposal_.startDate.add(proposal_.lifetime), ERROR_PROPOSAL_IS_ACTIVE);
 
         // Compensate the caller.
@@ -46,12 +48,13 @@ contract HCCompensations is HCStaking {
 
     function boostProposal(uint256 _proposalId) public {
         require(_proposalExists(_proposalId), ERROR_PROPOSAL_DOES_NOT_EXIST);
-        require(!(proposal_.state == ProposalState.Expired), ERROR_PROPOSAL_IS_CLOSED);
-        require(!(proposal_.state == ProposalState.Resolved), ERROR_PROPOSAL_IS_CLOSED);
-        require(!(proposal_.state == ProposalState.Boosted), ERROR_PROPOSAL_IS_BOOSTED);
+
+        Proposal storage proposal_ = proposals[_proposalId];
+        require(proposal_.state != ProposalState.Expired, ERROR_PROPOSAL_IS_CLOSED);
+        require(proposal_.state != ProposalState.Resolved, ERROR_PROPOSAL_IS_CLOSED);
+        require(proposal_.state != ProposalState.Boosted, ERROR_PROPOSAL_IS_BOOSTED);
 
         // Require that the proposal is currently pended.
-        Proposal storage proposal_ = proposals[_proposalId];
         require(proposal_.state == ProposalState.Pended);
 
         // Require that the proposal has had enough confidence for a period of time.

@@ -8,9 +8,6 @@ import "@aragon/apps-shared-minime/contracts/MiniMeToken.sol";
 contract HCStaking is HCVoting {
     using SafeMath for uint256;
 
-    // Token used for staking on proposals.
-    MiniMeToken public stakeToken;
-
     // Confidence threshold.
     // A proposal can be boosted if it's confidence, determined by staking, is above this threshold.
     uint256 public confidenceThresholdBase;

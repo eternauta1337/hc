@@ -8,6 +8,9 @@ contract HCBase is AragonApp {
     // Token used for voting.
     MiniMeToken public voteToken;
 
+    // Token used for staking on proposals.
+    MiniMeToken public stakeToken;
+
     // Vote state.
     // Absent: A vote that hasn't been made yet.
     // Yea: A positive vote signaling support for a proposal.
@@ -203,11 +206,11 @@ contract HCBase is AragonApp {
         proposal_.lifetime = queuePeriod;
 
         // Avoid double voting.
-		uint256 snapshotBlock = getBlockNumber64() - 1;
+        uint256 snapshotBlock = getBlockNumber64() - 1;
         uint256 votingPower = voteToken.totalSupplyAt(snapshotBlock);
         require(votingPower > 0, ERROR_INSUFFICIENT_TOKENS);
-		proposal_.votingPower = votingPower;
-		proposal_.snapshotBlock = snapshotBlock;
+        proposal_.votingPower = votingPower;
+        proposal_.snapshotBlock = snapshotBlock;
 
         emit ProposalCreated(proposalId, msg.sender, _metadata);
     }

@@ -19,6 +19,10 @@ contract('HolographicConsensus', accounts => {
 
   let APP_MANAGER_ROLE;
   let CREATE_PROPOSALS_ROLE;
+  let MODIFY_SUPPORT_PERCENT_ROLE;
+  let MODIFY_PERIODS_ROLE;
+  let MODIFY_COMPENSATION_FEES_ROLE;
+  let MODIFY_CONFIDENCE_THRESHOLD_ROLE;
 
   let daoFact, appBase, app;
   let voteTokenContract;
@@ -61,6 +65,10 @@ contract('HolographicConsensus', accounts => {
     // Get roles.
     APP_MANAGER_ROLE = await kernelBase.APP_MANAGER_ROLE();
     CREATE_PROPOSALS_ROLE = await appBase.CREATE_PROPOSALS_ROLE();
+    MODIFY_SUPPORT_PERCENT_ROLE = await appBase.MODIFY_SUPPORT_PERCENT_ROLE();
+    MODIFY_PERIODS_ROLE = await appBase.MODIFY_PERIODS_ROLE();
+    MODIFY_COMPENSATION_FEES_ROLE = await appBase.MODIFY_COMPENSATION_FEES_ROLE();
+    MODIFY_CONFIDENCE_THRESHOLD_ROLE = await appBase.MODIFY_CONFIDENCE_THRESHOLD_ROLE();
   })
 
   beforeEach(async () => {
@@ -122,6 +130,13 @@ contract('HolographicConsensus', accounts => {
       firstAccount,
       { from: firstAccount }
     );
+    await acl.createPermission(
+      app.address,
+      app.address,
+      MODIFY_SUPPORT_PERCENT_ROLE,
+      firstAccount,
+      { from: firstAccount }
+    );
   });
 
   it('Tokens get deployed correctly', async () => {
@@ -168,6 +183,40 @@ contract('HolographicConsensus', accounts => {
 
       // Reset elapsed time since proposals will have startDate set to now.
       elapsedTime = 0;
+    });
+
+    describe('When executing proposal scripts', () => {
+
+      it('Should execute a proposal\'s script', async () => {
+        
+        // Create the proposal.
+        const action = { to: app.address, calldata: app.contract.changeSupportPct.getData(60) }
+        const script = encodeCallScript([action])
+        const receipt = await app.createProposal(script, `Modify support percent`, { ...txParams });
+        
+        // Support proposal so that it executes.
+        await app.vote(8, true, { ...txParams, from: accounts[7] });
+        await app.vote(8, true, { ...txParams, from: accounts[8] });
+
+        // Retrieve new supportPercent value.
+        const supportPct = await app.supportPct();
+        expect(supportPct.toString()).to.equal(`60`);
+      });
+
+      it.only('Should not execute a proposal\'s script if it targets a blacklisted address', async () => {
+        
+        // Create the proposal.
+        const action = { to: stakeTokenContract.address, calldata: stakeTokenContract.contract.transfer.getData(ANY_ADDRESS, 1000) }
+        const script = encodeCallScript([action])
+        const receipt = await app.createProposal(script, `Remove some stake for someone`, { ...txParams });
+        
+        // Support proposal so that it executes.
+        // Should fail because the auto-execution of the proposal is blacklisted.
+        await app.vote(8, true, { ...txParams, from: accounts[7] });
+        await assertRevert(
+          app.vote(8, true, { ...txParams, from: accounts[8] })
+        );
+      });
     });
 
     it('numProposals should increase', async () => {
@@ -408,7 +457,7 @@ contract('HolographicConsensus', accounts => {
           expect((await app.getConfidence(0)).toString()).to.equal(`${2 * PRECISION_MULTIPLIER}`);
         });
 
-        it.only('Should allow staking and unstaking on proposals', async () => {
+        it('Should allow staking and unstaking on proposals', async () => {
 
           // Stake tokens.
           const upstakeReceipt = await app.stake(0, 10000, true, { ...txParams, from: accounts[6] });

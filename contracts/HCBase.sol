@@ -163,7 +163,7 @@ contract HCBase is AragonApp {
 
     // Error messages.
     string internal constant ERROR_INSUFFICIENT_ALLOWANCE                    = "INSUFFICIENT_ALLOWANCE";
-    string internal constant ERROR_SENDER_DOES_NOT_HAVE_REQUIRED_STAKE       = "SENDER_DOES_NOT_HAVE_REQUIRED_STAKE ";
+    string internal constant ERROR_SENDER_DOES_NOT_HAVE_REQUIRED_STAKE       = "SENDER_DOES_NOT_HAVE_REQUIRED_STAKE";
     string internal constant ERROR_PROPOSAL_DOES_NOT_HAVE_REQUIRED_STAKE     = "PROPOSAL_DOES_NOT_HAVE_REQUIRED_STAKE ";
     string internal constant ERROR_PROPOSAL_DOESNT_HAVE_ENOUGH_CONFIDENCE    = "PROPOSAL_DOESNT_HAVE_ENOUGH_CONFIDENCE";
     string internal constant ERROR_PROPOSAL_IS_NOT_BOOSTED                   = "PROPOSAL_IS_NOT_BOOSTED";

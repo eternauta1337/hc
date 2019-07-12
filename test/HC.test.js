@@ -243,13 +243,15 @@ contract('HolographicConsensus', accounts => {
 
       it('Should reject voting on proposals that do not exist', async () => {
         await assertRevert(
-          app.vote(9, true, { ...txParams })
+          app.vote(9, true, { ...txParams }),
+          `PROPOSAL_DOES_NOT_EXIST`
         );
       });
 
       it('Should reject voting from accounts that do not own vote tokens', async () => {
         await assertRevert(
-          app.vote(0, true, { ...txParams, from: accounts[9] })
+          app.vote(0, true, { ...txParams, from: accounts[9] }),
+					`INSUFFICIENT_TOKENS`
         );
       });
 
@@ -326,6 +328,7 @@ contract('HolographicConsensus', accounts => {
         it('Voting should not be allowed', async () => {
           await assertRevert(
             app.vote(0, false, { ...txParams, from: accounts[0] }),
+						`PROPOSAL_IS_CLOSED`
           );
         });
 
@@ -337,7 +340,8 @@ contract('HolographicConsensus', accounts => {
 
           // Staking should fail.
           await assertRevert(
-            app.stake(0, 1, false, { ...txParams, from: accounts[0] })
+            app.stake(0, 1, false, { ...txParams, from: accounts[0] }),
+            `PROPOSAL_IS_CLOSED`
           );
         });
 
@@ -375,7 +379,8 @@ contract('HolographicConsensus', accounts => {
 
         it('Should not allow additional votes on a resolved proposal', async () => {
           await assertRevert(
-            app.vote(0, false, { ...txParams, from: accounts[0] })
+            app.vote(0, false, { ...txParams, from: accounts[0] }),
+						`PROPOSAL_IS_CLOSED`
           );
         });
 
@@ -387,7 +392,8 @@ contract('HolographicConsensus', accounts => {
 
           // Staking should fail.
           await assertRevert(
-            app.stake(0, 1, false, { ...txParams, from: accounts[0] })
+            app.stake(0, 1, false, { ...txParams, from: accounts[0] }),
+						`PROPOSAL_IS_CLOSED`
           );
         });
 
@@ -422,32 +428,37 @@ contract('HolographicConsensus', accounts => {
 
         it('Should reject staking on proposals that do not exist', async () => {
           await assertRevert(
-            app.stake(1338, 1000, true, { ...txParams })
+            app.stake(1338, 1000, true, { ...txParams }),
+						`PROPOSAL_DOES_NOT_EXIST`
           );
         });
 
         it('Should not allow an account to stake more tokens that it holds', async () => {
           await assertRevert(
-            app.stake(0, 10000, true, { ...txParams })
+            app.stake(0, 10000, true, { ...txParams }),
+						`INSUFFICIENT_TOKENS`
           );
         });
 
         it('Should not allow an account to stake without having provided sufficient allowance', async () => {
           await assertRevert(
-            app.stake(0, 1000, true, { ...txParams, from: accounts[8] })
+            app.stake(0, 1000, true, { ...txParams, from: accounts[8] }),
+            `INSUFFICIENT_ALLOWANCE`
           );
         });
 
         it('Should not allow an account to withdraw tokens from a proposal that has no stake', async () => {
           await assertRevert(
-            app.unstake(0, 10000, true, { ...txParams })
+            app.unstake(0, 10000, true, { ...txParams }),
+            `SENDER_DOES_NOT_HAVE_REQUIRED_STAKE`
           );
         });
 
         it('Should not allow an account to withdraw tokens that were not staked by the account', async () => {
           await app.stake(0, 1000, true, { ...txParams });
           await assertRevert(
-            app.unstake(0, 1000, true, { ...txParams, from: accounts[1] })
+            app.unstake(0, 1000, true, { ...txParams, from: accounts[1] }),
+            `SENDER_DOES_NOT_HAVE_REQUIRED_STAKE`
           );
         });
 

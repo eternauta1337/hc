@@ -8,6 +8,8 @@ import "@aragon/os/contracts/lib/math/SafeMath.sol";
 contract HCVoting is IForwarder, AragonApp {
     using SafeMath for uint256;
 
+    // TODO: All uints used so far are uint256. Optimize!
+
     /*
      * Properties.
      */
@@ -188,7 +190,6 @@ contract HCVoting is IForwarder, AragonApp {
     event DownstakeProposal(uint256 indexed _proposalId, address indexed _staker, uint256 _amount);
     event WithdrawUpstake(uint256 indexed _proposalId, address indexed _staker, uint256 _amount);
     event WithdrawDownstake(uint256 indexed _proposalId, address indexed _staker, uint256 _amount);
-    // TODO: Add an event for a proposal becoming boosted.
 
     /*
      * Getters (that are not automatically injected by Solidity).
@@ -268,7 +269,7 @@ contract HCVoting is IForwarder, AragonApp {
 
     /*
      * Initializers 
-     * Note: there are no constructors since this is intended to be used as a proxy.
+     * Note: there are is constructor, since this is intended to be used as a proxy.
      */
 
     function initialize(
@@ -286,32 +287,10 @@ contract HCVoting is IForwarder, AragonApp {
         onlyInit 
     {
         initialized();
-        initializeVoting(
-            _voteToken, 
-            _supportPct,
-            _queuePeriod,
-            _boostPeriod,
-            _quietEndingPeriod,
-            _compensationFeePct
-        );
-        initializeStaking(
-            _stakeToken, 
-            _pendedBoostPeriod,
-            _confidenceThresholdBase
-        );
-    }
 
-    function initializeVoting(
-        MiniMeToken _voteToken, 
-        uint256 _supportPct,
-        uint256 _queuePeriod,
-        uint256 _boostPeriod,
-        uint256 _quietEndingPeriod,
-        uint256 _compensationFeePct
-    ) 
-        internal
-    {
+        // TODO: validate tokens
         voteToken = _voteToken;
+        stakeToken = _stakeToken;
 
         _validateSupportPct(_supportPct);
         supportPct = _supportPct;
@@ -327,16 +306,6 @@ contract HCVoting is IForwarder, AragonApp {
 
         // _validateCompensationFeePct(_compensationFeePct);
         compensationFeePct = _compensationFeePct;
-    }
-
-    function initializeStaking(
-        MiniMeToken _stakeToken, 
-        uint256 _pendedBoostPeriod,
-        uint256 _confidenceThresholdBase
-    ) 
-        internal
-    {
-        stakeToken = _stakeToken;
 
         // _validatePendedBoostPeriod(_pendedBoostPeriod);
         pendedBoostPeriod = _pendedBoostPeriod;

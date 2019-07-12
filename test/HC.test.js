@@ -96,7 +96,7 @@ contract('HolographicConsensus', accounts => {
     // Initialize minime tokens.
     voteTokenContract = await MiniMeToken.new(ZERO_ADDRESS, ZERO_ADDRESS, 0, 'VoteToken', 18, 'ANT', false, { from: accounts[0] });
     stakeTokenContract = await MiniMeToken.new(ZERO_ADDRESS, ZERO_ADDRESS, 0, 'StakeToken', 18, 'GEN', true, { from: accounts[0] });
-
+    
     // Initialize app proxy.
     await app.initialize(
       voteTokenContract.address, 
@@ -110,6 +110,9 @@ contract('HolographicConsensus', accounts => {
       CONFIDENCE_THRESHOLD_BASE,
       { from: accounts[0] }
     );
+
+    // Mint some stake tokens to the app so that it can pay fees and automatically downstake proposals.
+    await stakeTokenContract.generateTokens(app.address, INITIAL_VOTING_STAKE_TOKEN_BALANCE, { ...txParams });
 
     // Setup permissions.
     await acl.createPermission(
@@ -156,9 +159,6 @@ contract('HolographicConsensus', accounts => {
       await voteTokenContract.generateTokens(accounts[8], 100, { ...txParams });
       // Note: No tokens for account 9 =(
       // Note: Vote token total supply should be 333.
-
-      // Also mint some stake tokens to the app so that it can pay fees and automatically downstake proposals.
-      await stakeTokenContract.generateTokens(app.address, INITIAL_VOTING_STAKE_TOKEN_BALANCE, { ...txParams });
 
       // Create a few proposals.
       for(let i = 0; i < NUM_PROPOSALS; i++) {
@@ -344,150 +344,141 @@ contract('HolographicConsensus', accounts => {
 
       }); // When absolute majority support is reached in a proposal
 
-      // describe('When staking on proposals', () => { 
-      //   beforeEach(async () => {
+      describe('When staking on proposals', () => { 
+        
+        beforeEach(async () => {
 
-      //     // Mint some stake tokens.
-      //     await stakeTokenContract.generateTokens(accounts[0], 1000  , { ...txParams });
-      //     await stakeTokenContract.generateTokens(accounts[1], 1000  , { ...txParams });
-      //     await stakeTokenContract.generateTokens(accounts[2], 1000  , { ...txParams });
-      //     await stakeTokenContract.generateTokens(accounts[3], 10000 , { ...txParams });
-      //     await stakeTokenContract.generateTokens(accounts[4], 10000 , { ...txParams });
-      //     await stakeTokenContract.generateTokens(accounts[5], 10000 , { ...txParams });
-      //     await stakeTokenContract.generateTokens(accounts[6], 100000, { ...txParams });
-      //     await stakeTokenContract.generateTokens(accounts[7], 100000, { ...txParams });
-      //     await stakeTokenContract.generateTokens(accounts[8], 100000, { ...txParams });
-      //     // Note: No tokens for account 9 =(
-      //     // Note: Stake token total supply should be 333.
+          // Mint some stake tokens.
+          await stakeTokenContract.generateTokens(accounts[0], 1000  , { ...txParams });
+          await stakeTokenContract.generateTokens(accounts[1], 1000  , { ...txParams });
+          await stakeTokenContract.generateTokens(accounts[2], 1000  , { ...txParams });
+          await stakeTokenContract.generateTokens(accounts[3], 10000 , { ...txParams });
+          await stakeTokenContract.generateTokens(accounts[4], 10000 , { ...txParams });
+          await stakeTokenContract.generateTokens(accounts[5], 10000 , { ...txParams });
+          await stakeTokenContract.generateTokens(accounts[6], 100000, { ...txParams });
+          await stakeTokenContract.generateTokens(accounts[7], 100000, { ...txParams });
+          await stakeTokenContract.generateTokens(accounts[8], 100000, { ...txParams });
+          // Note: No tokens for account 9 =(
+          // Note: Stake token total supply should be 333.
 
-      //     // Mint some tokens to the voting contract.
-      //     // These will be used to auto-downstake proposals and pay compensation fees.
-      //     await stakeTokenContract.generateTokens(app.address, INITIAL_VOTING_STAKE_TOKEN_BALANCE, { ...txParams });
+          // All stakers give 'infinite' allowance to the contract.
+          // Note: In practice, a staker will need to either atomically provide allowance
+          // to the voting contract, or provide it by chunks that would support staking for some time.
+          const infiniteAllowance = `${10 ** 18}`;
+          for(let i = 0; i < 8; i++) {
+            await stakeTokenContract.approve(app.address, infiniteAllowance, { ...txParams, from: accounts[i] });
+          }
+          // Note: No allowance set for account 8 =(
+        });
 
-      //     // All stakers give 'infinite' allowance to the contract.
-      //     // Note: In practice, a staker will need to either atomically provide allowance
-      //     // to the voting contract, or provide it by chunks that would support staking for some time.
-      //     const infiniteAllowance = `${10 ** 18}`;
-      //     for(let i = 0; i < 8; i++) {
-      //       await stakeTokenContract.approve(
-      //         app.address, infiniteAllowance
-      //       , { ...txParams, from: accounts[i] });
-      //     }
-      //     // Note: No allowance set for account 8 =(
-      //   });
+        it('Should reject staking on proposals that do not exist', async () => {
+          await assertRevert(
+            app.stake(1338, 1000, true, { ...txParams })
+          );
+        });
 
-      //   it('Should reject staking on proposals that do not exist', async () => {
-      //     await assertRevert(
-      //       app.stake(1338, 1000, true, { ...txParams }),
-      //       `VOTING_ERROR_PROPOSAL_DOES_NOT_EXIST`
-      //     )).to.equal(true);
-      //   });
+        it('Should not allow an account to stake more tokens that it holds', async () => {
+          await assertRevert(
+            app.stake(0, 10000, true, { ...txParams })
+          );
+        });
 
-      //   it('Should not allow an account to stake more tokens that it holds', async () => {
-      //     await assertRevert(
-      //       app.stake(0, 10000, true, { ...txParams }),
-      //       `VOTING_ERROR_SENDER_DOES_NOT_HAVE_ENOUGH_FUNDS`
-      //     )).to.equal(true);
-      //   });
+        it('Should not allow an account to stake without having provided sufficient allowance', async () => {
+          await assertRevert(
+            app.stake(0, 1000, true, { ...txParams, from: accounts[8] })
+          );
+        });
 
-      //   it('Should not allow an account to stake without having provided sufficient allowance', async () => {
-      //     await assertRevert(
-      //       app.stake(0, 1000, true, { ...txParams, from: accounts[8] }),
-      //       `VOTING_ERROR_INSUFFICIENT_ALLOWANCE`
-      //     )).to.equal(true);
-      //   });
+        it('Should not allow an account to withdraw tokens from a proposal that has no stake', async () => {
+          await assertRevert(
+            app.unstake(0, 10000, true, { ...txParams })
+          );
+        });
 
-      //   it('Should not allow an account to withdraw tokens from a proposal that has no stake', async () => { await assertRevert(
-      //     app.unstake(0, 10000, true, { ...txParams }),
-      //     `VOTING_ERROR_SENDER_DOES_NOT_HAVE_REQUIRED_STAKE`
-      //   )).to.equal(true);
-      //   });
+        it('Should not allow an account to withdraw tokens that were not staked by the account', async () => {
+          await app.stake(0, 1000, true, { ...txParams });
+          await assertRevert(
+            app.unstake(0, 1000, true, { ...txParams, from: accounts[1] })
+          );
+        });
 
-      //   it('Should not allow an account to withdraw tokens that were not staked by the account', async () => {
-      //     await app.stake(0, 1000, true, { ...txParams });
-      //     await assertRevert(
-      //       app.unstake(0, 1000, true, { ...txParams, from: accounts[1] }),
-      //       `VOTING_ERROR_SENDER_DOES_NOT_HAVE_REQUIRED_STAKE`
-      //     )).to.equal(true);
-      //   });
+        it('Can retrieve a proposals confidence factor', async () => {
+          await app.stake(0, 10000, true, { ...txParams, from: accounts[3] });
+          await app.stake(0, 5000, false, { ...txParams, from: accounts[4] });
+          expect((await app.getConfidence(0)).toString()).to.equal(`${2 * PRECISION_MULTIPLIER}`);
+        });
 
-      //   it('Can retrieve a proposals confidence factor', async () => {
-      //     await app.stake(0, 10000, true, { ...txParams, from: accounts[3] });
-      //     await app.stake(0, 5000, false, { ...txParams, from: accounts[4] });
-      //     expect(await app.getConfidence(0)).to.equal(`${2 * PRECISION_MULTIPLIER}`);
-      //   });
+        it.only('Should allow staking and unstaking on proposals', async () => {
 
-      //   it('Should allow staking and unstaking on proposals', async () => {
+          // Stake tokens.
+          const upstakeReceipt = await app.stake(0, 10000, true, { ...txParams, from: accounts[6] });
+          const downstakeReceipt = await app.stake(0, 5000, false, { ...txParams, from: accounts[6] });
 
-      //     // Stake tokens.
-      //     const upstakeReceipt = await app.stake(0, 10000, true, { ...txParams, from: accounts[6] });
-      //     const downstakeReceipt = await app.stake(0, 5000, false, { ...txParams, from: accounts[6] });
+          // Verify that the proper events were triggered.
+          let event = upstakeReceipt.logs[0];
+          expect(event).to.be.an('object');
+          expect(event.args._proposalId.toString()).to.equal(`0`);
+          expect(event.args._staker.toString()).to.equal(accounts[6]);
+          expect(event.args._amount.toString()).to.equal(`10000`);
+          event = downstakeReceipt.logs[0];
+          expect(event).to.be.an('object');
+          expect(event.args._proposalId.toString()).to.equal(`0`);
+          expect(event.args._staker.toString()).to.equal(accounts[6]);
+          expect(event.args._amount.toString()).to.equal(`5000`);
 
-      //     // Verify that the proper events were triggered.
-      //     let event = upstakeReceipt.events.UpstakeProposal;
-      //     expect(event).not.to.equalNull();
-      //     expect(event.args._proposalId).to.equal(`0`);
-      //     expect(event.args._staker).to.equal(accounts[6]);
-      //     expect(event.args._amount).to.equal(`10000`);
-      //     event = downstakeReceipt.events.DownstakeProposal;
-      //     expect(event).not.to.equalNull();
-      //     expect(event.args._proposalId).to.equal(`0`);
-      //     expect(event.args._staker).to.equal(accounts[6]);
-      //     expect(event.args._amount).to.equal(`5000`);
+          // Stake some more.
+          await app.stake(0, 5000, true, { ...txParams, from: accounts[6] });
+          await app.stake(0, 5000, false, { ...txParams, from: accounts[6] });
 
-      //     // Stake some more.
-      //     await app.stake(0, 5000, true, { ...txParams, from: accounts[6] });
-      //     await app.stake(0, 5000, false, { ...txParams, from: accounts[6] });
+          // Verify that the proposal received the stake.
+          const proposal = await app.getProposalStakes(0);
+          expect(proposal[0].toString()).to.equal(`15000`);
+          expect(proposal[1].toString()).to.equal(`10000`);
 
-      //     // Verify that the proposal received the stake.
-      //     const proposal = await app.getProposal(0);
-      //     expect(proposal.upstake).to.equal(`15000`);
-      //     expect(proposal.downstake).to.equal(`10000`);
+          // Verify that the proposal registers the sender's stake.
+          let upstake = await app.getUpstake(0, accounts[6]);
+          expect(upstake.toString()).to.equal(`15000`);
+          let downstake = await app.getDownstake(0, accounts[6]);
+          expect(downstake.toString()).to.equal(`10000`);
 
-      //     // Verify that the proposal registers the sender's stake.
-      //     let upstake = await app.getUpstake(0, accounts[6]);
-      //     expect(upstake).to.equal(`15000`);
-      //     let downstake = await app.getDownstake(0, accounts[6]);
-      //     expect(downstake).to.equal(`10000`);
+          // Verify that the owner's stake token balance decreased.
+          let stakerBalance = await stakeTokenContract.balanceOf(accounts[6]);
+          expect(stakerBalance.toString()).to.equal(`75000`);
 
-      //     // Verify that the owner's stake token balance decreased.
-      //     let stakerBalance = await stakeTokenContract.balanceOf(accounts[6]);
-      //     expect(stakerBalance).to.equal(`75000`);
+          // Verify that the voting contract now holds the staked tokens.
+          let votingBalance = await stakeTokenContract.balanceOf(app.address);
+          expect(votingBalance.toString()).to.equal(`${INITIAL_VOTING_STAKE_TOKEN_BALANCE + 25000}`);
 
-      //     // Verify that the voting contract now holds the staked tokens.
-      //     let votingBalance = await stakeTokenContract.balanceOf(app.address);
-      //     expect(votingBalance).to.equal(`${INITIAL_VOTING_STAKE_TOKEN_BALANCE + 25000}`);
+          // Retrieve stake.
+          // const unUpstakeReceipt = await app.unstake(0, 10000, true, { ...txParams, from: accounts[6] });
+          // const unDownstakeReceipt = await app.unstake(0, 5000, false, { ...txParams, from: accounts[6] });
 
-      //     // Retrieve stake.
-      //     const unUpstakeReceipt = await app.unstake(0, 10000, true, { ...txParams, from: accounts[6] });
-      //     const unDownstakeReceipt = await app.unstake(0, 5000, false, { ...txParams, from: accounts[6] });
+          // Verify that the proper events were triggered.
+          // event = unUpstakeReceipt.events.WithdrawUpstake;
+          // expect(event).to.be.an('object');
+          // expect(event.args._proposalId).to.equal(`0`);
+          // expect(event.args._staker).to.equal(accounts[6]);
+          // expect(event.args._amount).to.equal(`10000`);
+          // event = unDownstakeReceipt.events.WithdrawDownstake;
+          // expect(event).to.be.an('object');
+          // expect(event.args._proposalId).to.equal(`0`);
+          // expect(event.args._staker).to.equal(accounts[6]);
+          // expect(event.args._amount).to.equal(`5000`);
 
-      //     // Verify that the proper events were triggered.
-      //     event = unUpstakeReceipt.events.WithdrawUpstake;
-      //     expect(event).not.to.equalNull();
-      //     expect(event.args._proposalId).to.equal(`0`);
-      //     expect(event.args._staker).to.equal(accounts[6]);
-      //     expect(event.args._amount).to.equal(`10000`);
-      //     event = unDownstakeReceipt.events.WithdrawDownstake;
-      //     expect(event).not.to.equalNull();
-      //     expect(event.args._proposalId).to.equal(`0`);
-      //     expect(event.args._staker).to.equal(accounts[6]);
-      //     expect(event.args._amount).to.equal(`5000`);
+          // Verify that the proposal registers the new sender's stake.
+          // upstake = await app.getUpstake(0, accounts[6]);
+          // expect(upstake).to.equal(`5000`);
+          // downstake = await app.getDownstake(0, accounts[6]);
+          // expect(downstake).to.equal(`5000`);
 
-      //     // Verify that the proposal registers the new sender's stake.
-      //     upstake = await app.getUpstake(0, accounts[6]);
-      //     expect(upstake).to.equal(`5000`);
-      //     downstake = await app.getDownstake(0, accounts[6]);
-      //     expect(downstake).to.equal(`5000`);
+          // Verify that the staker retrieved the tokens.
+          // stakerBalance = await stakeTokenContract.balanceOf(accounts[6]);
+          // expect(stakerBalance).to.equal(`90000`);
 
-      //     // Verify that the staker retrieved the tokens.
-      //     stakerBalance = await stakeTokenContract.balanceOf(accounts[6]);
-      //     expect(stakerBalance).to.equal(`90000`);
-
-      //     // Verify that the voting contract lost the tokens payed out to the staker.
-      //     votingBalance = await stakeTokenContract.balanceOf(app.address);
-      //     expect(votingBalance).to.equal(`${INITIAL_VOTING_STAKE_TOKEN_BALANCE + 10000}`);
-      //   });
+          // Verify that the voting contract lost the tokens payed out to the staker.
+          // votingBalance = await stakeTokenContract.balanceOf(app.address);
+          // expect(votingBalance).to.equal(`${INITIAL_VOTING_STAKE_TOKEN_BALANCE + 10000}`);
+        });
 
       //   it.todo('External callers should not be able to boost a proposal that hasn\'t gained enough confidence');
 
@@ -516,7 +507,7 @@ contract('HolographicConsensus', accounts => {
 
       //       // Verify that a proposal state change event was triggered.
       //       const event = receipt.events.ProposalStateChanged;
-      //       expect(event).not.to.equalNull();
+      //       expect(event).to.be.an('object');
       //       expect(event.args._proposalId).to.equal(`0`);
       //       expect(event.args._newState).to.equal(`5`); // ProposalState '5' = Expired
 
@@ -540,7 +531,7 @@ contract('HolographicConsensus', accounts => {
 
       //       // Verify that a proposal state change event was triggered.
       //       const event = receipt.events.ProposalStateChanged;
-      //       expect(event).not.to.equalNull();
+      //       expect(event).to.be.an('object');
       //       expect(event.args._proposalId).to.equal(`0`);
       //       expect(event.args._newState).to.equal(`5`); // ProposalState '5' = Expired
 
@@ -663,7 +654,7 @@ contract('HolographicConsensus', accounts => {
 
       //             // Verify that an event was triggered.
       //             const event = voteReceipt.events.ProposalLifetimeExtended;
-      //             expect(event).not.to.equalNull();
+      //             expect(event).to.be.an('object');
       //             expect(event.args._proposalId).to.equal(`0`);
       //             expect(event.args._newLifetime).to.equal(`${BOOST_PERIOD_SECS + QUIET_ENDING_PERIOD_SECS}`);
 
@@ -695,7 +686,7 @@ contract('HolographicConsensus', accounts => {
 
       //               // Verify that a proposal state change event was emitted.
       //               const event = receipt.events.ProposalStateChanged;
-      //               expect(event).not.to.equalNull();
+      //               expect(event).to.be.an('object');
       //               expect(event.args._proposalId).to.equal(`0`);
       //               expect(event.args._newState).to.equal(`4`); // ProposalState '4' = Resolved
 
@@ -728,7 +719,7 @@ contract('HolographicConsensus', accounts => {
       //       }); // When proposals are boosted
       //     }); // When proposals have had enough confidence for a while
       //   }); // When proposals have enough confidence
-      // }); // When staking on proposals
+      }); // When staking on proposals
     }); // When voting on proposals
   }); // When creating proposals
 }); // When setting up an HC contract correctly

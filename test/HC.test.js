@@ -195,8 +195,8 @@ contract('HolographicConsensus', accounts => {
         const receipt = await app.createProposal(script, `Modify support percent`, { ...txParams });
         
         // Support proposal so that it executes.
-        await app.vote(NUM_PROPOSALS + 1, true, { ...txParams, from: accounts[7] });
-        await app.vote(NUM_PROPOSALS + 1, true, { ...txParams, from: accounts[8] });
+        await app.vote(NUM_PROPOSALS, true, { ...txParams, from: accounts[7] });
+        await app.vote(NUM_PROPOSALS, true, { ...txParams, from: accounts[8] });
 
         // Retrieve new supportPercent value.
         const supportPct = await app.supportPct();
@@ -623,7 +623,7 @@ contract('HolographicConsensus', accounts => {
             expect(pendedDateDeltaSecs).to.be.below(2);
           }); 
 
-          it.only('Their state should change to Unpended if confidence drops', async () => {
+          it('Their state should change to Unpended if confidence drops', async () => {
 
             // Downstake the proposal a bit to reduce confidence beneath the threshold.
             await app.stake(0, 10000, false, { ...txParams, from: accounts[7] });
@@ -633,141 +633,142 @@ contract('HolographicConsensus', accounts => {
             expect(confidence.toString()).to.equal(`${2 * PRECISION_MULTIPLIER}`);
 
             // Retrieve the proposal and verify it's state.
-            const proposal = await app.getProposal(0);
-            expect(proposal[2]).to.equal(`1`); // ProposalState '1' = Unpended
+            const proposal = await app.getProposalInfo(0);
+            expect(proposal[2].toString()).to.equal(`1`); // ProposalState '1' = Unpended
           }); 
 
-      //     it.todo('External callers should not be able to boost a proposal that hasn\'t been pended for enough time');
+          it.skip('External callers should not be able to boost a proposal that hasn\'t been pended for enough time');
 
-      //     describe('When proposals have had enough confidence for a while', () => {
+          describe('When proposals have had enough confidence for a while', () => {
 
-      //       beforeEach(async () => {
+            beforeEach(async () => {
 
-      //         // Advance enough time for a proposal to be boosted.
-      //         // Note that a little extra time is advanced, that's because compensation fees
-      //         // are proportional to that extra time, and having no extra time would result in fees of value 0.
-      //         const time = PENDED_BOOST_PERIOD_SECS + 2 * HOURS;
-      //         elapsedTime += time;
-      //         await timeUtil.advanceTimeAndBlock(web3, time);
-      //       });
+              // Advance enough time for a proposal to be boosted.
+              // Note that a little extra time is advanced, that's because compensation fees
+              // are proportional to that extra time, and having no extra time would result in fees of value 0.
+              const time = PENDED_BOOST_PERIOD_SECS + 2 * HOURS;
+              elapsedTime += time;
+              await timeUtil.advanceTimeAndBlock(web3, time);
+            });
 
-      //       it('An external caller should be able to boost the proposal and receive a compensation fee', async () => {
+            it('An external caller should be able to boost the proposal and receive a compensation fee', async () => {
 
-      //         // Record the caller's current stake token balance
-      //         // to later verify that it has received a compensation fee for the call.
-      //         const balance = await stakeTokenContract.balanceOf(accounts[0]);
+              // Record the caller's current stake token balance
+              // to later verify that it has received a compensation fee for the call.
+              const balance = (await stakeTokenContract.balanceOf(accounts[0])).toString();
 
-      //         // Boost the proposal.
-      //         await app.boostProposal(0, { ...txParams });
+              // Boost the proposal.
+              await app.boostProposal(0, { ...txParams });
 
-      //         // Verify the proposal's state.
-      //         const proposal = await app.getProposal(0);
-      //         expect(proposal[2]).to.equal(`3`); // ProposalState '3' = Boosted
+              // Verify the proposal's state.
+              const proposalInfo = await app.getProposalInfo(0);
+              expect(proposalInfo[2].toString()).to.equal(`3`); // ProposalState '3' = Boosted
 
-      //         // Verify that the proposal's lifetime has changed to boostPeriod.
-      //         expect(proposal.lifetime).to.equal(`${BOOST_PERIOD_SECS}`);
+              // Verify that the proposal's lifetime has changed to boostPeriod.
+              const proposalTimeInfo = await app.getProposalTimeInfo(0);
+              expect(proposalTimeInfo[1].toString()).to.equal(`${BOOST_PERIOD_SECS}`);
 
-      //         // Verify that the coller received a compensation fee.
-      //         const newBalance = await stakeTokenContract.balanceOf(accounts[0]);
-      //         expect(parseInt(newBalance, 10)).to.equalGreaterThan(parseInt(balance, 10));
-      //       });
+              // Verify that the coller received a compensation fee.
+              const newBalance = (await stakeTokenContract.balanceOf(accounts[0])).toString();
+              expect(parseInt(newBalance, 10)).to.be.above(parseInt(balance, 10));
+            });
 
-      //       it.todo('An external caller shouldn\'t be able to boost a proposal once it has already been boosted');
+            it.skip('An external caller shouldn\'t be able to boost a proposal once it has already been boosted');
 
-      //       describe('When proposals are boosted', () => {
+            describe('When proposals are boosted', () => {
 
-      //         beforeEach(async () => {
+              beforeEach(async () => {
 
-      //           // Produce some votes without reaching absolute majority.
-      //           await app.vote(0, true, { ...txParams, from: accounts[3] });
-      //           await app.vote(0, true, { ...txParams, from: accounts[4] });
-      //           await app.vote(0, false, { ...txParams, from: accounts[5] });
+                // Produce some votes without reaching absolute majority.
+                await app.vote(0, true, { ...txParams, from: accounts[3] });
+                await app.vote(0, true, { ...txParams, from: accounts[4] });
+                await app.vote(0, false, { ...txParams, from: accounts[5] });
 
-      //           // Boost the pended proposals.
-      //           await app.boostProposal(0, { ...txParams });
-      //         });
+                // Boost the pended proposals.
+                await app.boostProposal(0, { ...txParams });
+              });
 
-      //         describe('In the quiet ending zone of the boost period', () => {
+              describe('In the quiet ending zone of the boost period', () => {
 
-      //           beforeEach(async () => {
+                beforeEach(async () => {
 
-      //             // Advance enough time for a proposal to be boosted.
-      //             const time = BOOST_PERIOD_SECS - elapsedTime - QUIET_ENDING_PERIOD_SECS * 0.5;
-      //             elapsedTime += time;
-      //             await timeUtil.advanceTimeAndBlock(web3, time);
-      //           });
+                  // Advance enough time for a proposal to be boosted.
+                  const time = BOOST_PERIOD_SECS - elapsedTime - QUIET_ENDING_PERIOD_SECS * 0.5;
+                  elapsedTime += time;
+                  await timeUtil.advanceTimeAndBlock(web3, time);
+                });
 
-      //           it('A decision flip near the end of the proposal should extend its boosted lifetime', async () => {
+                it('A decision flip near the end of the proposal should extend its boosted lifetime', async () => {
 
-      //             // Produce a decision flip in proposal 0.
-      //             const voteReceipt = await app.vote(0, false, { ...txParams, from: accounts[3] });
+                  // Produce a decision flip in proposal 0.
+                  const voteReceipt = await app.vote(0, false, { ...txParams, from: accounts[3] });
 
-      //             // Verify that an event was triggered.
-      //             const event = voteReceipt.events.ProposalLifetimeExtended;
-      //             expect(event).to.be.an('object');
-      //             expect(event.args._proposalId).to.equal(`0`);
-      //             expect(event.args._newLifetime).to.equal(`${BOOST_PERIOD_SECS + QUIET_ENDING_PERIOD_SECS}`);
+                  // Verify that an event was triggered.
+                  const event = voteReceipt.logs[1];
+                  expect(event).to.be.an('object');
+                  expect(event.args._proposalId.toString()).to.equal(`0`);
+                  expect(event.args._newLifetime.toString()).to.equal(`${BOOST_PERIOD_SECS + QUIET_ENDING_PERIOD_SECS}`);
 
-      //             // Retrieve the proposal and verify that its lifetime has been extended.
-      //             const proposal = await app.getProposal(0);
-      //             expect(proposal.lifetime).to.equal(`${BOOST_PERIOD_SECS + QUIET_ENDING_PERIOD_SECS}`);
-      //           });
+                  // Retrieve the proposal and verify that its lifetime has been extended.
+                  const proposal = await app.getProposalTimeInfo(0);
+                  expect(proposal[1].toString()).to.equal(`${BOOST_PERIOD_SECS + QUIET_ENDING_PERIOD_SECS}`);
+                });
 
-      //           describe('When the boost period has elapsed', () => {
+                describe('When the boost period has elapsed', () => {
 
-      //             beforeEach(async () => {
+                  beforeEach(async () => {
 
-      //               // Advance enough time for a proposal to be boosted.
-      //               // Note that a little extra time is advanced, that's because compensation fees
-      //               // are proportional to that extra time, and having no extra time would result in fees of value 0.
-      //               const time = BOOST_PERIOD_SECS - elapsedTime + 2 * HOURS;
-      //               elapsedTime += time;
-      //               await timeUtil.advanceTimeAndBlock(web3, time);
-      //             });
+                    // Advance enough time for a proposal to be boosted.
+                    // Note that a little extra time is advanced, that's because compensation fees
+                    // are proportional to that extra time, and having no extra time would result in fees of value 0.
+                    const time = BOOST_PERIOD_SECS - elapsedTime + 2 * HOURS;
+                    elapsedTime += time;
+                    await timeUtil.advanceTimeAndBlock(web3, time);
+                  });
 
-      //             it('Proposals should be resolvable by relative consensus', async () => {
+                  it('Proposals should be resolvable by relative consensus', async () => {
 
-      //               // Record the caller's current stake token balance
-      //               // to later verify that it has received a compensation fee for the call.
-      //               const balance = await stakeTokenContract.balanceOf(accounts[0]);
+                    // Record the caller's current stake token balance
+                    // to later verify that it has received a compensation fee for the call.
+                    const balance = (await stakeTokenContract.balanceOf(accounts[0])).toString();
 
-      //               // Have an external caller resolve the boosted proposal.
-      //               const receipt = await app.resolveBoostedProposal(0, { ...txParams });
+                    // Have an external caller resolve the boosted proposal.
+                    const receipt = await app.resolveBoostedProposal(0, { ...txParams });
 
-      //               // Verify that a proposal state change event was emitted.
-      //               const event = receipt.events.ProposalStateChanged;
-      //               expect(event).to.be.an('object');
-      //               expect(event.args._proposalId).to.equal(`0`);
-      //               expect(event.args._newState).to.equal(`4`); // ProposalState '4' = Resolved
+                    // Verify that a proposal state change event was emitted.
+                    const event = receipt.logs[0];
+                    expect(event).to.be.an('object');
+                    expect(event.args._proposalId.toString()).to.equal(`0`);
+                    expect(event.args._newState.toString()).to.equal(`4`); // ProposalState '4' = Resolved
 
-      //               // Verify that the state of the proposal was changed.
-      //               const proposal = await app.getProposal(0);
-      //               expect(proposal[2]).to.equal(`4`);
+                    // Verify that the state of the proposal was changed.
+                    const proposal = await app.getProposalInfo(0);
+                    expect(proposal[2].toString()).to.equal(`4`);
 
-      //               // Verify that the caller was compensated.
-      //               const newBalance = await stakeTokenContract.balanceOf(accounts[0]);
-      //               expect(parseInt(newBalance, 10)).to.equalGreaterThan(parseInt(balance, 10));
-      //             });
+                    // Verify that the caller was compensated.
+                    const newBalance = (await stakeTokenContract.balanceOf(accounts[0])).toString();
+                    expect(parseInt(newBalance, 10)).to.be.above(parseInt(balance, 10));
+                  });
 
-      //             // TODO: This same it should be performed on a non boosted proposal that was resolved with abs majority.
-      //             it('Winning stakers should be able to withdraw their reward on a proposal resolved by relative majority', async () => {
+                  // TODO: This same it should be performed on a non boosted proposal that was resolved with abs majority.
+                  it('Winning stakers should be able to withdraw their reward on a proposal resolved by relative majority', async () => {
 
-      //               // Have an external caller resolve the boosted proposal.
-      //               await app.resolveBoostedProposal(0, { ...txParams });
+                    // Have an external caller resolve the boosted proposal.
+                    await app.resolveBoostedProposal(0, { ...txParams });
 
-      //               // Withdraw reward.
-      //               await app.withdrawRewardFromResolvedProposal(0, { ...txParams, from: accounts[6] });
-      //               await app.withdrawRewardFromResolvedProposal(0, { ...txParams, from: accounts[7] });
+                    // Withdraw reward.
+                    await app.withdrawRewardFromResolvedProposal(0, { ...txParams, from: accounts[6] });
+                    await app.withdrawRewardFromResolvedProposal(0, { ...txParams, from: accounts[7] });
 
-      //               // Verify that the winning staker has recovered the stake + the reward.
-      //               expect(await stakeTokenContract.balanceOf(accounts[6])).to.equal(`105000`);
-      //               expect(await stakeTokenContract.balanceOf(accounts[7])).to.equal(`105000`);
-      //             });
+                    // Verify that the winning staker has recovered the stake + the reward.
+                    expect((await stakeTokenContract.balanceOf(accounts[6])).toString()).to.equal(`105000`);
+                    expect((await stakeTokenContract.balanceOf(accounts[7])).toString()).to.equal(`105000`);
+                  });
 
-      //           }); // When the boost period has elapsed
-      //         }); // In the quiet ending zone of the boost period
-      //       }); // When proposals are boosted
-      //     }); // When proposals have had enough confidence for a while
+                }); // When the boost period has elapsed
+              }); // In the quiet ending zone of the boost period
+            }); // When proposals are boosted
+          }); // When proposals have had enough confidence for a while
         }); // When proposals have enough confidence
       }); // When staking on proposals
     }); // When voting on proposals

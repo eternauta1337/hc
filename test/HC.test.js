@@ -195,15 +195,15 @@ contract('HolographicConsensus', accounts => {
         const receipt = await app.createProposal(script, `Modify support percent`, { ...txParams });
         
         // Support proposal so that it executes.
-        await app.vote(8, true, { ...txParams, from: accounts[7] });
-        await app.vote(8, true, { ...txParams, from: accounts[8] });
+        await app.vote(NUM_PROPOSALS + 1, true, { ...txParams, from: accounts[7] });
+        await app.vote(NUM_PROPOSALS + 1, true, { ...txParams, from: accounts[8] });
 
         // Retrieve new supportPercent value.
         const supportPct = await app.supportPct();
         expect(supportPct.toString()).to.equal(`60`);
       });
 
-      it.only('Should not execute a proposal\'s script if it targets a blacklisted address', async () => {
+      it('Should not execute a proposal\'s script if it targets a blacklisted address', async () => {
         
         // Create the proposal.
         const action = { to: stakeTokenContract.address, calldata: stakeTokenContract.contract.transfer.getData(ANY_ADDRESS, 1000) }
@@ -499,128 +499,129 @@ contract('HolographicConsensus', accounts => {
           expect(votingBalance.toString()).to.equal(`${INITIAL_VOTING_STAKE_TOKEN_BALANCE + 25000}`);
 
           // Retrieve stake.
-          // const unUpstakeReceipt = await app.unstake(0, 10000, true, { ...txParams, from: accounts[6] });
-          // const unDownstakeReceipt = await app.unstake(0, 5000, false, { ...txParams, from: accounts[6] });
+          const unUpstakeReceipt = await app.unstake(0, 10000, true, { ...txParams, from: accounts[6] });
+          const unDownstakeReceipt = await app.unstake(0, 5000, false, { ...txParams, from: accounts[6] });
 
           // Verify that the proper events were triggered.
-          // event = unUpstakeReceipt.events.WithdrawUpstake;
-          // expect(event).to.be.an('object');
-          // expect(event.args._proposalId).to.equal(`0`);
-          // expect(event.args._staker).to.equal(accounts[6]);
-          // expect(event.args._amount).to.equal(`10000`);
-          // event = unDownstakeReceipt.events.WithdrawDownstake;
-          // expect(event).to.be.an('object');
-          // expect(event.args._proposalId).to.equal(`0`);
-          // expect(event.args._staker).to.equal(accounts[6]);
-          // expect(event.args._amount).to.equal(`5000`);
+          event = unUpstakeReceipt.logs[0];
+          expect(event).to.be.an('object');
+          expect(event.args._proposalId.toString()).to.equal(`0`);
+          expect(event.args._staker.toString()).to.equal(accounts[6]);
+          expect(event.args._amount.toString()).to.equal(`10000`);
+          event = unDownstakeReceipt.logs[0];
+          expect(event).to.be.an('object');
+          expect(event.args._proposalId.toString()).to.equal(`0`);
+          expect(event.args._staker.toString()).to.equal(accounts[6]);
+          expect(event.args._amount.toString()).to.equal(`5000`);
 
           // Verify that the proposal registers the new sender's stake.
-          // upstake = await app.getUpstake(0, accounts[6]);
-          // expect(upstake).to.equal(`5000`);
-          // downstake = await app.getDownstake(0, accounts[6]);
-          // expect(downstake).to.equal(`5000`);
+          upstake = await app.getUpstake(0, accounts[6]);
+          expect(upstake.toString()).to.equal(`5000`);
+          downstake = await app.getDownstake(0, accounts[6]);
+          expect(downstake.toString()).to.equal(`5000`);
 
           // Verify that the staker retrieved the tokens.
-          // stakerBalance = await stakeTokenContract.balanceOf(accounts[6]);
-          // expect(stakerBalance).to.equal(`90000`);
+          stakerBalance = await stakeTokenContract.balanceOf(accounts[6]);
+          expect(stakerBalance.toString()).to.equal(`90000`);
 
           // Verify that the voting contract lost the tokens payed out to the staker.
-          // votingBalance = await stakeTokenContract.balanceOf(app.address);
-          // expect(votingBalance).to.equal(`${INITIAL_VOTING_STAKE_TOKEN_BALANCE + 10000}`);
+          votingBalance = await stakeTokenContract.balanceOf(app.address);
+          expect(votingBalance.toString()).to.equal(`${INITIAL_VOTING_STAKE_TOKEN_BALANCE + 10000}`);
         });
 
-      //   it.todo('External callers should not be able to boost a proposal that hasn\'t gained enough confidence');
+        it.skip('External callers should not be able to boost a proposal that hasn\'t gained enough confidence');
 
-      //   describe('When queued proposals\' lifetime ends without boosting nor resolution', () => {
+        describe('When queued proposals\' lifetime ends without boosting nor resolution', () => {
 
-      //     beforeEach(async () => {
+          beforeEach(async () => {
 
-      //       // Advance enough time for a proposal to be expired.
-      //       const time = QUEUE_PERIOD_SECS + 2 * HOURS;
-      //       elapsedTime += time;
-      //       await timeUtil.advanceTimeAndBlock(time);
-      //     });
+            // Advance enough time for a proposal to be expired.
+            const time = QUEUE_PERIOD_SECS + 2 * HOURS;
+            elapsedTime += time;
+            await timeUtil.advanceTimeAndBlock(web3, time);
+          });
 
-      //     it('External callers should be able to expire a proposal with stake and receive a compensation fee', async () => {
+          it('External callers should be able to expire a proposal with stake and receive a compensation fee', async () => {
 
-      //       // Add some stake to the proposal so that fee's can be obtained by external callers.
-      //       await app.stake(0, 10000, true, { ...txParams, from: accounts[3] });
-      //       await app.stake(0, 5000, false, { ...txParams, from: accounts[4] });
+            // Add some stake to the proposal so that fee's can be obtained by external callers.
+            await app.stake(0, 10000, true, { ...txParams, from: accounts[3] });
+            await app.stake(0, 5000, false, { ...txParams, from: accounts[4] });
 
-      //       // Record the caller's current stake token balance
-      //       // to later verify that it has received a compensation fee for the call.
-      //       const balance = await stakeTokenContract.balanceOf(accounts[0]);
+            // Record the caller's current stake token balance
+            // to later verify that it has received a compensation fee for the call.
+            const balance = (await stakeTokenContract.balanceOf(accounts[0])).toString();
 
-      //       // Call the expiration function.
-      //       const receipt = await app.expireNonBoostedProposal(0, { ...txParams });
+            // Call the expiration function.
+            const receipt = await app.expireNonBoostedProposal(0, { ...txParams });
 
-      //       // Verify that a proposal state change event was triggered.
-      //       const event = receipt.events.ProposalStateChanged;
-      //       expect(event).to.be.an('object');
-      //       expect(event.args._proposalId).to.equal(`0`);
-      //       expect(event.args._newState).to.equal(`5`); // ProposalState '5' = Expired
+            // Verify that a proposal state change event was triggered.
+            const event = receipt.logs[0];
+            expect(event).to.be.an('object');
+            expect(event.args._proposalId.toString()).to.equal(`0`);
+            expect(event.args._newState.toString()).to.equal(`5`); // ProposalState '5' = Expired
 
-      //       // Get the proposal and verify its new state.
-      //       const proposal = await app.getProposal(0);
-      //       expect(proposal[2]).to.equal(`5`);
+            // Get the proposal and verify its new state.
+            const proposal = await app.getProposalInfo(0);
+            expect(proposal[2].toString()).to.equal(`5`);
 
-      //       // Verify that the caller received a compensation fee.
-      //       const newBalance = await stakeTokenContract.balanceOf(accounts[0]);
-      //       expect(parseInt(newBalance, 10)).to.equalGreaterThan(parseInt(balance, 10));
-      //     });
+            // Verify that the caller received a compensation fee.
+            const newBalance = (await stakeTokenContract.balanceOf(accounts[0])).toString();
+            expect(parseInt(newBalance, 10)).to.be.above(parseInt(balance, 10));
+          });
 
-      //     it('Stakers should be able to withdraw their stake from an expired proposal', async () => {
+          it('Stakers should be able to withdraw their stake from an expired proposal', async () => {
 
-      //       // Add some stake to the proposal so that fee's can be obtained by external callers.
-      //       await app.stake(0, 10000, true, { ...txParams, from: accounts[3] });
-      //       await app.stake(0, 5000, false, { ...txParams, from: accounts[4] });
+            // Add some stake to the proposal so that fee's can be obtained by external callers.
+            await app.stake(0, 10000, true, { ...txParams, from: accounts[3] });
+            await app.stake(0, 5000, false, { ...txParams, from: accounts[4] });
 
-      //       // Call the expiration function.
-      //       const receipt = await app.expireNonBoostedProposal(0, { ...txParams });
+            // Call the expiration function.
+            const receipt = await app.expireNonBoostedProposal(0, { ...txParams });
 
-      //       // Verify that a proposal state change event was triggered.
-      //       const event = receipt.events.ProposalStateChanged;
-      //       expect(event).to.be.an('object');
-      //       expect(event.args._proposalId).to.equal(`0`);
-      //       expect(event.args._newState).to.equal(`5`); // ProposalState '5' = Expired
+            // Verify that a proposal state change event was triggered.
+            const event = receipt.logs[0];
+            expect(event).to.be.an('object');
+            expect(event.args._proposalId.toString()).to.equal(`0`);
+            expect(event.args._newState.toString()).to.equal(`5`); // ProposalState '5' = Expired
 
-      //       // Get the proposal and verify its new state.
-      //       const proposal = await app.getProposal(0);
-      //       expect(proposal[2]).to.equal(`5`);
+            // Get the proposal and verify its new state.
+            const proposal = await app.getProposalInfo(0);
+            expect(proposal[2].toString()).to.equal(`5`);
 
-      //       // Have the stakers withdraw their stake.
-      //       app.withdrawStakeFromExpiredQueuedProposal(0, { ...txParams, from: accounts[3] });
-      //       app.withdrawStakeFromExpiredQueuedProposal(0, { ...txParams, from: accounts[4] });
+            // Have the stakers withdraw their stake.
+            app.withdrawStakeFromExpiredQueuedProposal(0, { ...txParams, from: accounts[3] });
+            app.withdrawStakeFromExpiredQueuedProposal(0, { ...txParams, from: accounts[4] });
 
-      //       // Verify that the stakers retrieved their stake.
-      //       expect(await stakeTokenContract.balanceOf(accounts[3])).to.equal(`10000`);
-      //       expect(await stakeTokenContract.balanceOf(accounts[4])).to.equal(`10000`);
-      //     });
-      //   });
+            // Verify that the stakers retrieved their stake.
+            expect((await stakeTokenContract.balanceOf(accounts[3])).toString()).to.equal(`10000`);
+            expect((await stakeTokenContract.balanceOf(accounts[4])).toString()).to.equal(`10000`);
+          });
+        });
 
-      //   describe('When proposals have enough confidence', () => {
+        describe('When proposals have enough confidence', () => {
 
-      //     beforeEach(async () => {
+          beforeEach(async () => {
 
-      //       // Stake enough to reach the confidence factor.
-      //       await app.stake(0, 20000, true, { ...txParams, from: accounts[6] });
-      //       await app.stake(0, 20000, true, { ...txParams, from: accounts[7] });
-      //       await app.stake(0, 5000, false, { ...txParams, from: accounts[4] });
-      //       await app.stake(0, 5000, false, { ...txParams, from: accounts[5] });
-      //     });
+            // Stake enough to reach the confidence factor.
+            await app.stake(0, 20000, true, { ...txParams, from: accounts[6] });
+            await app.stake(0, 20000, true, { ...txParams, from: accounts[7] });
+            await app.stake(0, 5000, false, { ...txParams, from: accounts[4] });
+            await app.stake(0, 5000, false, { ...txParams, from: accounts[5] });
+          });
 
-      //     it('Their state should be set to Pended', async () => {
+          it('Their state should be set to Pended', async () => {
 
-      //       // Verify confidence.
-      //       const confidence = await app.getConfidence(0);
-      //       expect(confidence).to.equal(`${4 * PRECISION_MULTIPLIER}`);
+            // Verify confidence.
+            const confidence = await app.getConfidence(0);
+            expect(confidence.toString()).to.equal(`${4 * PRECISION_MULTIPLIER}`);
 
-      //       // Retrieve the proposal and verify it's state.
-      //       const proposal = await app.getProposal(0);
-      //       expect(proposal[2]).to.equal(`2`); // ProposalState '2' = Pended
-      //       const pendedDateDeltaSecs = ( new Date().getTime() / 1000 ) - parseInt(proposal.lastPendedDate, 10);
-      //       expect(pendedDateDeltaSecs).to.equalLessThan(2);
-      //     }); 
+            // Retrieve the proposal and verify it's state.
+            const proposalInfo = await app.getProposalInfo(0);
+            expect(proposalInfo[2].toString()).to.equal(`2`); // ProposalState '2' = Pended
+            const proposalTimeInfo = await app.getProposalTimeInfo(0);
+            const pendedDateDeltaSecs = ( new Date().getTime() / 1000 ) - parseInt(proposalTimeInfo[3].toString(), 10);
+            expect(pendedDateDeltaSecs).to.be.below(2);
+          }); 
 
       //     it('Their state should change to Unpended if confidence drops', async () => {
 
@@ -647,7 +648,7 @@ contract('HolographicConsensus', accounts => {
       //         // are proportional to that extra time, and having no extra time would result in fees of value 0.
       //         const time = PENDED_BOOST_PERIOD_SECS + 2 * HOURS;
       //         elapsedTime += time;
-      //         await timeUtil.advanceTimeAndBlock(time);
+      //         await timeUtil.advanceTimeAndBlock(web3, time);
       //       });
 
       //       it('An external caller should be able to boost the proposal and receive a compensation fee', async () => {
@@ -693,7 +694,7 @@ contract('HolographicConsensus', accounts => {
       //             // Advance enough time for a proposal to be boosted.
       //             const time = BOOST_PERIOD_SECS - elapsedTime - QUIET_ENDING_PERIOD_SECS * 0.5;
       //             elapsedTime += time;
-      //             await timeUtil.advanceTimeAndBlock(time);
+      //             await timeUtil.advanceTimeAndBlock(web3, time);
       //           });
 
       //           it('A decision flip near the end of the proposal should extend its boosted lifetime', async () => {
@@ -721,7 +722,7 @@ contract('HolographicConsensus', accounts => {
       //               // are proportional to that extra time, and having no extra time would result in fees of value 0.
       //               const time = BOOST_PERIOD_SECS - elapsedTime + 2 * HOURS;
       //               elapsedTime += time;
-      //               await timeUtil.advanceTimeAndBlock(time);
+      //               await timeUtil.advanceTimeAndBlock(web3, time);
       //             });
 
       //             it('Proposals should be resolvable by relative consensus', async () => {
@@ -767,7 +768,7 @@ contract('HolographicConsensus', accounts => {
       //         }); // In the quiet ending zone of the boost period
       //       }); // When proposals are boosted
       //     }); // When proposals have had enough confidence for a while
-      //   }); // When proposals have enough confidence
+        }); // When proposals have enough confidence
       }); // When staking on proposals
     }); // When voting on proposals
   }); // When creating proposals

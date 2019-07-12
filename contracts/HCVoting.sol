@@ -94,36 +94,64 @@ contract HCVoting is IForwarder, AragonApp {
      * Property modifiers.
      */
 
+    /**
+    * @notice Change the confidence threshold base required to consider a proposal for boosting
+    * @param _confidenceThresholdBase uint256 New confidence threshold base
+    */
     function changeConfidenceThresholdBase(uint256 _confidenceThresholdBase) external auth(MODIFY_CONFIDENCE_THRESHOLD_ROLE) {
         // _validateConfidenceThresholdBase(_confidenceThresholdBase);
         confidenceThresholdBase = _confidenceThresholdBase;
     }
 
+    /**
+    * @notice Change required support to approve a proposal
+    * @param _supportPct uint256 New required support
+    */
     function changeSupportPct(uint256 _supportPct) external auth(MODIFY_SUPPORT_PERCENT_ROLE) {
         _validateSupportPct(_supportPct);
         supportPct = _supportPct;
     }
 
+    /**
+    * @notice Change default queued proposals lifetime period
+    * @param _queuePeriod uint256 New queue period (seconds)
+    */
     function changeQueuePeriod(uint256 _queuePeriod) public auth(MODIFY_PERIODS_ROLE) {
         // _validateQueuePeriod(_queuePeriod);
         queuePeriod = _queuePeriod;
     }
     
+    /**
+    * @notice Change default boosted proposals lifetime period
+    * @param _boostPeriod uint256 New boost period (seconds)
+    */
     function changeBoostPeriod(uint256 _boostPeriod) public auth(MODIFY_PERIODS_ROLE) {
         // _validateBoostPeriod(_boostPeriod);
         boostPeriod = _boostPeriod;
     }
 
+    /**
+    * @notice Change quiet ending period for a boosted proposal to end without lifetime extensions
+    * @param _quietEndingPeriod uint256 New quiet ending period (seconds)
+    */
     function changeQuietEndingPeriod(uint256 _quietEndingPeriod) public auth(MODIFY_PERIODS_ROLE) {
         // _validateQuietEndingPeriod(_quietEndingPeriod);
         quietEndingPeriod = _quietEndingPeriod;
     }
 
+    /**
+    * @notice Change pended boost period for a pended proposal to become boosted while it remains pended
+    * @param _pendedBoostPeriod uint256 New pended boost period (seconds)
+    */
     function changePendedBoostPeriod(uint256 _pendedBoostPeriod) public auth(MODIFY_PERIODS_ROLE) {
         // _validatePendedBoostPeriod(_pendedBoostPeriod);
         pendedBoostPeriod = _pendedBoostPeriod;
     }
 
+    /**
+    * @notice Change compensation fee percentage
+    * @param _compensationFeePct uint256 New compensation fee percentage
+    */
     function changeCompensationFeePct(uint256 _compensationFeePct) public auth(MODIFY_COMPENSATION_FEES_ROLE) {
         // _validateCompensationFeePct(_compensationFeePct);
         compensationFeePct = _compensationFeePct;
@@ -336,7 +364,7 @@ contract HCVoting is IForwarder, AragonApp {
     * @notice Vote `_supports ? 'yes' : 'no'` in proposal #`_proposalId`
     * @dev Initialization check is implicitly provided by `_proposalExists()` as new proposals can only be
     *      created via `createProposal(),` which requires initialization
-    * @param _voteId Id for vote
+    * @param _proposalId Id for vote
     * @param _supports Whether voter supports the vote
     */
     function vote(uint256 _proposalId, bool _supports) public {

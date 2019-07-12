@@ -419,6 +419,12 @@ contract HCVoting is IForwarder, AragonApp {
      * Staking functions.
      */
 
+    /**
+    * @notice Stake `_amount` tokens on proposal #`_proposalId`
+    * @param _proposalId uint256 Id of proposal to stake on
+    * @param _amount uint256 Amount of tokens to stake on proposal #`_proposalId`
+    * @param _supports bool Signal 'upstake' or 'downstake' on proposal #`_proposalId`
+    */
     function stake(uint256 _proposalId, uint256 _amount, bool _supports) public {
         require(_proposalExists(_proposalId), ERROR_PROPOSAL_DOES_NOT_EXIST);
         require(stakeToken.balanceOf(msg.sender) >= _amount, ERROR_INSUFFICIENT_TOKENS);
@@ -449,6 +455,12 @@ contract HCVoting is IForwarder, AragonApp {
         _updateProposalAfterStaking(_proposalId);
     }
 
+    /**
+    * @notice Remove stake `_amount` tokens from proposal #`_proposalId`
+    * @param _proposalId uint256 Id of proposal to remove stake from
+    * @param _amount uint256 Amount of tokens to remove stake from proposal #`_proposalId`
+    * @param _supports bool Indicate the removal from 'upstake' or 'downstake' on proposal #`_proposalId`
+    */
     function unstake(uint256 _proposalId, uint256 _amount, bool _supports) public {
         require(_proposalExists(_proposalId), ERROR_PROPOSAL_DOES_NOT_EXIST);
 
@@ -508,6 +520,10 @@ contract HCVoting is IForwarder, AragonApp {
      * Boosting.
      */
 
+    /**
+    * @notice Boost proposal #`_proposalId`
+    * @param _proposalId uint256 Id of proposal to boost
+    */
     function boostProposal(uint256 _proposalId) public {
         require(_proposalExists(_proposalId), ERROR_PROPOSAL_DOES_NOT_EXIST);
 
@@ -537,6 +553,10 @@ contract HCVoting is IForwarder, AragonApp {
      * Resolution functions.
      */
 
+    /**
+    * @notice Resolve boosted proposal #`_proposalId`
+    * @param _proposalId uint256 Id of proposal to resolve
+    */
     function resolveBoostedProposal(uint256 _proposalId) public {
         require(_proposalExists(_proposalId), ERROR_PROPOSAL_DOES_NOT_EXIST);
 
@@ -556,6 +576,10 @@ contract HCVoting is IForwarder, AragonApp {
         _executeProposal(proposal_);
     }
 
+    /**
+    * @notice Expire non boosted proposal #`_proposalId`
+    * @param _proposalId uint256 Id of proposal to expire
+    */
     function expireNonBoostedProposal(uint256 _proposalId) public {
         require(_proposalExists(_proposalId), ERROR_PROPOSAL_DOES_NOT_EXIST);
 
@@ -614,6 +638,10 @@ contract HCVoting is IForwarder, AragonApp {
      * Withdrawing stake after proposals expire or resolve.
      */
 
+    /**
+    * @notice Withdraw stake from expired proposal
+    * @param _proposalId uint256 Id of proposal to withdraw stake from
+    */
     function withdrawStakeFromExpiredQueuedProposal(uint256 _proposalId) public {
         require(_proposalExists(_proposalId), ERROR_PROPOSAL_DOES_NOT_EXIST);
 
@@ -635,6 +663,10 @@ contract HCVoting is IForwarder, AragonApp {
         stakeToken.transfer(msg.sender, senderTotalStake);
     }
 
+    /**
+    * @notice Withdraw stake from resolved proposal, including rewards from winning stakes
+    * @param _proposalId uint256 Id of proposal to withdraw stake from
+    */
     function withdrawRewardFromResolvedProposal(uint256 _proposalId) public {
         require(_proposalExists(_proposalId), ERROR_PROPOSAL_DOES_NOT_EXIST);
 

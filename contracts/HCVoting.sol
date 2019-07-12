@@ -14,47 +14,27 @@ contract HCVoting is IForwarder, AragonApp {
      * Properties.
      */
 
-    // Tokens used for voting and staking.
     MiniMeToken public voteToken;
     MiniMeToken public stakeToken;
 
-    // Store proposals in a mapping, by numeric id.
-    mapping (uint256 => Proposal) internal proposals;
-    uint256 public numProposals;
-
-    // Percentage required for a vote to pass with either absolute or relative majority, e.g. 50%.
+    // See initialize function for documentation on these.
     uint256 public supportPct;
-
-    // Confidence threshold.
-    // A proposal can be boosted if it's confidence, determined by staking, is above this threshold.
     uint256 public confidenceThresholdBase;
-
-    // Lifetime of a proposal when it is not boosted.
     uint256 public queuePeriod;
-
-    // Lifetime of a proposal when it is boosted.
-    // Note: The effective lifetime of a proposal when it is boosted is dynamic, and can be extended
-    // due to the requirement of quiet endings.
     uint256 public boostPeriod;
     uint256 public quietEndingPeriod;
-
-    // Time for a pended proposal to become boosted if it maintained confidence within such period.
     uint256 public pendedBoostPeriod;
-
-    // Compensation fee for external callers of functions that resolve and expire proposals.
     uint256 public compensationFeePct;
 
     // Multiplier used to avoid losing precision when using division or calculating percentages.
     uint256 internal constant PRECISION_MULTIPLIER = 10 ** 16;
 
-    // Roles.
     bytes32 public constant CREATE_PROPOSALS_ROLE            = keccak256("CREATE_PROPOSALS_ROLE");
     bytes32 public constant MODIFY_SUPPORT_PERCENT_ROLE      = keccak256("MODIFY_SUPPORT_PERCENT_ROLE");
     bytes32 public constant MODIFY_PERIODS_ROLE              = keccak256("MODIFY_PERIODS_ROLE");
     bytes32 public constant MODIFY_COMPENSATION_FEES_ROLE    = keccak256("MODIFY_COMPENSATION_FEES_ROLE");
     bytes32 public constant MODIFY_CONFIDENCE_THRESHOLD_ROLE = keccak256("MODIFY_CONFIDENCE_THRESHOLD_ROLE");
 
-    // Error messages.
     string internal constant ERROR_INSUFFICIENT_ALLOWANCE                    = "INSUFFICIENT_ALLOWANCE";
     string internal constant ERROR_SENDER_DOES_NOT_HAVE_REQUIRED_STAKE       = "SENDER_DOES_NOT_HAVE_REQUIRED_STAKE";
     string internal constant ERROR_PROPOSAL_DOES_NOT_HAVE_REQUIRED_STAKE     = "PROPOSAL_DOES_NOT_HAVE_REQUIRED_STAKE ";
@@ -72,21 +52,21 @@ contract HCVoting is IForwarder, AragonApp {
     string internal constant ERROR_CAN_NOT_FORWARD                           = "CAN_NOT_FORWARD";
     string internal constant ERROR_INSUFFICIENT_TOKENS                       = "INSUFFICIENT_TOKENS";
     
-    // Vote state.
-    // Absent: A vote that hasn't been made yet.
-    // Yea: A positive vote signaling support for a proposal.
-    // Nay: A negative vote signaling disapproval for a proposal.
-    enum VoteState { Absent, Yea, Nay }
+    enum VoteState { 
+        Absent, // No vote
+        Yea,    // Supports proposal
+        Nay     // Rejects proposal
+    }
 
-    // Proposal state.
-    // Queued: A proposal that has just been created, expires in queuePeriod and can only be resolved with absolute majority.
-    // Pended: A proposal that has received enough confidence at a given moment.
-    // Unpended: A proposal that had been pended, but who's confindence dropped before pendedBoostPeriod elapses.
-    // Resolved: A proposal that was resolved positively either by absolute or relative majority.
-    // Expired: A proposal that expired, due to lack of resolution either by queuePeriod or boostPeriod elapsing.
-    enum ProposalState { Queued, Unpended, Pended, Boosted, Resolved, Expired }
+    enum ProposalState { 
+        Queued,   // The proposal has just been created, expires in queuePeriod and can only be resolved with absolute majority.
+        Unpended, // The proposal had been pended, but who's confindence dropped before pendedBoostPeriod elapses.
+        Pended,   // The proposal has received enough confidence at a given moment.
+        Boosted,  // the proposal has received enough confidence for pendedBoostPeriod, and can be resolved by relative majority.
+        Resolved, // The proposal was resolved positively either by absolute or relative majority.
+        Expired   // The proposal expired, due to lack of resolution either by queuePeriod or boostPeriod elapsing.
+    }
 
-    // Proposal data structure.
     struct Proposal {
         uint256 snapshotBlock;
         uint256 votingPower;
@@ -105,6 +85,10 @@ contract HCVoting is IForwarder, AragonApp {
         mapping (address => uint256) upstakes;
         mapping (address => uint256) downstakes;
     }
+
+    // Store proposals in a mapping, by numeric id.
+    mapping (uint256 => Proposal) internal proposals;
+    uint256 public numProposals;
 
     /*
      * Property modifiers.
@@ -154,29 +138,12 @@ contract HCVoting is IForwarder, AragonApp {
         require(_supportPct < 100, ERROR_INVALID_SUPPORT_PCT);
     }
 
-    // function _validateQueuePeriod(uint256 _queuePeriod) internal pure {
-    //     // TODO
-    // }
-
-    // function _validateBoostPeriod(uint256 _boostPeriod) internal pure {
-    //     // TODO
-    // }
-
-    // function _validateQuietEndingPeriod(uint256 _quietEndingPeriod) internal pure {
-    //     // TODO
-    // }
-
-    // function _validatePendedBoostPeriod(uint256 _pendedBoostPeriod) internal pure {
-    //     // TODO
-    // }
-    
-    // function _validateCompensationFeePct(uint256 _compensationFeePct) internal pure {
-    //     // TODO
-    // }
-
-    // function _validateConfidenceThresholdBase(uint256 _confidenceThresholdBase) internal pure {
-    //     // TODO
-    // }
+    // function _validateQueuePeriod(uint256 _queuePeriod) internal pure { // TODO }
+    // function _validateBoostPeriod(uint256 _boostPeriod) internal pure { // TODO }
+    // function _validateQuietEndingPeriod(uint256 _quietEndingPeriod) internal pure { // TODO }
+    // function _validatePendedBoostPeriod(uint256 _pendedBoostPeriod) internal pure { // TODO }
+    // function _validateCompensationFeePct(uint256 _compensationFeePct) internal pure { // TODO }
+    // function _validateConfidenceThresholdBase(uint256 _confidenceThresholdBase) internal pure { // TODO }
 
     /*
      * Events.
@@ -272,6 +239,18 @@ contract HCVoting is IForwarder, AragonApp {
      * Note: there are is constructor, since this is intended to be used as a proxy.
      */
 
+    /**
+    * @notice Initialize HCVoting app
+    * @param _voteToken MiniMeToken Address that will be used as governance token
+    * @param _stakeToken MiniMeToken Address that will be used as staking token
+    * @param _supportPct uint256 Percentage of yeas in casted votes for a proposal to succeed
+    * @param _queuePeriod uint256 Seconds that a proposal will be open for votes while not being boosted (unless enough yeas or nays have been cast to make an early decision)
+    * @param _boostPeriod uint256 Seconds that a proposal will be open for votes while not being boosted (unless enough yeas or nays have been cast to make an early decision)
+    * @param _quietEndingPeriod uint256 Seconds at the ending of _boostPeriod in which a support change will cause _boostPeriod to be extended by another _quietEndingPeriod
+    * @param _pendedBoostPeriod uint256 Seconds for which a proposal needs to maintain a high enough level of confidence for it to become boosted
+    * @param _compensationFeePct uint256 Maximum percent of a proposal's upstake that could be used to compensate an external caller that boosts, resolves or expires a proposal
+    * @param _confidenceThresholdBase uint256 Factor that determines how high the confidence of a proposal needs to be for it to be pended and eventually boosted
+    */
     function initialize(
         MiniMeToken _voteToken, 
         MiniMeToken _stakeToken, 
@@ -283,34 +262,27 @@ contract HCVoting is IForwarder, AragonApp {
         uint256 _compensationFeePct,
         uint256 _confidenceThresholdBase
     ) 
-        external 
-        onlyInit 
+        external onlyInit 
     {
         initialized();
 
+        _validateSupportPct(_supportPct);
+        // _validateQueuePeriod(_queuePeriod);
+        // _validateBoostPeriod(_boostPeriod);
+        // _validateQuietEndingPeriod(_quietEndingPeriod);
+        // _validateCompensationFeePct(_compensationFeePct);
+        // _validatePendedBoostPeriod(_pendedBoostPeriod);
+        // _validateConfidenceThresholdBase(_confidenceThresholdBase);
         // TODO: validate tokens
+
         voteToken = _voteToken;
         stakeToken = _stakeToken;
-
-        _validateSupportPct(_supportPct);
         supportPct = _supportPct;
-
-        // _validateQueuePeriod(_queuePeriod);
         queuePeriod = _queuePeriod;
-
-        // _validateBoostPeriod(_boostPeriod);
         boostPeriod = _boostPeriod;
-
-        // _validateQuietEndingPeriod(_quietEndingPeriod);
         quietEndingPeriod= _quietEndingPeriod;
-
-        // _validateCompensationFeePct(_compensationFeePct);
         compensationFeePct = _compensationFeePct;
-
-        // _validatePendedBoostPeriod(_pendedBoostPeriod);
         pendedBoostPeriod = _pendedBoostPeriod;
-
-        // _validateConfidenceThresholdBase(_confidenceThresholdBase);
         confidenceThresholdBase = _confidenceThresholdBase;
     }
 
@@ -318,6 +290,12 @@ contract HCVoting is IForwarder, AragonApp {
      * Creating proposals.
      */
 
+    /**
+    * @notice Create a new proposal about "`_metadata`"
+    * @param _executionScript EVM script to be executed on approval
+    * @param _metadata Vote metadata
+    * @return proposalId Id for newly created proposal
+    */
     function createProposal(bytes _executionScript, string _metadata) 
         public 
         auth(CREATE_PROPOSALS_ROLE)
@@ -354,6 +332,13 @@ contract HCVoting is IForwarder, AragonApp {
      * Voting functions.
      */
 
+    /**
+    * @notice Vote `_supports ? 'yes' : 'no'` in proposal #`_proposalId`
+    * @dev Initialization check is implicitly provided by `_proposalExists()` as new proposals can only be
+    *      created via `createProposal(),` which requires initialization
+    * @param _voteId Id for vote
+    * @param _supports Whether voter supports the vote
+    */
     function vote(uint256 _proposalId, bool _supports) public {
         require(_proposalExists(_proposalId), ERROR_PROPOSAL_DOES_NOT_EXIST);
         require(_userHasVotingPower(_proposalId, msg.sender), ERROR_INSUFFICIENT_TOKENS);

@@ -3,7 +3,7 @@ const { assertRevert } = require('@aragon/test-helpers/assertThrow');
 const { encodeCallScript, EMPTY_SCRIPT } = require('@aragon/test-helpers/evmScript');
 const timeUtil = require('../scripts/timeUtil.js');
 
-const HolographicConsensus = artifacts.require('HC.sol');
+const HolographicConsensus = artifacts.require('HCVoting.sol');
 const MiniMeToken = artifacts.require('@aragon/apps-shared-minime/contracts/MiniMeToken')
 const DAOFactory = artifacts.require('@aragon/core/contracts/factory/DAOFactory');
 const EVMScriptRegistryFactory = artifacts.require('@aragon/core/contracts/factory/EVMScriptRegistryFactory');
@@ -15,7 +15,7 @@ const getContract = name => artifacts.require(name);
 const ANY_ADDRESS = '0xffffffffffffffffffffffffffffffffffffffff';
 const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
 
-contract('HolographicConsensus', accounts => {
+contract('HCVoting', accounts => {
 
   let APP_MANAGER_ROLE;
   let CREATE_PROPOSALS_ROLE;
@@ -34,13 +34,13 @@ contract('HolographicConsensus', accounts => {
   const secondAccount = accounts[1];
 
   const HOURS = 60 * 60;
-  const SUPPORT_PERCENT = 51; // MOD ROLE 1
-  const QUEUE_PERIOD_SECS = 24 * HOURS; // MOD ROLE 2
-  const PENDED_BOOST_PERIOD_SECS = 1 * HOURS; // MOD ROLE 2
-  const BOOST_PERIOD_SECS = 6 * HOURS; // MOD ROLE 2
-  const QUIET_ENDING_PERIOD_SECS = 1 * HOURS; // MOD ROLE 2
-  const COMPENSATION_FEE_PERCENT = 10; // MOD ROLE 3
-  const CONFIDENCE_THRESHOLD_BASE = 4; // MOD ROLE 4
+  const SUPPORT_PERCENT = 51;
+  const QUEUE_PERIOD_SECS = 24 * HOURS;
+  const PENDED_BOOST_PERIOD_SECS = 1 * HOURS;
+  const BOOST_PERIOD_SECS = 6 * HOURS;
+  const QUIET_ENDING_PERIOD_SECS = 1 * HOURS;
+  const COMPENSATION_FEE_PERCENT = 10;
+  const CONFIDENCE_THRESHOLD_BASE = 4;
   const PRECISION_MULTIPLIER = 10 ** 16;
   const INITIAL_VOTING_STAKE_TOKEN_BALANCE = 100000000000;
 

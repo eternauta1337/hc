@@ -44,5 +44,5 @@
       "network": "mainnet"
     }
   },
-  "path": "contracts/HolographicConsensus.sol"
+  "path": "contracts/HCVoting.sol"
 }

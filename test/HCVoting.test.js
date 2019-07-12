@@ -15,6 +15,11 @@ const getContract = name => artifacts.require(name);
 const ANY_ADDRESS = '0xffffffffffffffffffffffffffffffffffffffff';
 const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
 
+/*
+ * TODO: Split this test file into multiple files!
+ * It has become quite unreadable.
+ * */
+
 contract('HCVoting', accounts => {
 
   let APP_MANAGER_ROLE;
@@ -27,7 +32,6 @@ contract('HCVoting', accounts => {
   let daoFact, appBase, app;
   let voteTokenContract;
   let stakeTokenContract;
-  let txParams;
   let elapsedTime = 0;
 
   const firstAccount = accounts[0];
@@ -45,13 +49,6 @@ contract('HCVoting', accounts => {
   const INITIAL_VOTING_STAKE_TOKEN_BALANCE = 100000000000;
 
   before(async () => {
-
-    txParams = {
-      from: accounts[0],
-      gas: 6700000,
-      gasPrice: 1
-    };
-
     const kernelBase = await getContract('Kernel').new(true); // petrify immediately
     const aclBase = await getContract('ACL').new();
     const regFact = await EVMScriptRegistryFactory.new();
@@ -120,7 +117,7 @@ contract('HCVoting', accounts => {
     );
 
     // Mint some stake tokens to the app so that it can pay fees and automatically downstake proposals.
-    await stakeTokenContract.generateTokens(app.address, INITIAL_VOTING_STAKE_TOKEN_BALANCE, { ...txParams });
+    await stakeTokenContract.generateTokens(app.address, INITIAL_VOTING_STAKE_TOKEN_BALANCE);
 
     // Setup permissions.
     await acl.createPermission(
@@ -163,21 +160,21 @@ contract('HCVoting', accounts => {
     beforeEach(async () => {
 
       // Mint some tokens!
-      await voteTokenContract.generateTokens(accounts[0], 1  , { ...txParams });
-      await voteTokenContract.generateTokens(accounts[1], 1  , { ...txParams });
-      await voteTokenContract.generateTokens(accounts[2], 1  , { ...txParams });
-      await voteTokenContract.generateTokens(accounts[3], 10 , { ...txParams });
-      await voteTokenContract.generateTokens(accounts[4], 10 , { ...txParams });
-      await voteTokenContract.generateTokens(accounts[5], 10 , { ...txParams });
-      await voteTokenContract.generateTokens(accounts[6], 100, { ...txParams });
-      await voteTokenContract.generateTokens(accounts[7], 100, { ...txParams });
-      await voteTokenContract.generateTokens(accounts[8], 100, { ...txParams });
+      await voteTokenContract.generateTokens(accounts[0], 1  );
+      await voteTokenContract.generateTokens(accounts[1], 1  );
+      await voteTokenContract.generateTokens(accounts[2], 1  );
+      await voteTokenContract.generateTokens(accounts[3], 10 );
+      await voteTokenContract.generateTokens(accounts[4], 10 );
+      await voteTokenContract.generateTokens(accounts[5], 10 );
+      await voteTokenContract.generateTokens(accounts[6], 100);
+      await voteTokenContract.generateTokens(accounts[7], 100);
+      await voteTokenContract.generateTokens(accounts[8], 100);
       // Note: No tokens for account 9 =(
       // Note: Vote token total supply should be 333.
 
       // Create a few proposals.
       for(let i = 0; i < NUM_PROPOSALS; i++) {
-        const receipt = await app.createProposal(EMPTY_SCRIPT, `DAOs should rule the world ${i}`, { ...txParams });
+        const receipt = await app.createProposal(EMPTY_SCRIPT, `DAOs should rule the world ${i}`);
         proposalCreationReceipts.push(receipt);
       }
 
@@ -192,11 +189,11 @@ contract('HCVoting', accounts => {
         // Create the proposal.
         const action = { to: app.address, calldata: app.contract.changeSupportPct.getData(60) }
         const script = encodeCallScript([action])
-        const receipt = await app.createProposal(script, `Modify support percent`, { ...txParams });
+        const receipt = await app.createProposal(script, `Modify support percent`);
         
         // Support proposal so that it executes.
-        await app.vote(NUM_PROPOSALS, true, { ...txParams, from: accounts[7] });
-        await app.vote(NUM_PROPOSALS, true, { ...txParams, from: accounts[8] });
+        await app.vote(NUM_PROPOSALS, true, { from: accounts[7] });
+        await app.vote(NUM_PROPOSALS, true, { from: accounts[8] });
 
         // Retrieve new supportPercent value.
         const supportPct = await app.supportPct();
@@ -208,13 +205,13 @@ contract('HCVoting', accounts => {
         // Create the proposal.
         const action = { to: stakeTokenContract.address, calldata: stakeTokenContract.contract.transfer.getData(ANY_ADDRESS, 1000) }
         const script = encodeCallScript([action])
-        const receipt = await app.createProposal(script, `Remove some stake from the voting app`, { ...txParams });
+        const receipt = await app.createProposal(script, `Remove some stake from the voting app`);
         
         // Support proposal so that it executes.
         // Should fail because the auto-execution of the proposal is blacklisted for the stake token.
-        await app.vote(NUM_PROPOSALS, true, { ...txParams, from: accounts[7] });
+        await app.vote(NUM_PROPOSALS, true, { from: accounts[7] });
         await assertRevert(
-          app.vote(NUM_PROPOSALS, true, { ...txParams, from: accounts[8] }),
+          app.vote(NUM_PROPOSALS, true, { from: accounts[8] }),
           `EVMCALLS_BLACKLISTED_CALL`
         );
       });
@@ -244,14 +241,14 @@ contract('HCVoting', accounts => {
 
       it('Should reject voting on proposals that do not exist', async () => {
         await assertRevert(
-          app.vote(9, true, { ...txParams }),
+          app.vote(9, true),
           `PROPOSAL_DOES_NOT_EXIST`
         );
       });
 
       it('Should reject voting from accounts that do not own vote tokens', async () => {
         await assertRevert(
-          app.vote(0, true, { ...txParams, from: accounts[9] }),
+          app.vote(0, true, { from: accounts[9] }),
 					`INSUFFICIENT_TOKENS`
         );
       });
@@ -259,9 +256,9 @@ contract('HCVoting', accounts => {
       it('Should allow multiple votes on a proposal, tracking support and emitting events', async () => {
 
         // Cast some random votes.
-        await app.vote(1, true, { ...txParams, from: accounts[0] });
-        await app.vote(1, true, { ...txParams, from: accounts[3] });
-        const receipt = await app.vote(1, false, { ...txParams, from: accounts[6] });
+        await app.vote(1, true, { from: accounts[0] });
+        await app.vote(1, true, { from: accounts[3] });
+        const receipt = await app.vote(1, false, { from: accounts[6] });
 
         // Verify that at least one VoteCasted event was emitted.
         const event = receipt.logs[0];
@@ -285,9 +282,9 @@ contract('HCVoting', accounts => {
         expect((await app.getVote(1, accounts[8])).toString()).to.equal(`0`);
 
         // Change some votes.
-        await app.vote(1, false, { ...txParams, from: accounts[0] });
-        await app.vote(1, true, { ...txParams, from: accounts[3] });
-        await app.vote(1, false, { ...txParams, from: accounts[6] });
+        await app.vote(1, false, { from: accounts[0] });
+        await app.vote(1, true, { from: accounts[3] });
+        await app.vote(1, false, { from: accounts[6] });
 
         // Retrieve the proposal and verify that the votes were recoreded.
         proposalVotes = await app.getProposalVotes(1);
@@ -303,10 +300,10 @@ contract('HCVoting', accounts => {
       it('Should not resolve a proposal while it doesn\'t reach absolute majority', async () => {
 
         // Cast some random votes.
-        await app.vote(3, false, { ...txParams, from: accounts[0] });
-        await app.vote(3, false, { ...txParams, from: accounts[1] });
-        await app.vote(3, false, { ...txParams, from: accounts[4] });
-        await app.vote(3, true, { ...txParams, from: accounts[8] });
+        await app.vote(3, false, { from: accounts[0] });
+        await app.vote(3, false, { from: accounts[1] });
+        await app.vote(3, false, { from: accounts[4] });
+        await app.vote(3, true, { from: accounts[8] });
 
         // Retrieve the proposal and verify that it has been resolved.
         const proposalInfo = await app.getProposalInfo(3);
@@ -323,12 +320,12 @@ contract('HCVoting', accounts => {
           await timeUtil.advanceTimeAndBlock(web3, time);
 
           // Call proposal expiration.
-          await app.expireNonBoostedProposal(0,  {...txParams });
+          await app.expireNonBoostedProposal(0);
         });
 
         it('Voting should not be allowed', async () => {
           await assertRevert(
-            app.vote(0, false, { ...txParams, from: accounts[0] }),
+            app.vote(0, false, { from: accounts[0] }),
 						`PROPOSAL_IS_CLOSED`
           );
         });
@@ -336,12 +333,12 @@ contract('HCVoting', accounts => {
         it('Staking should not be allowed', async () => {
 
           // Mint some stake tokens and give allowance.
-          await stakeTokenContract.generateTokens(accounts[0], 1000, { ...txParams });
-          await stakeTokenContract.approve(app.address, 1000, { ...txParams, from: accounts[0] });
+          await stakeTokenContract.generateTokens(accounts[0], 1000);
+          await stakeTokenContract.approve(app.address, 1000, { from: accounts[0] });
 
           // Staking should fail.
           await assertRevert(
-            app.stake(0, 1, false, { ...txParams, from: accounts[0] }),
+            app.stake(0, 1, false, { from: accounts[0] }),
             `PROPOSAL_IS_CLOSED`
           );
         });
@@ -355,11 +352,11 @@ contract('HCVoting', accounts => {
         beforeEach(async () => {
 
           // Cast enough votes to achieve absolute support.
-          await app.vote(0, false, { ...txParams, from: accounts[0] });
-          await app.vote(0, false, { ...txParams, from: accounts[1] });
-          await app.vote(0, false, { ...txParams, from: accounts[4] });
-          await app.vote(0, true, { ...txParams, from: accounts[7] });
-          lastVoteReceipt = await app.vote(0, true, { ...txParams, from: accounts[8] });
+          await app.vote(0, false, { from: accounts[0] });
+          await app.vote(0, false, { from: accounts[1] });
+          await app.vote(0, false, { from: accounts[4] });
+          await app.vote(0, true, { from: accounts[7] });
+          lastVoteReceipt = await app.vote(0, true, { from: accounts[8] });
         });
 
         it('A ProposalStateChanged event with the Resolved state should be emitted', async () => {
@@ -380,7 +377,7 @@ contract('HCVoting', accounts => {
 
         it('Should not allow additional votes on a resolved proposal', async () => {
           await assertRevert(
-            app.vote(0, false, { ...txParams, from: accounts[0] }),
+            app.vote(0, false, { from: accounts[0] }),
 						`PROPOSAL_IS_CLOSED`
           );
         });
@@ -388,12 +385,12 @@ contract('HCVoting', accounts => {
         it('Should not allow staking on a resolved proposal', async () => {
 
           // Mint some stake tokens and give allowance.
-          await stakeTokenContract.generateTokens(accounts[0], 1000, { ...txParams });
-          await stakeTokenContract.approve(app.address, 1000 , { ...txParams, from: accounts[0] });
+          await stakeTokenContract.generateTokens(accounts[0], 1000);
+          await stakeTokenContract.approve(app.address, 1000 , { from: accounts[0] });
 
           // Staking should fail.
           await assertRevert(
-            app.stake(0, 1, false, { ...txParams, from: accounts[0] }),
+            app.stake(0, 1, false, { from: accounts[0] }),
 						`PROPOSAL_IS_CLOSED`
           );
         });
@@ -405,75 +402,75 @@ contract('HCVoting', accounts => {
         beforeEach(async () => {
 
           // Mint some stake tokens.
-          await stakeTokenContract.generateTokens(accounts[0], 1000  , { ...txParams });
-          await stakeTokenContract.generateTokens(accounts[1], 1000  , { ...txParams });
-          await stakeTokenContract.generateTokens(accounts[2], 1000  , { ...txParams });
-          await stakeTokenContract.generateTokens(accounts[3], 10000 , { ...txParams });
-          await stakeTokenContract.generateTokens(accounts[4], 10000 , { ...txParams });
-          await stakeTokenContract.generateTokens(accounts[5], 10000 , { ...txParams });
-          await stakeTokenContract.generateTokens(accounts[6], 100000, { ...txParams });
-          await stakeTokenContract.generateTokens(accounts[7], 100000, { ...txParams });
-          await stakeTokenContract.generateTokens(accounts[8], 100000, { ...txParams });
+          await stakeTokenContract.generateTokens(accounts[0], 1000  );
+          await stakeTokenContract.generateTokens(accounts[1], 1000  );
+          await stakeTokenContract.generateTokens(accounts[2], 1000  );
+          await stakeTokenContract.generateTokens(accounts[3], 10000 );
+          await stakeTokenContract.generateTokens(accounts[4], 10000 );
+          await stakeTokenContract.generateTokens(accounts[5], 10000 );
+          await stakeTokenContract.generateTokens(accounts[6], 100000);
+          await stakeTokenContract.generateTokens(accounts[7], 100000);
+          await stakeTokenContract.generateTokens(accounts[8], 100000);
           // Note: No tokens for account 9 =(
-          // Note: Stake token total supply should be 333.
+          // Note: Stake token total supply should be 333000.
 
           // All stakers give 'infinite' allowance to the contract.
           // Note: In practice, a staker will need to either atomically provide allowance
           // to the voting contract, or provide it by chunks that would support staking for some time.
           const infiniteAllowance = `${10 ** 18}`;
           for(let i = 0; i < 8; i++) {
-            await stakeTokenContract.approve(app.address, infiniteAllowance, { ...txParams, from: accounts[i] });
+            await stakeTokenContract.approve(app.address, infiniteAllowance, { from: accounts[i] });
           }
           // Note: No allowance set for account 8 =(
         });
 
         it('Should reject staking on proposals that do not exist', async () => {
           await assertRevert(
-            app.stake(1338, 1000, true, { ...txParams }),
+            app.stake(1338, 1000, true),
 						`PROPOSAL_DOES_NOT_EXIST`
           );
         });
 
         it('Should not allow an account to stake more tokens that it holds', async () => {
           await assertRevert(
-            app.stake(0, 10000, true, { ...txParams }),
+            app.stake(0, 10000, true),
 						`INSUFFICIENT_TOKENS`
           );
         });
 
         it('Should not allow an account to stake without having provided sufficient allowance', async () => {
           await assertRevert(
-            app.stake(0, 1000, true, { ...txParams, from: accounts[8] }),
+            app.stake(0, 1000, true, { from: accounts[8] }),
             `INSUFFICIENT_ALLOWANCE`
           );
         });
 
         it('Should not allow an account to withdraw tokens from a proposal that has no stake', async () => {
           await assertRevert(
-            app.unstake(0, 10000, true, { ...txParams }),
+            app.unstake(0, 10000, true),
             `SENDER_DOES_NOT_HAVE_REQUIRED_STAKE`
           );
         });
 
         it('Should not allow an account to withdraw tokens that were not staked by the account', async () => {
-          await app.stake(0, 1000, true, { ...txParams });
+          await app.stake(0, 1000, true);
           await assertRevert(
-            app.unstake(0, 1000, true, { ...txParams, from: accounts[1] }),
+            app.unstake(0, 1000, true, { from: accounts[1] }),
             `SENDER_DOES_NOT_HAVE_REQUIRED_STAKE`
           );
         });
 
         it('Can retrieve a proposals confidence factor', async () => {
-          await app.stake(0, 10000, true, { ...txParams, from: accounts[3] });
-          await app.stake(0, 5000, false, { ...txParams, from: accounts[4] });
+          await app.stake(0, 10000, true, { from: accounts[3] });
+          await app.stake(0, 5000, false, { from: accounts[4] });
           expect((await app.getConfidence(0)).toString()).to.equal(`${2 * PRECISION_MULTIPLIER}`);
         });
 
         it('Should allow staking and unstaking on proposals', async () => {
 
           // Stake tokens.
-          const upstakeReceipt = await app.stake(0, 10000, true, { ...txParams, from: accounts[6] });
-          const downstakeReceipt = await app.stake(0, 5000, false, { ...txParams, from: accounts[6] });
+          const upstakeReceipt = await app.stake(0, 10000, true, { from: accounts[6] });
+          const downstakeReceipt = await app.stake(0, 5000, false, { from: accounts[6] });
 
           // Verify that the proper events were triggered.
           let event = upstakeReceipt.logs[0];
@@ -488,8 +485,8 @@ contract('HCVoting', accounts => {
           expect(event.args._amount.toString()).to.equal(`5000`);
 
           // Stake some more.
-          await app.stake(0, 5000, true, { ...txParams, from: accounts[6] });
-          await app.stake(0, 5000, false, { ...txParams, from: accounts[6] });
+          await app.stake(0, 5000, true, { from: accounts[6] });
+          await app.stake(0, 5000, false, { from: accounts[6] });
 
           // Verify that the proposal received the stake.
           const proposal = await app.getProposalStakes(0);
@@ -511,8 +508,8 @@ contract('HCVoting', accounts => {
           expect(votingBalance.toString()).to.equal(`${INITIAL_VOTING_STAKE_TOKEN_BALANCE + 25000}`);
 
           // Retrieve stake.
-          const unUpstakeReceipt = await app.unstake(0, 10000, true, { ...txParams, from: accounts[6] });
-          const unDownstakeReceipt = await app.unstake(0, 5000, false, { ...txParams, from: accounts[6] });
+          const unUpstakeReceipt = await app.unstake(0, 10000, true, { from: accounts[6] });
+          const unDownstakeReceipt = await app.unstake(0, 5000, false, { from: accounts[6] });
 
           // Verify that the proper events were triggered.
           event = unUpstakeReceipt.logs[0];
@@ -556,15 +553,15 @@ contract('HCVoting', accounts => {
           it('External callers should be able to expire a proposal with stake and receive a compensation fee', async () => {
 
             // Add some stake to the proposal so that fee's can be obtained by external callers.
-            await app.stake(0, 10000, true, { ...txParams, from: accounts[3] });
-            await app.stake(0, 5000, false, { ...txParams, from: accounts[4] });
+            await app.stake(0, 10000, true, { from: accounts[3] });
+            await app.stake(0, 5000, false, { from: accounts[4] });
 
             // Record the caller's current stake token balance
             // to later verify that it has received a compensation fee for the call.
             const balance = (await stakeTokenContract.balanceOf(accounts[0])).toString();
 
             // Call the expiration function.
-            const receipt = await app.expireNonBoostedProposal(0, { ...txParams });
+            const receipt = await app.expireNonBoostedProposal(0);
 
             // Verify that a proposal state change event was triggered.
             const event = receipt.logs[0];
@@ -584,11 +581,11 @@ contract('HCVoting', accounts => {
           it('Stakers should be able to withdraw their stake from an expired proposal', async () => {
 
             // Add some stake to the proposal so that fee's can be obtained by external callers.
-            await app.stake(0, 10000, true, { ...txParams, from: accounts[3] });
-            await app.stake(0, 5000, false, { ...txParams, from: accounts[4] });
+            await app.stake(0, 10000, true, { from: accounts[3] });
+            await app.stake(0, 5000, false, { from: accounts[4] });
 
             // Call the expiration function.
-            const receipt = await app.expireNonBoostedProposal(0, { ...txParams });
+            const receipt = await app.expireNonBoostedProposal(0);
 
             // Verify that a proposal state change event was triggered.
             const event = receipt.logs[0];
@@ -601,8 +598,8 @@ contract('HCVoting', accounts => {
             expect(proposal[2].toString()).to.equal(`5`);
 
             // Have the stakers withdraw their stake.
-            app.withdrawStakeFromExpiredQueuedProposal(0, { ...txParams, from: accounts[3] });
-            app.withdrawStakeFromExpiredQueuedProposal(0, { ...txParams, from: accounts[4] });
+            app.withdrawStakeFromExpiredQueuedProposal(0, { from: accounts[3] });
+            app.withdrawStakeFromExpiredQueuedProposal(0, { from: accounts[4] });
 
             // Verify that the stakers retrieved their stake.
             expect((await stakeTokenContract.balanceOf(accounts[3])).toString()).to.equal(`10000`);
@@ -615,10 +612,10 @@ contract('HCVoting', accounts => {
           beforeEach(async () => {
 
             // Stake enough to reach the confidence factor.
-            await app.stake(0, 20000, true, { ...txParams, from: accounts[6] });
-            await app.stake(0, 20000, true, { ...txParams, from: accounts[7] });
-            await app.stake(0, 5000, false, { ...txParams, from: accounts[4] });
-            await app.stake(0, 5000, false, { ...txParams, from: accounts[5] });
+            await app.stake(0, 20000, true, { from: accounts[6] });
+            await app.stake(0, 20000, true, { from: accounts[7] });
+            await app.stake(0, 5000, false, { from: accounts[4] });
+            await app.stake(0, 5000, false, { from: accounts[5] });
           });
 
           it('Their state should be set to Pended', async () => {
@@ -638,7 +635,7 @@ contract('HCVoting', accounts => {
           it('Their state should change to Unpended if confidence drops', async () => {
 
             // Downstake the proposal a bit to reduce confidence beneath the threshold.
-            await app.stake(0, 10000, false, { ...txParams, from: accounts[7] });
+            await app.stake(0, 10000, false, { from: accounts[7] });
 
             // Verify that confidence dropped.
             const confidence = await app.getConfidence(0);
@@ -670,7 +667,7 @@ contract('HCVoting', accounts => {
               const balance = (await stakeTokenContract.balanceOf(accounts[0])).toString();
 
               // Boost the proposal.
-              await app.boostProposal(0, { ...txParams });
+              await app.boostProposal(0);
 
               // Verify the proposal's state.
               const proposalInfo = await app.getProposalInfo(0);
@@ -692,12 +689,12 @@ contract('HCVoting', accounts => {
               beforeEach(async () => {
 
                 // Produce some votes without reaching absolute majority.
-                await app.vote(0, true, { ...txParams, from: accounts[3] });
-                await app.vote(0, true, { ...txParams, from: accounts[4] });
-                await app.vote(0, false, { ...txParams, from: accounts[5] });
+                await app.vote(0, true, { from: accounts[3] });
+                await app.vote(0, true, { from: accounts[4] });
+                await app.vote(0, false, { from: accounts[5] });
 
                 // Boost the pended proposals.
-                await app.boostProposal(0, { ...txParams });
+                await app.boostProposal(0);
               });
 
               describe('In the quiet ending zone of the boost period', () => {
@@ -713,7 +710,7 @@ contract('HCVoting', accounts => {
                 it('A decision flip near the end of the proposal should extend its boosted lifetime', async () => {
 
                   // Produce a decision flip in proposal 0.
-                  const voteReceipt = await app.vote(0, false, { ...txParams, from: accounts[3] });
+                  const voteReceipt = await app.vote(0, false, { from: accounts[3] });
 
                   // Verify that an event was triggered.
                   const event = voteReceipt.logs[1];
@@ -743,9 +740,9 @@ contract('HCVoting', accounts => {
                     // Record the caller's current stake token balance
                     // to later verify that it has received a compensation fee for the call.
                     const balance = (await stakeTokenContract.balanceOf(accounts[0])).toString();
-
+ 
                     // Have an external caller resolve the boosted proposal.
-                    const receipt = await app.resolveBoostedProposal(0, { ...txParams });
+                    const receipt = await app.resolveBoostedProposal(0);
 
                     // Verify that a proposal state change event was emitted.
                     const event = receipt.logs[0];
@@ -766,11 +763,11 @@ contract('HCVoting', accounts => {
                   it('Winning stakers should be able to withdraw their reward on a proposal resolved by relative majority', async () => {
 
                     // Have an external caller resolve the boosted proposal.
-                    await app.resolveBoostedProposal(0, { ...txParams });
+                    await app.resolveBoostedProposal(0);
 
                     // Withdraw reward.
-                    await app.withdrawRewardFromResolvedProposal(0, { ...txParams, from: accounts[6] });
-                    await app.withdrawRewardFromResolvedProposal(0, { ...txParams, from: accounts[7] });
+                    await app.withdrawRewardFromResolvedProposal(0, { from: accounts[6] });
+                    await app.withdrawRewardFromResolvedProposal(0, { from: accounts[7] });
 
                     // Verify that the winning staker has recovered the stake + the reward.
                     expect((await stakeTokenContract.balanceOf(accounts[6])).toString()).to.equal(`105000`);

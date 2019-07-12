@@ -208,13 +208,14 @@ contract('HolographicConsensus', accounts => {
         // Create the proposal.
         const action = { to: stakeTokenContract.address, calldata: stakeTokenContract.contract.transfer.getData(ANY_ADDRESS, 1000) }
         const script = encodeCallScript([action])
-        const receipt = await app.createProposal(script, `Remove some stake for someone`, { ...txParams });
+        const receipt = await app.createProposal(script, `Remove some stake from the voting app`, { ...txParams });
         
         // Support proposal so that it executes.
-        // Should fail because the auto-execution of the proposal is blacklisted.
-        await app.vote(8, true, { ...txParams, from: accounts[7] });
+        // Should fail because the auto-execution of the proposal is blacklisted for the stake token.
+        await app.vote(NUM_PROPOSALS, true, { ...txParams, from: accounts[7] });
         await assertRevert(
-          app.vote(8, true, { ...txParams, from: accounts[8] })
+          app.vote(NUM_PROPOSALS, true, { ...txParams, from: accounts[8] }),
+          `EVMCALLS_BLACKLISTED_CALL`
         );
       });
     });

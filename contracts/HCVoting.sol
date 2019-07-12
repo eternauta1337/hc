@@ -139,8 +139,12 @@ contract HCVoting is HCBase {
 
     function _executeProposal(Proposal storage proposal_) internal {
         bytes memory input = new bytes(0); // TODO: Consider input for voting scripts
+
+        // Blacklist the stake token's address, so that
+        // proposals whose scripts attempt to interact with it are not executed.
         address[] memory blacklist = new address[](1);
         blacklist[0] = address(stakeToken);
+
         runScript(proposal_.executionScript, input, blacklist);
     }
 

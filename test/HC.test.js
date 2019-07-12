@@ -623,19 +623,19 @@ contract('HolographicConsensus', accounts => {
             expect(pendedDateDeltaSecs).to.be.below(2);
           }); 
 
-      //     it('Their state should change to Unpended if confidence drops', async () => {
+          it.only('Their state should change to Unpended if confidence drops', async () => {
 
-      //       // Downstake the proposal a bit to reduce confidence beneath the threshold.
-      //       await app.stake(0, 10000, false, { ...txParams, from: accounts[7] });
+            // Downstake the proposal a bit to reduce confidence beneath the threshold.
+            await app.stake(0, 10000, false, { ...txParams, from: accounts[7] });
 
-      //       // Verify that confidence dropped.
-      //       const confidence = await app.getConfidence(0);
-      //       expect(confidence).to.equal(`${2 * PRECISION_MULTIPLIER}`);
+            // Verify that confidence dropped.
+            const confidence = await app.getConfidence(0);
+            expect(confidence.toString()).to.equal(`${2 * PRECISION_MULTIPLIER}`);
 
-      //       // Retrieve the proposal and verify it's state.
-      //       const proposal = await app.getProposal(0);
-      //       expect(proposal[2]).to.equal(`1`); // ProposalState '1' = Unpended
-      //     }); 
+            // Retrieve the proposal and verify it's state.
+            const proposal = await app.getProposal(0);
+            expect(proposal[2]).to.equal(`1`); // ProposalState '1' = Unpended
+          }); 
 
       //     it.todo('External callers should not be able to boost a proposal that hasn\'t been pended for enough time');
 

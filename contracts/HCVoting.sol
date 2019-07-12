@@ -1,14 +1,16 @@
 pragma solidity ^0.4.24;
 
-import "@aragon/os/contracts/common/IForwarder.sol";
 import "@aragon/os/contracts/apps/AragonApp.sol";
-import "@aragon/apps-shared-minime/contracts/MiniMeToken.sol";
+import "@aragon/os/contracts/common/IForwarder.sol";
+
 import "@aragon/os/contracts/lib/math/SafeMath.sol";
+import "@aragon/os/contracts/lib/math/SafeMath64.sol";
+
+import "@aragon/apps-shared-minime/contracts/MiniMeToken.sol";
 
 contract HCVoting is IForwarder, AragonApp {
     using SafeMath for uint256;
-
-    // TODO: All uints used so far are uint256. Optimize!
+    using SafeMath64 for uint64;
 
     /*
      * Properties.
@@ -20,10 +22,10 @@ contract HCVoting is IForwarder, AragonApp {
     // See initialize function for documentation on these.
     uint256 public supportPct;
     uint256 public confidenceThresholdBase;
-    uint256 public queuePeriod;
-    uint256 public boostPeriod;
-    uint256 public quietEndingPeriod;
-    uint256 public pendedBoostPeriod;
+    uint64 public queuePeriod;
+    uint64 public boostPeriod;
+    uint64 public quietEndingPeriod;
+    uint64 public pendedBoostPeriod;
     uint256 public compensationFeePct;
 
     // Multiplier used to avoid losing precision when using division or calculating percentages.
@@ -68,19 +70,19 @@ contract HCVoting is IForwarder, AragonApp {
     }
 
     struct Proposal {
-        uint256 snapshotBlock;
-        uint256 votingPower;
-        bytes executionScript;
         ProposalState state;
-        uint256 lifetime;
-        uint256 startDate;
-        uint256 lastPendedDate;
-        uint256 lastRelativeSupportFlipDate;
         VoteState lastRelativeSupport;
+        uint64 snapshotBlock;
+        uint64 lifetime;
+        uint64 startDate;
+        uint64 lastPendedDate;
+        uint64 lastRelativeSupportFlipDate;
+        uint256 votingPower;
         uint256 yea;
         uint256 nay;
         uint256 upstake;
         uint256 downstake;
+        bytes executionScript;
         mapping (address => VoteState) votes;
         mapping (address => uint256) upstakes;
         mapping (address => uint256) downstakes;
@@ -116,7 +118,7 @@ contract HCVoting is IForwarder, AragonApp {
     * @notice Change default queued proposals lifetime period
     * @param _queuePeriod uint256 New queue period (seconds)
     */
-    function changeQueuePeriod(uint256 _queuePeriod) public auth(MODIFY_PERIODS_ROLE) {
+    function changeQueuePeriod(uint64 _queuePeriod) public auth(MODIFY_PERIODS_ROLE) {
         // _validateQueuePeriod(_queuePeriod);
         queuePeriod = _queuePeriod;
     }
@@ -125,7 +127,7 @@ contract HCVoting is IForwarder, AragonApp {
     * @notice Change default boosted proposals lifetime period
     * @param _boostPeriod uint256 New boost period (seconds)
     */
-    function changeBoostPeriod(uint256 _boostPeriod) public auth(MODIFY_PERIODS_ROLE) {
+    function changeBoostPeriod(uint64 _boostPeriod) public auth(MODIFY_PERIODS_ROLE) {
         // _validateBoostPeriod(_boostPeriod);
         boostPeriod = _boostPeriod;
     }
@@ -134,7 +136,7 @@ contract HCVoting is IForwarder, AragonApp {
     * @notice Change quiet ending period for a boosted proposal to end without lifetime extensions
     * @param _quietEndingPeriod uint256 New quiet ending period (seconds)
     */
-    function changeQuietEndingPeriod(uint256 _quietEndingPeriod) public auth(MODIFY_PERIODS_ROLE) {
+    function changeQuietEndingPeriod(uint64 _quietEndingPeriod) public auth(MODIFY_PERIODS_ROLE) {
         // _validateQuietEndingPeriod(_quietEndingPeriod);
         quietEndingPeriod = _quietEndingPeriod;
     }
@@ -143,7 +145,7 @@ contract HCVoting is IForwarder, AragonApp {
     * @notice Change pended boost period for a pended proposal to become boosted while it remains pended
     * @param _pendedBoostPeriod uint256 New pended boost period (seconds)
     */
-    function changePendedBoostPeriod(uint256 _pendedBoostPeriod) public auth(MODIFY_PERIODS_ROLE) {
+    function changePendedBoostPeriod(uint64 _pendedBoostPeriod) public auth(MODIFY_PERIODS_ROLE) {
         // _validatePendedBoostPeriod(_pendedBoostPeriod);
         pendedBoostPeriod = _pendedBoostPeriod;
     }
@@ -152,7 +154,7 @@ contract HCVoting is IForwarder, AragonApp {
     * @notice Change compensation fee percentage
     * @param _compensationFeePct uint256 New compensation fee percentage
     */
-    function changeCompensationFeePct(uint256 _compensationFeePct) public auth(MODIFY_COMPENSATION_FEES_ROLE) {
+    function changeCompensationFeePct(uint64 _compensationFeePct) public auth(MODIFY_COMPENSATION_FEES_ROLE) {
         // _validateCompensationFeePct(_compensationFeePct);
         compensationFeePct = _compensationFeePct;
     }
@@ -180,7 +182,7 @@ contract HCVoting is IForwarder, AragonApp {
     event ProposalCreated(uint256 indexed _proposalId, address indexed _creator, string _metadata);
     event ProposalStateChanged(uint256 indexed _proposalId, ProposalState _newState);
     event VoteCasted(uint256 indexed _proposalId, address indexed _voter, bool _supports, uint256 _stake);
-    event ProposalLifetimeExtended(uint256 indexed _proposalId, uint256 _newLifetime);
+    event ProposalLifetimeExtended(uint256 indexed _proposalId, uint64 _newLifetime);
     event UpstakeProposal(uint256 indexed _proposalId, address indexed _staker, uint256 _amount);
     event DownstakeProposal(uint256 indexed _proposalId, address indexed _staker, uint256 _amount);
     event WithdrawUpstake(uint256 indexed _proposalId, address indexed _staker, uint256 _amount);
@@ -205,11 +207,11 @@ contract HCVoting is IForwarder, AragonApp {
     }
 
     function getProposalTimeInfo(uint256 _proposalId) public view returns (
-        uint256 snapshotBlock,
-        uint256 lifetime,
-        uint256 startDate,
-        uint256 lastPendedDate,
-        uint256 lastRelativeSupportFlipDate
+        uint64 snapshotBlock,
+        uint64 lifetime,
+        uint64 startDate,
+        uint64 lastPendedDate,
+        uint64 lastRelativeSupportFlipDate
     )
     {
         require(_proposalExists(_proposalId), ERROR_PROPOSAL_DOES_NOT_EXIST);
@@ -282,13 +284,13 @@ contract HCVoting is IForwarder, AragonApp {
     function initialize(
         MiniMeToken _voteToken, 
         MiniMeToken _stakeToken, 
-        uint256 _supportPct,
-        uint256 _queuePeriod,
-        uint256 _boostPeriod,
-        uint256 _quietEndingPeriod,
-        uint256 _pendedBoostPeriod,
-        uint256 _compensationFeePct,
-        uint256 _confidenceThresholdBase
+        uint64 _supportPct,
+        uint64 _queuePeriod,
+        uint64 _boostPeriod,
+        uint64 _quietEndingPeriod,
+        uint64 _pendedBoostPeriod,
+        uint64 _compensationFeePct,
+        uint64 _confidenceThresholdBase
     ) 
         external onlyInit 
     {
@@ -343,11 +345,11 @@ contract HCVoting is IForwarder, AragonApp {
         // Initialize proposal.
         Proposal storage proposal_ = proposals[proposalId];
         proposal_.executionScript = _executionScript;
-        proposal_.startDate = now;
+        proposal_.startDate = getTimestamp64();
         proposal_.lifetime = queuePeriod;
 
         // Avoid double voting.
-        uint256 snapshotBlock = getBlockNumber64() - 1;
+        uint64 snapshotBlock = getBlockNumber64() - 1;
         uint256 votingPower = voteToken.totalSupplyAt(snapshotBlock);
         require(votingPower > 0, ERROR_INSUFFICIENT_TOKENS);
         proposal_.votingPower = votingPower;
@@ -426,7 +428,7 @@ contract HCVoting is IForwarder, AragonApp {
             VoteState currentSupport = proposal_.lastRelativeSupport;
             VoteState newSupport = _calculateProposalSupport(proposal_, true);
             if(newSupport != currentSupport) {
-                proposal_.lastRelativeSupportFlipDate = now;
+                proposal_.lastRelativeSupportFlipDate = getTimestamp64();
                 proposal_.lastRelativeSupport = newSupport;
                 proposal_.lifetime = proposal_.lifetime.add(quietEndingPeriod);
                 emit ProposalLifetimeExtended(_proposalId, proposal_.lifetime);
@@ -435,7 +437,7 @@ contract HCVoting is IForwarder, AragonApp {
     }
 
     function _calculateProposalSupport(Proposal storage proposal_, bool _relative) internal view returns (VoteState) {
-        uint total = _relative ? proposal_.yea.add(proposal_.nay) : proposal_.votingPower;
+        uint256 total = _relative ? proposal_.yea.add(proposal_.nay) : proposal_.votingPower;
         uint256 yeaPct = _votesToPct(proposal_.yea, total);
         uint256 nayPct = _votesToPct(proposal_.nay, total);
         if(yeaPct > supportPct.mul(PRECISION_MULTIPLIER)) return VoteState.Yea;
@@ -531,7 +533,7 @@ contract HCVoting is IForwarder, AragonApp {
         Proposal storage proposal_ = proposals[_proposalId];
         if(_proposalHasEnoughConfidence(_proposalId)) {
             if(proposal_.state == ProposalState.Queued || proposal_.state == ProposalState.Unpended) {
-                proposal_.lastPendedDate = now;
+                proposal_.lastPendedDate = getTimestamp64();
                 _updateProposalState(_proposalId, ProposalState.Pended);
             }
         }
@@ -565,7 +567,7 @@ contract HCVoting is IForwarder, AragonApp {
 
         // Require that the proposal has had enough confidence for a period of time.
         require(_proposalHasEnoughConfidence(_proposalId), ERROR_PROPOSAL_DOESNT_HAVE_ENOUGH_CONFIDENCE);
-        require(now >= proposal_.lastPendedDate.add(pendedBoostPeriod), ERROR_PROPOSAL_HASNT_HAD_CONFIDENCE_ENOUGH_TIME);
+        require(getTimestamp64() >= proposal_.lastPendedDate.add(pendedBoostPeriod), ERROR_PROPOSAL_HASNT_HAD_CONFIDENCE_ENOUGH_TIME);
 
         // Compensate the caller.
         uint256 fee = _calculateCompensationFee(_proposalId, proposal_.lastPendedDate.add(pendedBoostPeriod));
@@ -592,7 +594,7 @@ contract HCVoting is IForwarder, AragonApp {
         require(proposal_.state == ProposalState.Boosted, ERROR_PROPOSAL_IS_NOT_BOOSTED);
 
         // Verify that the proposal lifetime has ended.
-        require(now >= proposal_.startDate.add(proposal_.lifetime), ERROR_PROPOSAL_IS_ACTIVE);
+        require(getTimestamp64() >= proposal_.startDate.add(proposal_.lifetime), ERROR_PROPOSAL_IS_ACTIVE);
 
         // Compensate the caller.
         uint256 fee = _calculateCompensationFee(_proposalId, proposal_.startDate.add(proposal_.lifetime));
@@ -616,7 +618,7 @@ contract HCVoting is IForwarder, AragonApp {
         require(proposal_.state != ProposalState.Expired, ERROR_PROPOSAL_IS_CLOSED);
 
         // Verify that the proposal's lifetime has ended.
-        require(now >= proposal_.startDate.add(proposal_.lifetime), ERROR_PROPOSAL_IS_ACTIVE);
+        require(getTimestamp64() >= proposal_.startDate.add(proposal_.lifetime), ERROR_PROPOSAL_IS_ACTIVE);
 
         // Compensate the caller.
         uint256 fee = _calculateCompensationFee(_proposalId, proposal_.startDate.add(proposal_.lifetime));
@@ -627,7 +629,7 @@ contract HCVoting is IForwarder, AragonApp {
         _updateProposalState(_proposalId, ProposalState.Expired);
     }
 
-    function _calculateCompensationFee(uint256 _proposalId, uint256 _cutoffDate) internal view returns(uint256 _fee) {
+    function _calculateCompensationFee(uint256 _proposalId, uint64 _cutoffDate) internal view returns(uint256 _fee) {
 
         // Require that the proposal has potentially expired.
         // This is necessary because the fee depends on the time since expiration.
@@ -646,7 +648,7 @@ contract HCVoting is IForwarder, AragonApp {
            |/______________> time elapsed since resolution
         */
         // Note: this assumes that now > _cutoffDate, and it is the responsibility of the calling function to verify that.
-        _fee = now.sub(_cutoffDate).div(compensationFeePct);
+        _fee = uint256(getTimestamp64().sub(_cutoffDate)).div(compensationFeePct);
         uint256 max = proposal_.upstake.mul(PRECISION_MULTIPLIER).div(compensationFeePct);
         if(_fee.mul(PRECISION_MULTIPLIER) > max) _fee = max.div(PRECISION_MULTIPLIER);
     }

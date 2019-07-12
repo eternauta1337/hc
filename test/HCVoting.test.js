@@ -668,7 +668,6 @@ contract('HCVoting', accounts => {
               // Record the caller's current stake token balance
               // to later verify that it has received a compensation fee for the call.
               const balance = (await stakeTokenContract.balanceOf(accounts[0])).toString();
-              console.log(`balance`, balance);
 
               // Boost the proposal.
               await app.boostProposal(0, { ...txParams });
@@ -683,7 +682,6 @@ contract('HCVoting', accounts => {
 
               // Verify that the coller received a compensation fee.
               const newBalance = (await stakeTokenContract.balanceOf(accounts[0])).toString();
-              console.log(`newBalance`, newBalance);
               expect(parseInt(newBalance, 10)).to.be.above(parseInt(balance, 10));
             });
 

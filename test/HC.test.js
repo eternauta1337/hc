@@ -3,7 +3,7 @@ const { assertRevert } = require('@aragon/test-helpers/assertThrow');
 const { encodeCallScript, EMPTY_SCRIPT } = require('@aragon/test-helpers/evmScript');
 const timeUtil = require('../scripts/timeUtil.js');
 
-const HolographicConsensus = artifacts.require('HolographicConsensus.sol');
+const HolographicConsensus = artifacts.require('HC.sol');
 const MiniMeToken = artifacts.require('@aragon/apps-shared-minime/contracts/MiniMeToken')
 const DAOFactory = artifacts.require('@aragon/core/contracts/factory/DAOFactory');
 const EVMScriptRegistryFactory = artifacts.require('@aragon/core/contracts/factory/EVMScriptRegistryFactory');

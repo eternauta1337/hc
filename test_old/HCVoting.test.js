@@ -136,26 +136,26 @@ contract.skip('HCVoting', accounts => {
     );
   });
 
-  it('Tokens get deployed correctly', async () => {
-    expect(web3.isAddress(voteTokenContract.address)).to.be.true;
-    expect(web3.isAddress(stakeTokenContract.address)).to.be.true;
-  });
+  // it('Tokens get deployed correctly', async () => {
+  //   expect(web3.isAddress(voteTokenContract.address)).to.be.true;
+  //   expect(web3.isAddress(stakeTokenContract.address)).to.be.true;
+  // });
 
-  it('Voting gets deployed and set up correctly', async () => {
-    expect(web3.isAddress(app.address)).to.equal(true);
-    expect((await app.supportPct()).toString()).to.equal(`${SUPPORT_PERCENT}`);
-    expect((await app.queuePeriod()).toString()).to.equal(`${QUEUE_PERIOD_SECS}`);
-    expect((await app.pendedBoostPeriod()).toString()).to.equal(`${PENDED_BOOST_PERIOD_SECS}`);
-    expect((await app.boostPeriod()).toString()).to.equal(`${BOOST_PERIOD_SECS}`);
-    expect((await app.quietEndingPeriod()).toString()).to.equal(`${QUIET_ENDING_PERIOD_SECS}`);
-    expect((await app.compensationFeePct()).toString()).to.equal(`${COMPENSATION_FEE_PERCENT}`);
-  });
+  // it('Voting gets deployed and set up correctly', async () => {
+  //   expect(web3.isAddress(app.address)).to.equal(true);
+  //   expect((await app.supportPct()).toString()).to.equal(`${SUPPORT_PERCENT}`);
+  //   expect((await app.queuePeriod()).toString()).to.equal(`${QUEUE_PERIOD_SECS}`);
+  //   expect((await app.pendedBoostPeriod()).toString()).to.equal(`${PENDED_BOOST_PERIOD_SECS}`);
+  //   expect((await app.boostPeriod()).toString()).to.equal(`${BOOST_PERIOD_SECS}`);
+  //   expect((await app.quietEndingPeriod()).toString()).to.equal(`${QUIET_ENDING_PERIOD_SECS}`);
+  //   expect((await app.compensationFeePct()).toString()).to.equal(`${COMPENSATION_FEE_PERCENT}`);
+  // });
 
-  describe('When creating proposals', () => {
+  // describe('When creating proposals', () => {
 
-    const proposalCreationReceipts = [];
+    // const proposalCreationReceipts = [];
 
-    const NUM_PROPOSALS = 8;
+    // const NUM_PROPOSALS = 8;
 
     beforeEach(async () => {
 
@@ -173,10 +173,10 @@ contract.skip('HCVoting', accounts => {
       // Note: Vote token total supply should be 333.
 
       // Create a few proposals.
-      for(let i = 0; i < NUM_PROPOSALS; i++) {
-        const receipt = await app.createProposal(EMPTY_SCRIPT, `DAOs should rule the world ${i}`);
-        proposalCreationReceipts.push(receipt);
-      }
+      // for(let i = 0; i < NUM_PROPOSALS; i++) {
+      //   const receipt = await app.createProposal(EMPTY_SCRIPT, `DAOs should rule the world ${i}`);
+      //   proposalCreationReceipts.push(receipt);
+      // }
 
       // Reset elapsed time since proposals will have startDate set to now.
       elapsedTime = 0;

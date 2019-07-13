@@ -94,10 +94,10 @@ const common = {
     test.stakeToken = await MiniMeToken.new(common.ZERO_ADDRESS, common.ZERO_ADDRESS, 0, 'StakeToken', 18, 'GEN', true);
   },
 
-  defaultSetup: async (test, defaultAddress) => {
+  defaultSetup: async (test, managerAddress) => {
     await common.deployDAOFactory(test);
-    await common.deployDAO(test, defaultAddress);
-    await common.deployApp(test, defaultAddress);
+    await common.deployDAO(test, managerAddress);
+    await common.deployApp(test, managerAddress);
     await common.deployTokens(test);
     await test.app.initialize(
       test.voteToken.address, 

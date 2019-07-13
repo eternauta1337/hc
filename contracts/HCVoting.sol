@@ -237,6 +237,7 @@ contract HCVoting is IForwarder, AragonApp {
         downstake = proposal_.downstake;
     }
 
+    // TODO: Reconsider naming to make the difference between getVote and getProposalVotes
     function getVote(uint256 _proposalId, address _voter) public view returns (VoteState) {
         require(_proposalExists(_proposalId), ERROR_PROPOSAL_DOES_NOT_EXIST);
 

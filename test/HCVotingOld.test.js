@@ -20,7 +20,7 @@ const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
  * It has become quite unreadable.
  * */
 
-contract.skip('HCVoting', accounts => {
+contract.skip('HCVoting (DEPRECATED)', accounts => {
 
   let APP_MANAGER_ROLE;
   let CREATE_PROPOSALS_ROLE;
@@ -239,63 +239,63 @@ contract.skip('HCVoting', accounts => {
 
     describe('When voting on proposals (that have no stake)', () => {
 
-      it('Should reject voting on proposals that do not exist', async () => {
-        await assertRevert(
-          app.vote(9, true),
-          `PROPOSAL_DOES_NOT_EXIST`
-        );
-      });
+      // it('Should reject voting on proposals that do not exist', async () => {
+      //   await assertRevert(
+      //     app.vote(9, true),
+      //     `PROPOSAL_DOES_NOT_EXIST`
+      //   );
+      // });
 
-      it('Should reject voting from accounts that do not own vote tokens', async () => {
-        await assertRevert(
-          app.vote(0, true, { from: accounts[9] }),
-					`INSUFFICIENT_TOKENS`
-        );
-      });
+      // it('Should reject voting from accounts that do not own vote tokens', async () => {
+      //   await assertRevert(
+      //     app.vote(0, true, { from: accounts[9] }),
+					// `INSUFFICIENT_TOKENS`
+      //   );
+      // });
 
-      it('Should allow multiple votes on a proposal, tracking support and emitting events', async () => {
+      // it('Should allow multiple votes on a proposal, tracking support and emitting events', async () => {
 
-        // Cast some random votes.
-        await app.vote(1, true, { from: accounts[0] });
-        await app.vote(1, true, { from: accounts[3] });
-        const receipt = await app.vote(1, false, { from: accounts[6] });
+      //   // Cast some random votes.
+      //   await app.vote(1, true, { from: accounts[0] });
+      //   await app.vote(1, true, { from: accounts[3] });
+      //   const receipt = await app.vote(1, false, { from: accounts[6] });
 
-        // Verify that at least one VoteCasted event was emitted.
-        const event = receipt.logs[0];
-        expect(event).to.be.an('object');
-        expect(event.args._proposalId.toString()).to.equal(`1`);
-        expect(event.args._voter.toString()).to.equal(accounts[6]);
-        expect(event.args._supports).to.equal(false);
-        expect(event.args._stake.toString()).to.equal(`100`);
+      //   // Verify that at least one VoteCasted event was emitted.
+      //   const event = receipt.logs[0];
+      //   expect(event).to.be.an('object');
+      //   expect(event.args._proposalId.toString()).to.equal(`1`);
+      //   expect(event.args._voter.toString()).to.equal(accounts[6]);
+      //   expect(event.args._supports).to.equal(false);
+      //   expect(event.args._stake.toString()).to.equal(`100`);
 
-        // Retrieve the proposal and verify that the votes were recoreded.
-        let proposalVotes = await app.getProposalVotes(1);
-        expect(proposalVotes[0].toString()).to.equal(`11`);
-        expect(proposalVotes[1].toString()).to.equal(`100`);
+      //   // Retrieve the proposal and verify that the votes were recoreded.
+      //   let proposalVotes = await app.getProposalVotes(1);
+      //   expect(proposalVotes[0].toString()).to.equal(`11`);
+      //   expect(proposalVotes[1].toString()).to.equal(`100`);
 
-        // Verify that each voter's vote state is coherent with the vote.
-        expect((await app.getVote(1, accounts[0])).toString()).to.equal(`1`);
-        expect((await app.getVote(1, accounts[3])).toString()).to.equal(`1`);
-        expect((await app.getVote(1, accounts[6])).toString()).to.equal(`2`);
+      //   // Verify that each voter's vote state is coherent with the vote.
+      //   expect((await app.getVote(1, accounts[0])).toString()).to.equal(`1`);
+      //   expect((await app.getVote(1, accounts[3])).toString()).to.equal(`1`);
+      //   expect((await app.getVote(1, accounts[6])).toString()).to.equal(`2`);
 
-        // Verify that someone that hasn't voted registers no vote.
-        expect((await app.getVote(1, accounts[8])).toString()).to.equal(`0`);
+      //   // Verify that someone that hasn't voted registers no vote.
+      //   expect((await app.getVote(1, accounts[8])).toString()).to.equal(`0`);
 
-        // Change some votes.
-        await app.vote(1, false, { from: accounts[0] });
-        await app.vote(1, true, { from: accounts[3] });
-        await app.vote(1, false, { from: accounts[6] });
+      //   // Change some votes.
+      //   await app.vote(1, false, { from: accounts[0] });
+      //   await app.vote(1, true, { from: accounts[3] });
+      //   await app.vote(1, false, { from: accounts[6] });
 
-        // Retrieve the proposal and verify that the votes were recoreded.
-        proposalVotes = await app.getProposalVotes(1);
-        expect(proposalVotes[0].toString()).to.equal(`10`);
-        expect(proposalVotes[1].toString()).to.equal(`101`);
+      //   // Retrieve the proposal and verify that the votes were recoreded.
+      //   proposalVotes = await app.getProposalVotes(1);
+      //   expect(proposalVotes[0].toString()).to.equal(`10`);
+      //   expect(proposalVotes[1].toString()).to.equal(`101`);
 
-        // Verify that each voter's vote state is coherent with the vote.
-        expect((await app.getVote(1, accounts[0])).toString()).to.equal(`2`);
-        expect((await app.getVote(1, accounts[3])).toString()).to.equal(`1`);
-        expect((await app.getVote(1, accounts[6])).toString()).to.equal(`2`);
-      });
+      //   // Verify that each voter's vote state is coherent with the vote.
+      //   expect((await app.getVote(1, accounts[0])).toString()).to.equal(`2`);
+      //   expect((await app.getVote(1, accounts[3])).toString()).to.equal(`1`);
+      //   expect((await app.getVote(1, accounts[6])).toString()).to.equal(`2`);
+      // });
 
       it('Should not resolve a proposal while it doesn\'t reach absolute majority', async () => {
 

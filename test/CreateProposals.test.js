@@ -7,7 +7,7 @@ const {
 const { EMPTY_SCRIPT } = require('@aragon/test-helpers/evmScript');
 const { assertRevert } = require('@aragon/test-helpers/assertThrow');
 
-contract('HCVoting', accounts => {
+contract('HCVoting', ([appManager, proposalCreator]) => {
 
   describe('When creating proposals', () => {
 
@@ -15,7 +15,7 @@ contract('HCVoting', accounts => {
     const proposalCreationDates = [];
     const NUM_PROPOSALS = 8;
 
-    before(() => defaultSetup(this, accounts[0]));
+    beforeEach(() => defaultSetup(this, appManager));
 
     describe('When there is no existing vote token supply', () => {
       it('Proposal creation should be rejected', async () => {
@@ -33,7 +33,11 @@ contract('HCVoting', accounts => {
         await this.voteToken.generateTokens(ANY_ADDRESS, INITIAL_VOTING_STAKE_TOKEN_BALANCE);
 
         for(let i = 0; i < NUM_PROPOSALS; i++) {
-          const receipt = await this.app.createProposal(EMPTY_SCRIPT, `Proposal message ${i}`);
+          const receipt = await this.app.createProposal(
+            EMPTY_SCRIPT, 
+            `Proposal message ${i}`,
+            { from: proposalCreator }
+          );
           proposalCreationReceipts.push(receipt);
           proposalCreationDates.push(new Date().getTime() / 1000);
         }
@@ -49,7 +53,7 @@ contract('HCVoting', accounts => {
           const event = receipt.logs.filter(l => l.event === 'ProposalCreated')[0];
           expect(event).to.be.an('object');
           expect(event.args._proposalId.toString()).to.equal(`${i}`);
-          expect(event.args._creator).to.equal(accounts[0]);
+          expect(event.args._creator).to.equal(proposalCreator);
           expect(event.args._metadata.toString()).to.equal(`Proposal message ${i}`);
         }
       });
@@ -69,6 +73,8 @@ contract('HCVoting', accounts => {
         }
       });
 
+      it.skip('Only vote token holders should be able to create proposals');
+      
     });
   });
 });

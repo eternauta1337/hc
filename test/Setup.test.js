@@ -8,11 +8,11 @@ const {
   COMPENSATION_FEE_PERCENT
 } = require('./common.js');
 
-contract('HCVoting', accounts => {
+contract('HCVoting', ([appManager]) => {
 
   describe('When deploying the app', () => {
 
-    before(() => defaultSetup(this, accounts[0]));
+    beforeEach(() => defaultSetup(this, appManager));
     
     it('Tokens get deployed', async () => {
       expect(web3.isAddress(this.voteToken.address)).to.be.true;

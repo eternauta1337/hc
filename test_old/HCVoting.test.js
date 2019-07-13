@@ -20,7 +20,7 @@ const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
  * It has become quite unreadable.
  * */
 
-contract('HCVoting', accounts => {
+contract.skip('HCVoting', accounts => {
 
   let APP_MANAGER_ROLE;
   let CREATE_PROPOSALS_ROLE;

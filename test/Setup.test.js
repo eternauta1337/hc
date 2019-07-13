@@ -20,8 +20,8 @@ contract('HCVoting', accounts => {
     });
 
     it('Tokens are set correctly', async () => {
-      expect(await this.app.voteToken).to.equal(this.voteToken.address);
-      expect(await this.app.stakeToken).to.equal(this.stakeToken.address);
+      expect((await this.app.voteToken()).toString()).to.equal(this.voteToken.address);
+      expect((await this.app.stakeToken()).toString()).to.equal(this.stakeToken.address);
     });
 
     it('App gets deployed', async () => {

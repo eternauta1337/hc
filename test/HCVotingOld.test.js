@@ -151,7 +151,7 @@ contract.skip('HCVoting', accounts => {
   //   expect((await app.compensationFeePct()).toString()).to.equal(`${COMPENSATION_FEE_PERCENT}`);
   // });
 
-  // describe('When creating proposals', () => {
+  describe('When creating proposals', () => {
 
     // const proposalCreationReceipts = [];
 
@@ -217,25 +217,25 @@ contract.skip('HCVoting', accounts => {
       });
     });
 
-    it('numProposals should increase', async () => {
-      expect((await app.numProposals()).toString()).to.equal(`${NUM_PROPOSALS}`);
-    });
+    // it('numProposals should increase', async () => {
+    //   expect((await app.numProposals()).toString()).to.equal(`${NUM_PROPOSALS}`);
+    // });
 
-    it('Emit ProposalCreated events', async () => {
-      const receipt = proposalCreationReceipts[2];
-      const event = receipt.logs[0];
-      expect(event).to.be.an('object');
-      expect(event.args._proposalId.toString()).to.equal(`2`);
-      expect(event.args._creator).to.equal(accounts[0]);
-      expect(event.args._metadata.toString()).to.equal(`DAOs should rule the world 2`);
-    });
+    // it('Emit ProposalCreated events', async () => {
+    //   const receipt = proposalCreationReceipts[2];
+    //   const event = receipt.logs[0];
+    //   expect(event).to.be.an('object');
+    //   expect(event.args._proposalId.toString()).to.equal(`2`);
+    //   expect(event.args._creator).to.equal(accounts[0]);
+    //   expect(event.args._metadata.toString()).to.equal(`DAOs should rule the world 2`);
+    // });
 
-    it('The proposal should be created with expected parameters', async () => {
-      const proposalTimeInfo = await app.getProposalTimeInfo(2);
-      const startDateDeltaSecs = ( new Date().getTime() / 1000 ) - parseInt(proposalTimeInfo[2].toString(), 10);
-      expect(startDateDeltaSecs).to.be.below(2);
-      expect(proposalTimeInfo[1].toString()).to.equal(`${QUEUE_PERIOD_SECS}`);
-    });
+    // it('The proposal should be created with expected parameters', async () => {
+    //   const proposalTimeInfo = await app.getProposalTimeInfo(2);
+    //   const startDateDeltaSecs = ( new Date().getTime() / 1000 ) - parseInt(proposalTimeInfo[2].toString(), 10);
+    //   expect(startDateDeltaSecs).to.be.below(2);
+    //   expect(proposalTimeInfo[1].toString()).to.equal(`${QUEUE_PERIOD_SECS}`);
+    // });
 
     describe('When voting on proposals (that have no stake)', () => {
 

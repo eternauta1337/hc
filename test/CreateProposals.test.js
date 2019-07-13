@@ -20,7 +20,7 @@ contract('HCVoting', accounts => {
     describe('When there is no existing vote token supply', () => {
       it('Proposal creation should be rejected', async () => {
         await assertRevert(
-          this.app.createProposal(EMPTY_SCRIPT, `DAOs should rule the world`),
+          this.app.createProposal(EMPTY_SCRIPT, `Proposal message`),
           `INSUFFICIENT_TOKENS`
         );
       });
@@ -33,7 +33,7 @@ contract('HCVoting', accounts => {
         await this.voteToken.generateTokens(ANY_ADDRESS, INITIAL_VOTING_STAKE_TOKEN_BALANCE);
 
         for(let i = 0; i < NUM_PROPOSALS; i++) {
-          const receipt = await this.app.createProposal(EMPTY_SCRIPT, `DAOs should rule the world ${i}`);
+          const receipt = await this.app.createProposal(EMPTY_SCRIPT, `Proposal message ${i}`);
           proposalCreationReceipts.push(receipt);
           proposalCreationDates.push(new Date().getTime() / 1000);
         }
@@ -50,7 +50,7 @@ contract('HCVoting', accounts => {
           expect(event).to.be.an('object');
           expect(event.args._proposalId.toString()).to.equal(`${i}`);
           expect(event.args._creator).to.equal(accounts[0]);
-          expect(event.args._metadata.toString()).to.equal(`DAOs should rule the world ${i}`);
+          expect(event.args._metadata.toString()).to.equal(`Proposal message ${i}`);
         }
       });
 

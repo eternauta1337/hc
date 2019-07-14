@@ -182,40 +182,40 @@ contract.skip('HCVoting (DEPRECATED)', accounts => {
       elapsedTime = 0;
     });
 
-    describe('When executing proposal scripts', () => {
+    // describe('When executing proposal scripts', () => {
 
-      it('Should execute a proposal\'s script', async () => {
+    //   it('Should execute a proposal\'s script', async () => {
         
-        // Create the proposal.
-        const action = { to: app.address, calldata: app.contract.changeSupportPct.getData(60) }
-        const script = encodeCallScript([action])
-        const receipt = await app.createProposal(script, `Modify support percent`);
+    //     // Create the proposal.
+    //     const action = { to: app.address, calldata: app.contract.changeSupportPct.getData(60) }
+    //     const script = encodeCallScript([action])
+    //     const receipt = await app.createProposal(script, `Modify support percent`);
         
-        // Support proposal so that it executes.
-        await app.vote(NUM_PROPOSALS, true, { from: accounts[7] });
-        await app.vote(NUM_PROPOSALS, true, { from: accounts[8] });
+    //     // Support proposal so that it executes.
+    //     await app.vote(NUM_PROPOSALS, true, { from: accounts[7] });
+    //     await app.vote(NUM_PROPOSALS, true, { from: accounts[8] });
 
-        // Retrieve new supportPercent value.
-        const supportPct = await app.supportPct();
-        expect(supportPct.toString()).to.equal(`60`);
-      });
+    //     // Retrieve new supportPercent value.
+    //     const supportPct = await app.supportPct();
+    //     expect(supportPct.toString()).to.equal(`60`);
+    //   });
 
-      it('Should not execute a proposal\'s script if it targets a blacklisted address', async () => {
+    //   it('Should not execute a proposal\'s script if it targets a blacklisted address', async () => {
         
-        // Create the proposal.
-        const action = { to: stakeTokenContract.address, calldata: stakeTokenContract.contract.transfer.getData(ANY_ADDRESS, 1000) }
-        const script = encodeCallScript([action])
-        const receipt = await app.createProposal(script, `Remove some stake from the voting app`);
+    //     // Create the proposal.
+    //     const action = { to: stakeTokenContract.address, calldata: stakeTokenContract.contract.transfer.getData(ANY_ADDRESS, 1000) }
+    //     const script = encodeCallScript([action])
+    //     const receipt = await app.createProposal(script, `Remove some stake from the voting app`);
         
-        // Support proposal so that it executes.
-        // Should fail because the auto-execution of the proposal is blacklisted for the stake token.
-        await app.vote(NUM_PROPOSALS, true, { from: accounts[7] });
-        await assertRevert(
-          app.vote(NUM_PROPOSALS, true, { from: accounts[8] }),
-          `EVMCALLS_BLACKLISTED_CALL`
-        );
-      });
-    });
+    //     // Support proposal so that it executes.
+    //     // Should fail because the auto-execution of the proposal is blacklisted for the stake token.
+    //     await app.vote(NUM_PROPOSALS, true, { from: accounts[7] });
+    //     await assertRevert(
+    //       app.vote(NUM_PROPOSALS, true, { from: accounts[8] }),
+    //       `EVMCALLS_BLACKLISTED_CALL`
+    //     );
+    //   });
+    // });
 
     // it('numProposals should increase', async () => {
     //   expect((await app.numProposals()).toString()).to.equal(`${NUM_PROPOSALS}`);

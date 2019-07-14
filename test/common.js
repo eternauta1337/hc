@@ -20,7 +20,6 @@ const common = {
   ANY_ADDRESS: '0xffffffffffffffffffffffffffffffffffffffff',
   ZERO_ADDRESS: '0x0000000000000000000000000000000000000000',
   PRECISION_MULTIPLIER: 10 ** 16,
-  INITIAL_VOTING_STAKE_TOKEN_BALANCE: 10 ** 18,
 
   deployDAOFactory: async (test) => { 
     const kernelBase = await getContract('Kernel').new(true); // petrify immediately

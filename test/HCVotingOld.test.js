@@ -424,19 +424,19 @@ contract.skip('HCVoting (DEPRECATED)', accounts => {
           // Note: No allowance set for account 8 =(
         });
 
-        it('Should reject staking on proposals that do not exist', async () => {
-          await assertRevert(
-            app.stake(1338, 1000, true),
-						`PROPOSAL_DOES_NOT_EXIST`
-          );
-        });
+        // it('Should reject staking on proposals that do not exist', async () => {
+        //   await assertRevert(
+        //     app.stake(1338, 1000, true),
+						// `PROPOSAL_DOES_NOT_EXIST`
+        //   );
+        // });
 
-        it('Should not allow an account to stake more tokens that it holds', async () => {
-          await assertRevert(
-            app.stake(0, 10000, true),
-						`INSUFFICIENT_TOKENS`
-          );
-        });
+        // it('Should not allow an account to stake more tokens that it holds', async () => {
+        //   await assertRevert(
+        //     app.stake(0, 10000, true),
+						// `INSUFFICIENT_TOKENS`
+        //   );
+        // });
 
         it('Should not allow an account to stake without having provided sufficient allowance', async () => {
           await assertRevert(

@@ -1,7 +1,6 @@
 const { 
   defaultSetup,
   QUEUE_PERIOD_SECS,
-  INITIAL_VOTING_STAKE_TOKEN_BALANCE,
   ANY_ADDRESS
 } = require('./common.js');
 const { EMPTY_SCRIPT } = require('@aragon/test-helpers/evmScript');
@@ -30,7 +29,7 @@ contract('HCVoting', ([appManager, proposalCreator]) => {
       
       beforeEach(async () => {
 
-        await this.voteToken.generateTokens(ANY_ADDRESS, INITIAL_VOTING_STAKE_TOKEN_BALANCE);
+        await this.voteToken.generateTokens(ANY_ADDRESS, 999);
 
         for(let i = 0; i < NUM_PROPOSALS; i++) {
           const receipt = await this.app.createProposal(

@@ -149,7 +149,7 @@ contract('HCVoting', accounts => {
       expect(downstake.toString()).to.equal(`${proposalDownstake}`);
     });
 
-    it('Should keep track of an acouunt\'s staking balance', async () => {
+    it('Should keep track of an acount\'s staking balance', async () => {
       
       let holderUpstake = 0;
       let holderDownstake = 0;

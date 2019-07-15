@@ -460,11 +460,11 @@ contract.skip('HCVoting (DEPRECATED)', accounts => {
         //   );
         // });
 
-        it('Can retrieve a proposals confidence factor', async () => {
-          await app.stake(0, 10000, true, { from: accounts[3] });
-          await app.stake(0, 5000, false, { from: accounts[4] });
-          expect((await app.getConfidence(0)).toString()).to.equal(`${2 * PRECISION_MULTIPLIER}`);
-        });
+        // it('Can retrieve a proposals confidence factor', async () => {
+        //   await app.stake(0, 10000, true, { from: accounts[3] });
+        //   await app.stake(0, 5000, false, { from: accounts[4] });
+        //   expect((await app.getConfidence(0)).toString()).to.equal(`${2 * PRECISION_MULTIPLIER}`);
+        // });
 
         // it('Should allow staking and unstaking on proposals', async () => {
 

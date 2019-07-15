@@ -8,7 +8,7 @@ const {
   COMPENSATION_FEE_PERCENT
 } = require('./common.js');
 
-contract.only('HCVoting', ([appManager]) => {
+contract('HCVoting', ([appManager]) => {
 
   describe('When deploying the app', () => {
 

@@ -8,7 +8,7 @@ const { EMPTY_SCRIPT } = require('@aragon/test-helpers/evmScript');
 const { assertRevert } = require('@aragon/test-helpers/assertThrow');
 const timeUtil = require('../scripts/timeUtil.js');
 
-contract.only('HCVoting', accounts => {
+contract('HCVoting', accounts => {
 
   const [ 
     stakeHolder1, 
@@ -130,65 +130,62 @@ contract.only('HCVoting', accounts => {
         
       });
 
+      it.skip('Stakers should be able to withdraw their stake', async () => {
+        
+      });
+
     });
 
-    describe('When a proposal has relative support', () => {
+    describe('When a proposal is boosted and reaches the end of its lifetime', () => {
 
       beforeEach(async () => {
         await this.app.vote(0, true, { from: voteHolder1 });
         await this.app.vote(0, true, { from: voteHolder2 });
+        await this.app.stake(0, HOLDER_1_STAKE_BALANCE, false, { from: stakeHolder1 });
+        await this.app.stake(0, HOLDER_5_STAKE_BALANCE, true, { from: stakeHolder5 });
+        await timeUtil.advanceTimeAndBlock(web3, PENDED_BOOST_PERIOD_SECS);
+        await this.app.boostProposal(0, { from: stakeHolder1 });
+        await timeUtil.advanceTimeAndBlock(web3, BOOST_PERIOD_SECS + 2 * 3600);
       });
-      
-      describe('When a proposal is boosted and reaches the end of its lifetime', () => {
+
+      it('An external caller should be able to resolve the proposal and be compensated for it', async () => {
+        const initialHolderBalance = (await this.stakeToken.balanceOf(stakeHolder1)).toString();
+        await this.app.resolveBoostedProposal(0, { from: stakeHolder1 });
+        const newBalance = (await this.stakeToken.balanceOf(stakeHolder1)).toString();
+        expect(parseInt(newBalance, 10)).to.be.above(parseInt(initialHolderBalance, 10));
+      });
+
+      describe('When a boosted proposal is resolved by an external caller', () => {
 
         beforeEach(async () => {
-          await this.app.stake(0, HOLDER_1_STAKE_BALANCE, false, { from: stakeHolder1 });
-          await this.app.stake(0, HOLDER_5_STAKE_BALANCE, true, { from: stakeHolder5 });
-          await timeUtil.advanceTimeAndBlock(web3, PENDED_BOOST_PERIOD_SECS);
-          await this.app.boostProposal(0, { from: stakeHolder1 });
-          await timeUtil.advanceTimeAndBlock(web3, BOOST_PERIOD_SECS + 2 * 3600);
+          await this.app.resolveBoostedProposal(0);
         });
 
-        it('An external caller should be able to resolve the proposal and be compensated for it', async () => {
-          const initialHolderBalance = (await this.stakeToken.balanceOf(stakeHolder1)).toString();
-          await this.app.resolveBoostedProposal(0, { from: stakeHolder1 });
-          const newBalance = (await this.stakeToken.balanceOf(stakeHolder1)).toString();
-          expect(parseInt(newBalance, 10)).to.be.above(parseInt(initialHolderBalance, 10));
+        it.skip('A ProposalStateChanged should be triggered');
+
+        it('The proposal state should be set to resolved', async () => {
+          const [
+            votingPower, 
+            executionScript, 
+            state, 
+            lastRelativeSupport
+          ] = await this.app.getProposalInfo(0);
+          expect(state.toString()).to.equal(`4`); // ProposalState '4' = Resolved
         });
 
-        describe('When a boosted proposal is resolved by an external caller', () => {
-
-          beforeEach(async () => {
-            await this.app.resolveBoostedProposal(0);
-          });
-
-          it.skip('A ProposalStateChanged should be triggered');
-
-          it('The proposal state should be set to resolved', async () => {
-            const [
-              votingPower, 
-              executionScript, 
-              state, 
-              lastRelativeSupport
-            ] = await this.app.getProposalInfo(0);
-            expect(state.toString()).to.equal(`4`); // ProposalState '4' = Resolved
-          });
-
-          it('Should have been executed', async () => {
-            const [
-              votingPower, 
-              executionScript, 
-              state, 
-              lastRelativeSupport,
-              executed
-            ] = await this.app.getProposalInfo(0);
-            expect(executed).to.equal(true);
-          });
-          
+        it('Should have been executed', async () => {
+          const [
+            votingPower, 
+            executionScript, 
+            state, 
+            lastRelativeSupport,
+            executed
+          ] = await this.app.getProposalInfo(0);
+          expect(executed).to.equal(true);
         });
         
       });
-
+      
     });
 
     describe('When a proposal does not have relative support', () => {

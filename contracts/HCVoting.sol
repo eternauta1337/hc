@@ -503,6 +503,7 @@ contract HCVoting is IForwarder, AragonApp {
         Proposal storage proposal_ = proposals[_proposalId];
         require(proposal_.state != ProposalState.Expired, ERROR_PROPOSAL_IS_CLOSED);
         require(proposal_.state != ProposalState.Resolved, ERROR_PROPOSAL_IS_CLOSED);
+        require(proposal_.state != ProposalState.Boosted, ERROR_PROPOSAL_IS_BOOSTED);
 
         // Verify that the sender holds the required stake to be removed.
         if(_supports) require(proposal_.upstakes[msg.sender] >= _amount, ERROR_SENDER_DOES_NOT_HAVE_REQUIRED_STAKE);

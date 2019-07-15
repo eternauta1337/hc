@@ -223,6 +223,8 @@ contract('HCVoting', accounts => {
               expect(event.args._newState.toString()).to.equal(`3`); // ProposalState '3' = Boosted
             });
 
+            it.skip('Stakers should not be able to stake');
+            it.skip('Stakers should not be able to unstake');
             it.skip('An external caller shouldn\'t be able to boost a proposal once it has already been boosted');
             it.skip('A decision flip before the quiet ending period should not extend it\'s lifetime')
 

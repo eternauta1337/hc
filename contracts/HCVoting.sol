@@ -547,12 +547,10 @@ contract HCVoting is IForwarder, AragonApp {
         Proposal storage proposal_ = proposals[_proposalId];
         require(proposal_.state != ProposalState.Resolved, ERROR_PROPOSAL_IS_CLOSED);
         require(proposal_.state != ProposalState.Boosted, ERROR_PROPOSAL_IS_BOOSTED);
-        require(getTimestamp64() >= proposal_.startDate.add(proposal_.lifetime), ERROR_PROPOSAL_IS_ACTIVE);
-
-        // Require that the proposal is currently pended.
-        require(proposal_.state == ProposalState.Pended);
+        require(getTimestamp64() < proposal_.startDate.add(proposal_.lifetime), ERROR_PROPOSAL_IS_CLOSED);
 
         // Require that the proposal has had enough confidence for a period of time.
+        require(proposal_.state == ProposalState.Pended);
         require(_proposalHasEnoughConfidence(_proposalId), ERROR_PROPOSAL_DOESNT_HAVE_ENOUGH_CONFIDENCE);
         require(getTimestamp64() >= proposal_.lastPendedDate.add(pendedBoostPeriod), ERROR_PROPOSAL_HASNT_HAD_CONFIDENCE_ENOUGH_TIME);
 

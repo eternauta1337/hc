@@ -6,7 +6,7 @@ const {
 const { EMPTY_SCRIPT } = require('@aragon/test-helpers/evmScript');
 const { assertRevert } = require('@aragon/test-helpers/assertThrow');
 
-contract.only('HCVoting', ([appManager, proposalCreator]) => {
+contract('HCVoting', ([appManager, proposalCreator]) => {
 
   describe('When creating proposals', () => {
 

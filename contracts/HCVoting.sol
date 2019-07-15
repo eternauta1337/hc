@@ -577,12 +577,12 @@ contract HCVoting is IForwarder, AragonApp {
         if(proposal_.state == ProposalState.Boosted) {
             require(getTimestamp64() >= proposal_.startDate.add(proposal_.lifetime), ERROR_PROPOSAL_IS_ACTIVE);
             VoteState relativeSupport = _calculateProposalSupport(proposal_, true);
-            if(relativeSupport != VoteState.Absent) proposal_.state = ProposalState.Resolved;
+            if(relativeSupport != VoteState.Absent) _updateProposalState(0, ProposalState.Resolved);
             if(relativeSupport == VoteState.Yea) _executeProposal(proposal_);
         }
         else {
             VoteState absoluteSupport = _calculateProposalSupport(proposal_, false);
-            if(absoluteSupport != VoteState.Absent) proposal_.state = ProposalState.Resolved;
+            if(absoluteSupport != VoteState.Absent) _updateProposalState(0, ProposalState.Resolved);
             if(absoluteSupport == VoteState.Yea) _executeProposal(proposal_);
         }
     }

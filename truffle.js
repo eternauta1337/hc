@@ -72,4 +72,7 @@ module.exports = {
       runs: 200
     }
   },
+  mocha: {
+    bail: false
+  }
 }

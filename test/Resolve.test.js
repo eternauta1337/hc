@@ -77,16 +77,17 @@ contract('HCVoting', accounts => {
 
     describe('When a Queued proposal reaches absolute majority', () => {
 
-      let lastVoteReceipt;
+      let resolveReceipt;
 
       beforeEach(async () => {
         await this.app.vote(0, true, { from: voteHolder1 });
         await this.app.vote(0, true, { from: voteHolder2 });
-        lastVoteReceipt = await this.app.vote(0, true, { from: voteHolder3 });
+        await this.app.vote(0, true, { from: voteHolder3 });
+        resolveReceipt = await this.app.resolveProposal(0);
       });
 
       it('A ProposalStateChanged event with the Resolved state should be emitted', async () => {
-        const event = lastVoteReceipt.logs.filter(l => l.event === 'ProposalStateChanged')[0];
+        const event = resolveReceipt.logs.filter(l => l.event === 'ProposalStateChanged')[0];
         expect(event).to.be.an('object');
         expect(event.args._proposalId.toString()).to.equal(`0`);
         expect(event.args._newState.toString()).to.equal(`4`); // ProposalState '4' = Resolved
@@ -148,17 +149,14 @@ contract('HCVoting', accounts => {
         await timeUtil.advanceTimeAndBlock(web3, BOOST_PERIOD_SECS + 2 * 3600);
       });
 
-      it('An external caller should be able to resolve the proposal and be compensated for it', async () => {
-        const initialHolderBalance = (await this.stakeToken.balanceOf(stakeHolder1)).toString();
-        await this.app.resolveBoostedProposal(0, { from: stakeHolder1 });
-        const newBalance = (await this.stakeToken.balanceOf(stakeHolder1)).toString();
-        expect(parseInt(newBalance, 10)).to.be.above(parseInt(initialHolderBalance, 10));
+      it('An external caller should be able to resolve the proposal', async () => {
+        await this.app.resolveProposal(0, { from: stakeHolder1 });
       });
 
       describe('When a boosted proposal is resolved by an external caller', () => {
 
         beforeEach(async () => {
-          await this.app.resolveBoostedProposal(0);
+          await this.app.resolveProposal(0);
         });
 
         it.skip('A ProposalStateChanged should be triggered');

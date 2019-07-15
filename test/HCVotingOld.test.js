@@ -297,18 +297,18 @@ contract.skip('HCVoting (DEPRECATED)', accounts => {
       //   expect((await app.getVote(1, accounts[6])).toString()).to.equal(`2`);
       // });
 
-      it('Should not resolve a proposal while it doesn\'t reach absolute majority', async () => {
+      // it('Should not resolve a proposal while it doesn\'t reach absolute majority', async () => {
 
-        // Cast some random votes.
-        await app.vote(3, false, { from: accounts[0] });
-        await app.vote(3, false, { from: accounts[1] });
-        await app.vote(3, false, { from: accounts[4] });
-        await app.vote(3, true, { from: accounts[8] });
+      //   // Cast some random votes.
+      //   await app.vote(3, false, { from: accounts[0] });
+      //   await app.vote(3, false, { from: accounts[1] });
+      //   await app.vote(3, false, { from: accounts[4] });
+      //   await app.vote(3, true, { from: accounts[8] });
 
-        // Retrieve the proposal and verify that it has been resolved.
-        const proposalInfo = await app.getProposalInfo(3);
-        expect(proposalInfo[2].toString()).to.equal(`0`); // ProposalState '0' = Queued
-      });
+      //   // Retrieve the proposal and verify that it has been resolved.
+      //   const proposalInfo = await app.getProposalInfo(3);
+      //   expect(proposalInfo[2].toString()).to.equal(`0`); // ProposalState '0' = Queued
+      // });
 
       describe('When proposals expire (directly from queue)', () => {
 
@@ -359,41 +359,41 @@ contract.skip('HCVoting (DEPRECATED)', accounts => {
           lastVoteReceipt = await app.vote(0, true, { from: accounts[8] });
         });
 
-        it('A ProposalStateChanged event with the Resolved state should be emitted', async () => {
+        // it('A ProposalStateChanged event with the Resolved state should be emitted', async () => {
 
-          // Check that a ProposalStateChanged event was emitted.
-          const event = lastVoteReceipt.logs[1];
-          expect(event).to.be.an('object');
-          expect(event.args._proposalId.toString()).to.equal(`0`);
-          expect(event.args._newState.toString()).to.equal(`4`); // ProposalState '4' = Resolved
-        });
+        //   // Check that a ProposalStateChanged event was emitted.
+        //   const event = lastVoteReceipt.logs[1];
+        //   expect(event).to.be.an('object');
+        //   expect(event.args._proposalId.toString()).to.equal(`0`);
+        //   expect(event.args._newState.toString()).to.equal(`4`); // ProposalState '4' = Resolved
+        // });
 
-        it('The retrieved proposal\'s state should be Resolved', async () => {
+        // it('The retrieved proposal\'s state should be Resolved', async () => {
 
-          // Retrieve the proposal and verify that it has been resolved.
-          const proposal = await app.getProposalInfo(0);
-          expect(proposal[2].toString()).to.equal(`4`); // ProposalState '4' = Resolved
-        });
+        //   // Retrieve the proposal and verify that it has been resolved.
+        //   const proposal = await app.getProposalInfo(0);
+        //   expect(proposal[2].toString()).to.equal(`4`); // ProposalState '4' = Resolved
+        // });
 
-        it('Should not allow additional votes on a resolved proposal', async () => {
-          await assertRevert(
-            app.vote(0, false, { from: accounts[0] }),
-						`PROPOSAL_IS_CLOSED`
-          );
-        });
+        // it('Should not allow additional votes on a resolved proposal', async () => {
+        //   await assertRevert(
+        //     app.vote(0, false, { from: accounts[0] }),
+						// `PROPOSAL_IS_CLOSED`
+        //   );
+        // });
 
-        it('Should not allow staking on a resolved proposal', async () => {
+        // it('Should not allow staking on a resolved proposal', async () => {
 
-          // Mint some stake tokens and give allowance.
-          await stakeTokenContract.generateTokens(accounts[0], 1000);
-          await stakeTokenContract.approve(app.address, 1000 , { from: accounts[0] });
+        //   // Mint some stake tokens and give allowance.
+        //   await stakeTokenContract.generateTokens(accounts[0], 1000);
+        //   await stakeTokenContract.approve(app.address, 1000 , { from: accounts[0] });
 
-          // Staking should fail.
-          await assertRevert(
-            app.stake(0, 1, false, { from: accounts[0] }),
-						`PROPOSAL_IS_CLOSED`
-          );
-        });
+        //   // Staking should fail.
+        //   await assertRevert(
+        //     app.stake(0, 1, false, { from: accounts[0] }),
+						// `PROPOSAL_IS_CLOSED`
+        //   );
+        // });
 
       }); // When absolute majority support is reached in a proposal
 
@@ -538,7 +538,7 @@ contract.skip('HCVoting (DEPRECATED)', accounts => {
         //   expect(votingBalance.toString()).to.equal(`${INITIAL_VOTING_STAKE_TOKEN_BALANCE + 10000}`);
         // });
 
-        it.skip('External callers should not be able to boost a proposal that hasn\'t gained enough confidence');
+        // it.skip('External callers should not be able to boost a proposal that hasn\'t gained enough confidence');
 
         describe('When queued proposals\' lifetime ends without boosting nor resolution', () => {
 
@@ -618,33 +618,33 @@ contract.skip('HCVoting (DEPRECATED)', accounts => {
             await app.stake(0, 5000, false, { from: accounts[5] });
           });
 
-          it('Their state should be set to Pended', async () => {
+          // it('Their state should be set to Pended', async () => {
 
-            // Verify confidence.
-            const confidence = await app.getConfidence(0);
-            expect(confidence.toString()).to.equal(`${4 * PRECISION_MULTIPLIER}`);
+          //   // Verify confidence.
+          //   const confidence = await app.getConfidence(0);
+          //   expect(confidence.toString()).to.equal(`${4 * PRECISION_MULTIPLIER}`);
 
-            // Retrieve the proposal and verify it's state.
-            const proposalInfo = await app.getProposalInfo(0);
-            expect(proposalInfo[2].toString()).to.equal(`2`); // ProposalState '2' = Pended
-            const proposalTimeInfo = await app.getProposalTimeInfo(0);
-            const pendedDateDeltaSecs = ( new Date().getTime() / 1000 ) - parseInt(proposalTimeInfo[3].toString(), 10);
-            expect(pendedDateDeltaSecs).to.be.below(2);
-          }); 
+          //   // Retrieve the proposal and verify it's state.
+          //   const proposalInfo = await app.getProposalInfo(0);
+          //   expect(proposalInfo[2].toString()).to.equal(`2`); // ProposalState '2' = Pended
+          //   const proposalTimeInfo = await app.getProposalTimeInfo(0);
+          //   const pendedDateDeltaSecs = ( new Date().getTime() / 1000 ) - parseInt(proposalTimeInfo[3].toString(), 10);
+          //   expect(pendedDateDeltaSecs).to.be.below(2);
+          // }); 
 
-          it('Their state should change to Unpended if confidence drops', async () => {
+          // it('Their state should change to Unpended if confidence drops', async () => {
 
-            // Downstake the proposal a bit to reduce confidence beneath the threshold.
-            await app.stake(0, 10000, false, { from: accounts[7] });
+          //   // Downstake the proposal a bit to reduce confidence beneath the threshold.
+          //   await app.stake(0, 10000, false, { from: accounts[7] });
 
-            // Verify that confidence dropped.
-            const confidence = await app.getConfidence(0);
-            expect(confidence.toString()).to.equal(`${2 * PRECISION_MULTIPLIER}`);
+          //   // Verify that confidence dropped.
+          //   const confidence = await app.getConfidence(0);
+          //   expect(confidence.toString()).to.equal(`${2 * PRECISION_MULTIPLIER}`);
 
-            // Retrieve the proposal and verify it's state.
-            const proposal = await app.getProposalInfo(0);
-            expect(proposal[2].toString()).to.equal(`1`); // ProposalState '1' = Unpended
-          }); 
+          //   // Retrieve the proposal and verify it's state.
+          //   const proposal = await app.getProposalInfo(0);
+          //   expect(proposal[2].toString()).to.equal(`1`); // ProposalState '1' = Unpended
+          // }); 
 
           it.skip('External callers should not be able to boost a proposal that hasn\'t been pended for enough time');
 
@@ -660,29 +660,29 @@ contract.skip('HCVoting (DEPRECATED)', accounts => {
               await timeUtil.advanceTimeAndBlock(web3, time);
             });
 
-            it('An external caller should be able to boost the proposal and receive a compensation fee', async () => {
+            // it('An external caller should be able to boost the proposal and receive a compensation fee', async () => {
 
-              // Record the caller's current stake token balance
-              // to later verify that it has received a compensation fee for the call.
-              const balance = (await stakeTokenContract.balanceOf(accounts[0])).toString();
+            //   // Record the caller's current stake token balance
+            //   // to later verify that it has received a compensation fee for the call.
+            //   const balance = (await stakeTokenContract.balanceOf(accounts[0])).toString();
 
-              // Boost the proposal.
-              await app.boostProposal(0);
+            //   // Boost the proposal.
+            //   await app.boostProposal(0);
 
-              // Verify the proposal's state.
-              const proposalInfo = await app.getProposalInfo(0);
-              expect(proposalInfo[2].toString()).to.equal(`3`); // ProposalState '3' = Boosted
+            //   // Verify the proposal's state.
+            //   const proposalInfo = await app.getProposalInfo(0);
+            //   expect(proposalInfo[2].toString()).to.equal(`3`); // ProposalState '3' = Boosted
 
-              // Verify that the proposal's lifetime has changed to boostPeriod.
-              const proposalTimeInfo = await app.getProposalTimeInfo(0);
-              expect(proposalTimeInfo[1].toString()).to.equal(`${BOOST_PERIOD_SECS}`);
+            //   // Verify that the proposal's lifetime has changed to boostPeriod.
+            //   const proposalTimeInfo = await app.getProposalTimeInfo(0);
+            //   expect(proposalTimeInfo[1].toString()).to.equal(`${BOOST_PERIOD_SECS}`);
 
-              // Verify that the coller received a compensation fee.
-              const newBalance = (await stakeTokenContract.balanceOf(accounts[0])).toString();
-              expect(parseInt(newBalance, 10)).to.be.above(parseInt(balance, 10));
-            });
+            //   // Verify that the coller received a compensation fee.
+            //   const newBalance = (await stakeTokenContract.balanceOf(accounts[0])).toString();
+            //   expect(parseInt(newBalance, 10)).to.be.above(parseInt(balance, 10));
+            // });
 
-            it.skip('An external caller shouldn\'t be able to boost a proposal once it has already been boosted');
+            // it.skip('An external caller shouldn\'t be able to boost a proposal once it has already been boosted');
 
             describe('When proposals are boosted', () => {
 
@@ -707,21 +707,21 @@ contract.skip('HCVoting (DEPRECATED)', accounts => {
                   await timeUtil.advanceTimeAndBlock(web3, time);
                 });
 
-                it('A decision flip near the end of the proposal should extend its boosted lifetime', async () => {
+                // it('A decision flip near the end of the proposal should extend its boosted lifetime', async () => {
 
-                  // Produce a decision flip in proposal 0.
-                  const voteReceipt = await app.vote(0, false, { from: accounts[3] });
+                //   // Produce a decision flip in proposal 0.
+                //   const voteReceipt = await app.vote(0, false, { from: accounts[3] });
 
-                  // Verify that an event was triggered.
-                  const event = voteReceipt.logs[1];
-                  expect(event).to.be.an('object');
-                  expect(event.args._proposalId.toString()).to.equal(`0`);
-                  expect(event.args._newLifetime.toString()).to.equal(`${BOOST_PERIOD_SECS + QUIET_ENDING_PERIOD_SECS}`);
+                //   // Verify that an event was triggered.
+                //   const event = voteReceipt.logs[1];
+                //   expect(event).to.be.an('object');
+                //   expect(event.args._proposalId.toString()).to.equal(`0`);
+                //   expect(event.args._newLifetime.toString()).to.equal(`${BOOST_PERIOD_SECS + QUIET_ENDING_PERIOD_SECS}`);
 
-                  // Retrieve the proposal and verify that its lifetime has been extended.
-                  const proposal = await app.getProposalTimeInfo(0);
-                  expect(proposal[1].toString()).to.equal(`${BOOST_PERIOD_SECS + QUIET_ENDING_PERIOD_SECS}`);
-                });
+                //   // Retrieve the proposal and verify that its lifetime has been extended.
+                //   const proposal = await app.getProposalTimeInfo(0);
+                //   expect(proposal[1].toString()).to.equal(`${BOOST_PERIOD_SECS + QUIET_ENDING_PERIOD_SECS}`);
+                // });
 
                 describe('When the boost period has elapsed', () => {
 

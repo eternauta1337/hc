@@ -72,6 +72,7 @@ contract HCVoting is IForwarder, AragonApp {
     struct Proposal {
         ProposalState state;
         VoteState lastRelativeSupport;
+        bool executed;
         uint64 snapshotBlock;
         uint64 lifetime;
         uint64 startDate;
@@ -196,7 +197,8 @@ contract HCVoting is IForwarder, AragonApp {
         uint256 votingPower,
         bytes executionScript,
         ProposalState state,
-        VoteState lastRelativeSupport
+        VoteState lastRelativeSupport,
+        bool executed
     ) {
         require(_proposalExists(_proposalId), ERROR_PROPOSAL_DOES_NOT_EXIST);
         Proposal storage proposal_ = proposals[_proposalId];
@@ -204,6 +206,7 @@ contract HCVoting is IForwarder, AragonApp {
         executionScript = proposal_.executionScript;
         state = proposal_.state;
         lastRelativeSupport = proposal_.lastRelativeSupport;
+        executed = proposal_.executed;
     }
 
     function getProposalTimeInfo(uint256 _proposalId) public view returns (
@@ -542,7 +545,7 @@ contract HCVoting is IForwarder, AragonApp {
         }
         else {
           if(proposal_.state == ProposalState.Pended) {
-                    _updateProposalState(_proposalId, ProposalState.Unpended);
+              _updateProposalState(_proposalId, ProposalState.Unpended);
           }
         }
 
@@ -579,6 +582,7 @@ contract HCVoting is IForwarder, AragonApp {
 
         // Boost the proposal.
         _updateProposalState(_proposalId, ProposalState.Boosted);
+        proposal_.startDate = getTimestamp64();
         proposal_.lifetime = boostPeriod;
     }
 
@@ -606,7 +610,10 @@ contract HCVoting is IForwarder, AragonApp {
 
         // Resolve the proposal.
         _updateProposalState(_proposalId, ProposalState.Resolved);
-        _executeProposal(proposal_);
+        VoteState absoluteSupport = _calculateProposalSupport(proposal_, true);
+        if(absoluteSupport == VoteState.Yea) {
+            _executeProposal(proposal_);
+        }
     }
 
     /**
@@ -657,6 +664,8 @@ contract HCVoting is IForwarder, AragonApp {
     }
 
     function _executeProposal(Proposal storage proposal_) internal {
+        proposal_.executed = true;
+
         bytes memory input = new bytes(0); // TODO: Consider input for voting scripts
 
         // Blacklist the stake token's address, so that

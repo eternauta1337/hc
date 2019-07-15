@@ -20,20 +20,28 @@ contract HCVoting is IForwarder, AragonApp {
     MiniMeToken public stakeToken;
 
     // See initialize function for documentation on these.
-    uint256 public supportPct;
-    uint256 public confidenceThresholdBase;
     uint64 public queuePeriod;
     uint64 public boostPeriod;
     uint64 public quietEndingPeriod;
     uint64 public pendedBoostPeriod;
+    uint256 public supportPct;
+    uint256 public confidenceThresholdBase;
 
     // Multiplier used to avoid losing precision when using division or calculating percentages.
     uint256 internal constant PRECISION_MULTIPLIER = 10 ** 16;
+
+    /*
+     * Roles.
+     */
 
     bytes32 public constant CREATE_PROPOSALS_ROLE            = keccak256("CREATE_PROPOSALS_ROLE");
     bytes32 public constant MODIFY_SUPPORT_PERCENT_ROLE      = keccak256("MODIFY_SUPPORT_PERCENT_ROLE");
     bytes32 public constant MODIFY_PERIODS_ROLE              = keccak256("MODIFY_PERIODS_ROLE");
     bytes32 public constant MODIFY_CONFIDENCE_THRESHOLD_ROLE = keccak256("MODIFY_CONFIDENCE_THRESHOLD_ROLE");
+
+    /*
+     * Errors.
+     */
 
     string internal constant ERROR_INSUFFICIENT_ALLOWANCE                    = "INSUFFICIENT_ALLOWANCE";
     string internal constant ERROR_SENDER_DOES_NOT_HAVE_REQUIRED_STAKE       = "SENDER_DOES_NOT_HAVE_REQUIRED_STAKE";
@@ -52,6 +60,10 @@ contract HCVoting is IForwarder, AragonApp {
     string internal constant ERROR_CAN_NOT_FORWARD                           = "CAN_NOT_FORWARD";
     string internal constant ERROR_INSUFFICIENT_TOKENS                       = "INSUFFICIENT_TOKENS";
     
+    /*
+     * Proposal data structure and storage.
+     */
+
     enum VoteState { 
         Absent, // No vote
         Yea,    // Supports proposal
@@ -178,6 +190,7 @@ contract HCVoting is IForwarder, AragonApp {
 
     /*
      * Getters (that are not automatically injected by Solidity).
+     * Note: A single getProposal(...) getter is not provided because it produces a stack-too-deep error.
      */
 
     function getProposalInfo(uint256 _proposalId) public view returns (
@@ -581,53 +594,27 @@ contract HCVoting is IForwarder, AragonApp {
     }
 
     function _executeProposal(Proposal storage proposal_) internal {
-        proposal_.executed = true;
-
-        bytes memory input = new bytes(0); // TODO: Consider input for voting scripts
 
         // Blacklist the stake token's address, so that
         // proposals whose scripts attempt to interact with it are not executed.
         address[] memory blacklist = new address[](1);
         blacklist[0] = address(stakeToken);
 
+        bytes memory input = new bytes(0); // TODO: Consider input for voting scripts
         runScript(proposal_.executionScript, input, blacklist);
+
+        proposal_.executed = true;
     }
 
     /*
-     * Withdrawing stake after proposals expire or resolve.
+     * Withdrawing stake after proposals are resolved
      */
-
-    /**
-    * @notice Withdraw stake from expired proposal
-    * @param _proposalId uint256 Id of proposal to withdraw stake from
-    */
-    function withdrawStakeFromExpiredProposal(uint256 _proposalId) public {
-        require(_proposalExists(_proposalId), ERROR_PROPOSAL_DOES_NOT_EXIST);
-
-        Proposal storage proposal_ = proposals[_proposalId];
-        require(proposal_.state != ProposalState.Resolved, ERROR_PROPOSAL_IS_CLOSED);
-        require(getTimestamp64() >= proposal_.startDate.add(proposal_.lifetime), ERROR_PROPOSAL_IS_ACTIVE);
-
-        // Calculate the amount of that the user has staked.
-        uint256 senderUpstake = proposal_.upstakes[msg.sender];
-        uint256 senderDownstake = proposal_.downstakes[msg.sender];
-        uint256 senderTotalStake = senderUpstake.add(senderDownstake);
-        require(senderTotalStake > 0, ERROR_NO_STAKE_TO_WITHDRAW);
-
-        // Remove the stake from the sender.
-        proposal_.upstakes[msg.sender] = 0;
-        proposal_.downstakes[msg.sender] = 0;
-
-        // Return the tokens to the sender.
-        require(stakeToken.balanceOf(address(this)) >= senderTotalStake, ERROR_INSUFFICIENT_TOKENS);
-        stakeToken.transfer(msg.sender, senderTotalStake);
-    }
 
     /**
     * @notice Withdraw stake from resolved proposal, including rewards from winning stakes
     * @param _proposalId uint256 Id of proposal to withdraw stake from
     */
-    function withdrawRewardFromResolvedProposal(uint256 _proposalId) public {
+    function withdrawStakeFromResolvedProposal(uint256 _proposalId) public {
         require(_proposalExists(_proposalId), ERROR_PROPOSAL_DOES_NOT_EXIST);
 
         Proposal storage proposal_ = proposals[_proposalId];

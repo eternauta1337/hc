@@ -8,7 +8,7 @@ const {
   COMPENSATION_FEE_PERCENT
 } = require('./common.js');
 
-contract('HCVoting', ([appManager]) => {
+contract.only('HCVoting', ([appManager]) => {
 
   describe('When deploying the app', () => {
 
@@ -34,7 +34,6 @@ contract('HCVoting', ([appManager]) => {
       expect((await this.app.pendedBoostPeriod()).toString()).to.equal(`${PENDED_BOOST_PERIOD_SECS}`);
       expect((await this.app.boostPeriod()).toString()).to.equal(`${BOOST_PERIOD_SECS}`);
       expect((await this.app.quietEndingPeriod()).toString()).to.equal(`${QUIET_ENDING_PERIOD_SECS}`);
-      expect((await this.app.compensationFeePct()).toString()).to.equal(`${COMPENSATION_FEE_PERCENT}`);
     });
   });
 });

@@ -246,6 +246,8 @@ contract HCVoting is IForwarder, AragonApp {
         return proposal_.votes[_voter];
     }
 
+    // TODO: As above, reconsider renaming to make it clearer to know when dealing with a sender
+    // upstake or a proposal upstake
     function getUpstake(uint256 _proposalId, address _staker) public view returns (uint256) {
         require(_proposalExists(_proposalId), ERROR_PROPOSAL_DOES_NOT_EXIST);
         Proposal storage proposal_ = proposals[_proposalId];

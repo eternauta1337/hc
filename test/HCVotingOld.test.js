@@ -438,27 +438,27 @@ contract.skip('HCVoting (DEPRECATED)', accounts => {
         //   );
         // });
 
-        it('Should not allow an account to stake without having provided sufficient allowance', async () => {
-          await assertRevert(
-            app.stake(0, 1000, true, { from: accounts[8] }),
-            `INSUFFICIENT_ALLOWANCE`
-          );
-        });
+        // it('Should not allow an account to stake without having provided sufficient allowance', async () => {
+        //   await assertRevert(
+        //     app.stake(0, 1000, true, { from: accounts[8] }),
+        //     `INSUFFICIENT_ALLOWANCE`
+        //   );
+        // });
 
-        it('Should not allow an account to withdraw tokens from a proposal that has no stake', async () => {
-          await assertRevert(
-            app.unstake(0, 10000, true),
-            `SENDER_DOES_NOT_HAVE_REQUIRED_STAKE`
-          );
-        });
+        // it('Should not allow an account to withdraw tokens from a proposal that has no stake', async () => {
+        //   await assertRevert(
+        //     app.unstake(0, 10000, true),
+        //     `SENDER_DOES_NOT_HAVE_REQUIRED_STAKE`
+        //   );
+        // });
 
-        it('Should not allow an account to withdraw tokens that were not staked by the account', async () => {
-          await app.stake(0, 1000, true);
-          await assertRevert(
-            app.unstake(0, 1000, true, { from: accounts[1] }),
-            `SENDER_DOES_NOT_HAVE_REQUIRED_STAKE`
-          );
-        });
+        // it('Should not allow an account to withdraw tokens that were not staked by the account', async () => {
+        //   await app.stake(0, 1000, true);
+        //   await assertRevert(
+        //     app.unstake(0, 1000, true, { from: accounts[1] }),
+        //     `SENDER_DOES_NOT_HAVE_REQUIRED_STAKE`
+        //   );
+        // });
 
         it('Can retrieve a proposals confidence factor', async () => {
           await app.stake(0, 10000, true, { from: accounts[3] });
@@ -466,77 +466,77 @@ contract.skip('HCVoting (DEPRECATED)', accounts => {
           expect((await app.getConfidence(0)).toString()).to.equal(`${2 * PRECISION_MULTIPLIER}`);
         });
 
-        it('Should allow staking and unstaking on proposals', async () => {
+        // it('Should allow staking and unstaking on proposals', async () => {
 
-          // Stake tokens.
-          const upstakeReceipt = await app.stake(0, 10000, true, { from: accounts[6] });
-          const downstakeReceipt = await app.stake(0, 5000, false, { from: accounts[6] });
+        //   // Stake tokens.
+        //   const upstakeReceipt = await app.stake(0, 10000, true, { from: accounts[6] });
+        //   const downstakeReceipt = await app.stake(0, 5000, false, { from: accounts[6] });
 
-          // Verify that the proper events were triggered.
-          let event = upstakeReceipt.logs[0];
-          expect(event).to.be.an('object');
-          expect(event.args._proposalId.toString()).to.equal(`0`);
-          expect(event.args._staker.toString()).to.equal(accounts[6]);
-          expect(event.args._amount.toString()).to.equal(`10000`);
-          event = downstakeReceipt.logs[0];
-          expect(event).to.be.an('object');
-          expect(event.args._proposalId.toString()).to.equal(`0`);
-          expect(event.args._staker.toString()).to.equal(accounts[6]);
-          expect(event.args._amount.toString()).to.equal(`5000`);
+        //   // Verify that the proper events were triggered.
+        //   let event = upstakeReceipt.logs[0];
+        //   expect(event).to.be.an('object');
+        //   expect(event.args._proposalId.toString()).to.equal(`0`);
+        //   expect(event.args._staker.toString()).to.equal(accounts[6]);
+        //   expect(event.args._amount.toString()).to.equal(`10000`);
+        //   event = downstakeReceipt.logs[0];
+        //   expect(event).to.be.an('object');
+        //   expect(event.args._proposalId.toString()).to.equal(`0`);
+        //   expect(event.args._staker.toString()).to.equal(accounts[6]);
+        //   expect(event.args._amount.toString()).to.equal(`5000`);
 
-          // Stake some more.
-          await app.stake(0, 5000, true, { from: accounts[6] });
-          await app.stake(0, 5000, false, { from: accounts[6] });
+        //   // Stake some more.
+        //   await app.stake(0, 5000, true, { from: accounts[6] });
+        //   await app.stake(0, 5000, false, { from: accounts[6] });
 
-          // Verify that the proposal received the stake.
-          const proposal = await app.getProposalStakes(0);
-          expect(proposal[0].toString()).to.equal(`15000`);
-          expect(proposal[1].toString()).to.equal(`10000`);
+        //   // Verify that the proposal received the stake.
+        //   const proposal = await app.getProposalStakes(0);
+        //   expect(proposal[0].toString()).to.equal(`15000`);
+        //   expect(proposal[1].toString()).to.equal(`10000`);
 
-          // Verify that the proposal registers the sender's stake.
-          let upstake = await app.getUpstake(0, accounts[6]);
-          expect(upstake.toString()).to.equal(`15000`);
-          let downstake = await app.getDownstake(0, accounts[6]);
-          expect(downstake.toString()).to.equal(`10000`);
+        //   // Verify that the proposal registers the sender's stake.
+        //   let upstake = await app.getUpstake(0, accounts[6]);
+        //   expect(uProposalCreatedpstake.toString()).to.equal(`15000`);
+        //   let downstake = await app.getDownstake(0, accounts[6]);
+        //   expect(downstake.toString()).to.equal(`10000`);
 
-          // Verify that the owner's stake token balance decreased.
-          let stakerBalance = await stakeTokenContract.balanceOf(accounts[6]);
-          expect(stakerBalance.toString()).to.equal(`75000`);
+        //   // Verify that the owner's stake token balance decreased.
+        //   let stakerBalance = await stakeTokenContract.balanceOf(accounts[6]);
+        //   expect(stakerBalance.toString()).to.equal(`75000`);
 
-          // Verify that the voting contract now holds the staked tokens.
-          let votingBalance = await stakeTokenContract.balanceOf(app.address);
-          expect(votingBalance.toString()).to.equal(`${INITIAL_VOTING_STAKE_TOKEN_BALANCE + 25000}`);
+        //   // Verify that the voting contract now holds the staked tokens.
+        //   let votingBalance = await stakeTokenContract.balanceOf(app.address);
+        //   expect(votingBalance.toString()).to.equal(`${INITIAL_VOTING_STAKE_TOKEN_BALANCE + 25000}`);
 
-          // Retrieve stake.
-          const unUpstakeReceipt = await app.unstake(0, 10000, true, { from: accounts[6] });
-          const unDownstakeReceipt = await app.unstake(0, 5000, false, { from: accounts[6] });
+        //   // Retrieve stake.
+        //   const unUpstakeReceipt = await app.unstake(0, 10000, true, { from: accounts[6] });
+        //   const unDownstakeReceipt = await app.unstake(0, 5000, false, { from: accounts[6] });
 
-          // Verify that the proper events were triggered.
-          event = unUpstakeReceipt.logs[0];
-          expect(event).to.be.an('object');
-          expect(event.args._proposalId.toString()).to.equal(`0`);
-          expect(event.args._staker.toString()).to.equal(accounts[6]);
-          expect(event.args._amount.toString()).to.equal(`10000`);
-          event = unDownstakeReceipt.logs[0];
-          expect(event).to.be.an('object');
-          expect(event.args._proposalId.toString()).to.equal(`0`);
-          expect(event.args._staker.toString()).to.equal(accounts[6]);
-          expect(event.args._amount.toString()).to.equal(`5000`);
+        //   // Verify that the proper events were triggered.
+        //   event = unUpstakeReceipt.logs[0];
+        //   expect(event).to.be.an('object');
+        //   expect(event.args._proposalId.toString()).to.equal(`0`);
+        //   expect(event.args._staker.toString()).to.equal(accounts[6]);
+        //   expect(event.args._amount.toString()).to.equal(`10000`);
+        //   event = unDownstakeReceipt.logs[0];
+        //   expect(event).to.be.an('object');
+        //   expect(event.args._proposalId.toString()).to.equal(`0`);
+        //   expect(event.args._staker.toString()).to.equal(accounts[6]);
+        //   expect(event.args._amount.toString()).to.equal(`5000`);
 
-          // Verify that the proposal registers the new sender's stake.
-          upstake = await app.getUpstake(0, accounts[6]);
-          expect(upstake.toString()).to.equal(`5000`);
-          downstake = await app.getDownstake(0, accounts[6]);
-          expect(downstake.toString()).to.equal(`5000`);
+        //   // Verify that the proposal registers the new sender's stake.
+        //   upstake = await app.getUpstake(0, accounts[6]);
+        //   expect(upstake.toString()).to.equal(`5000`);
+        //   downstake = await app.getDownstake(0, accounts[6]);
+        //   expect(downstake.toString()).to.equal(`5000`);
 
-          // Verify that the staker retrieved the tokens.
-          stakerBalance = await stakeTokenContract.balanceOf(accounts[6]);
-          expect(stakerBalance.toString()).to.equal(`90000`);
+        //   // Verify that the staker retrieved the tokens.
+        //   stakerBalance = await stakeTokenContract.balanceOf(accounts[6]);
+        //   expect(stakerBalance.toString()).to.equal(`90000`);
 
-          // Verify that the voting contract lost the tokens payed out to the staker.
-          votingBalance = await stakeTokenContract.balanceOf(app.address);
-          expect(votingBalance.toString()).to.equal(`${INITIAL_VOTING_STAKE_TOKEN_BALANCE + 10000}`);
-        });
+        //   // Verify that the voting contract lost the tokens payed out to the staker.
+        //   votingBalance = await stakeTokenContract.balanceOf(app.address);
+        //   expect(votingBalance.toString()).to.equal(`${INITIAL_VOTING_STAKE_TOKEN_BALANCE + 10000}`);
+        // });
 
         it.skip('External callers should not be able to boost a proposal that hasn\'t gained enough confidence');
 

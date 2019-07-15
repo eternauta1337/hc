@@ -9,7 +9,7 @@ const {
 const { EMPTY_SCRIPT } = require('@aragon/test-helpers/evmScript');
 const timeUtil = require('../scripts/timeUtil.js');
 
-contract.only('HCVoting', accounts => {
+contract('HCVoting', accounts => {
 
   const [ 
     stakeHolder1, 

@@ -44,6 +44,9 @@ contract('HCVoting', accounts => {
       await this.app.vote(0, true,  { from: holder2 });
       await this.app.vote(0, true,  { from: holder3 });
 
+      // Trigger the execution of the proposal.
+      await this.app.resolveProposal(0);
+
       // Retrieve new supportPercent value.
       const supportPct = await this.app.supportPct();
       expect(supportPct.toString()).to.equal(`${newSupportPct}`);
@@ -60,12 +63,15 @@ contract('HCVoting', accounts => {
       const script = encodeCallScript([action])
       const receipt = await this.app.createProposal(script, `Remove some stake from the voting app`);
       
-      // Support proposal so that it executes.
-      // Should fail because the auto-execution of the proposal is blacklisted for the stake token.
+      // Support the proposal.
       await this.app.vote(0, false, { from: holder1 });
       await this.app.vote(0, true,  { from: holder2 });
+      await this.app.vote(0, true, { from: holder3 }),
+
+      // Execute the proposal.
+      // Should fail because the auto-execution of the proposal is blacklisted for the stake token.
       await assertRevert(
-        this.app.vote(0, true, { from: holder3 }),
+        this.app.resolveProposal(0),
         `EVMCALLS_BLACKLISTED_CALL`
       );
     });

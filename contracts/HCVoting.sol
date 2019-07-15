@@ -569,24 +569,20 @@ contract HCVoting is IForwarder, AragonApp {
     * @param _proposalId uint256 Id of proposal to resolve
     */
     function resolveProposal(uint256 _proposalId) public {
-        _evaluateProposalResolution(_proposalId);
-    }
-
-    function _evaluateProposalResolution(uint256 _proposalId) internal {
         require(_proposalExists(_proposalId), ERROR_PROPOSAL_DOES_NOT_EXIST);
+
         Proposal storage proposal_ = proposals[_proposalId];
         require(proposal_.state != ProposalState.Resolved, ERROR_PROPOSAL_IS_CLOSED);
-        require(getTimestamp64() >= proposal_.startDate.add(proposal_.lifetime), ERROR_PROPOSAL_IS_ACTIVE);
 
-        proposal_.state = ProposalState.Resolved;
-
-        // Execute?
         if(proposal_.state == ProposalState.Boosted) {
+            require(getTimestamp64() >= proposal_.startDate.add(proposal_.lifetime), ERROR_PROPOSAL_IS_ACTIVE);
             VoteState relativeSupport = _calculateProposalSupport(proposal_, true);
+            if(relativeSupport != VoteState.Absent) proposal_.state = ProposalState.Resolved;
             if(relativeSupport == VoteState.Yea) _executeProposal(proposal_);
         }
         else {
             VoteState absoluteSupport = _calculateProposalSupport(proposal_, false);
+            if(absoluteSupport != VoteState.Absent) proposal_.state = ProposalState.Resolved;
             if(absoluteSupport == VoteState.Yea) _executeProposal(proposal_);
         }
     }

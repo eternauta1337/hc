@@ -26,7 +26,6 @@ contract HCVoting is IForwarder, AragonApp {
     uint64 public boostPeriod;
     uint64 public quietEndingPeriod;
     uint64 public pendedBoostPeriod;
-    uint256 public compensationFeePct;
 
     // Multiplier used to avoid losing precision when using division or calculating percentages.
     uint256 internal constant PRECISION_MULTIPLIER = 10 ** 16;
@@ -34,7 +33,6 @@ contract HCVoting is IForwarder, AragonApp {
     bytes32 public constant CREATE_PROPOSALS_ROLE            = keccak256("CREATE_PROPOSALS_ROLE");
     bytes32 public constant MODIFY_SUPPORT_PERCENT_ROLE      = keccak256("MODIFY_SUPPORT_PERCENT_ROLE");
     bytes32 public constant MODIFY_PERIODS_ROLE              = keccak256("MODIFY_PERIODS_ROLE");
-    bytes32 public constant MODIFY_COMPENSATION_FEES_ROLE    = keccak256("MODIFY_COMPENSATION_FEES_ROLE");
     bytes32 public constant MODIFY_CONFIDENCE_THRESHOLD_ROLE = keccak256("MODIFY_CONFIDENCE_THRESHOLD_ROLE");
 
     string internal constant ERROR_INSUFFICIENT_ALLOWANCE                    = "INSUFFICIENT_ALLOWANCE";
@@ -65,8 +63,7 @@ contract HCVoting is IForwarder, AragonApp {
         Unpended, // The proposal had been pended, but who's confindence dropped before pendedBoostPeriod elapses.
         Pended,   // The proposal has received enough confidence at a given moment.
         Boosted,  // the proposal has received enough confidence for pendedBoostPeriod, and can be resolved by relative majority.
-        Resolved, // The proposal was resolved positively either by absolute or relative majority.
-        Expired   // The proposal expired, due to lack of resolution either by queuePeriod or boostPeriod elapsing.
+        Resolved  // The proposal was resolved positively either by absolute or relative majority.
     }
 
     struct Proposal {
@@ -151,15 +148,6 @@ contract HCVoting is IForwarder, AragonApp {
         pendedBoostPeriod = _pendedBoostPeriod;
     }
 
-    /**
-    * @notice Change compensation fee percentage
-    * @param _compensationFeePct uint256 New compensation fee percentage
-    */
-    function changeCompensationFeePct(uint64 _compensationFeePct) public auth(MODIFY_COMPENSATION_FEES_ROLE) {
-        // _validateCompensationFeePct(_compensationFeePct);
-        compensationFeePct = _compensationFeePct;
-    }
-
     /*
      * Property validators.
      */
@@ -173,7 +161,6 @@ contract HCVoting is IForwarder, AragonApp {
     // function _validateBoostPeriod(uint256 _boostPeriod) internal pure { // TODO }
     // function _validateQuietEndingPeriod(uint256 _quietEndingPeriod) internal pure { // TODO }
     // function _validatePendedBoostPeriod(uint256 _pendedBoostPeriod) internal pure { // TODO }
-    // function _validateCompensationFeePct(uint256 _compensationFeePct) internal pure { // TODO }
     // function _validateConfidenceThresholdBase(uint256 _confidenceThresholdBase) internal pure { // TODO }
 
     /*
@@ -284,7 +271,6 @@ contract HCVoting is IForwarder, AragonApp {
     * @param _boostPeriod uint256 Seconds that a proposal will be open for votes while not being boosted (unless enough yeas or nays have been cast to make an early decision)
     * @param _quietEndingPeriod uint256 Seconds at the ending of _boostPeriod in which a support change will cause _boostPeriod to be extended by another _quietEndingPeriod
     * @param _pendedBoostPeriod uint256 Seconds for which a proposal needs to maintain a high enough level of confidence for it to become boosted
-    * @param _compensationFeePct uint256 Maximum percent of a proposal's upstake that could be used to compensate an external caller that boosts, resolves or expires a proposal
     * @param _confidenceThresholdBase uint256 Factor that determines how high the confidence of a proposal needs to be for it to be pended and eventually boosted
     */
     function initialize(
@@ -295,7 +281,6 @@ contract HCVoting is IForwarder, AragonApp {
         uint64 _boostPeriod,
         uint64 _quietEndingPeriod,
         uint64 _pendedBoostPeriod,
-        uint64 _compensationFeePct,
         uint64 _confidenceThresholdBase
     ) 
         external onlyInit 
@@ -306,7 +291,6 @@ contract HCVoting is IForwarder, AragonApp {
         // _validateQueuePeriod(_queuePeriod);
         // _validateBoostPeriod(_boostPeriod);
         // _validateQuietEndingPeriod(_quietEndingPeriod);
-        // _validateCompensationFeePct(_compensationFeePct);
         // _validatePendedBoostPeriod(_pendedBoostPeriod);
         // _validateConfidenceThresholdBase(_confidenceThresholdBase);
         // TODO: validate tokens
@@ -317,7 +301,6 @@ contract HCVoting is IForwarder, AragonApp {
         queuePeriod = _queuePeriod;
         boostPeriod = _boostPeriod;
         quietEndingPeriod= _quietEndingPeriod;
-        compensationFeePct = _compensationFeePct;
         pendedBoostPeriod = _pendedBoostPeriod;
         confidenceThresholdBase = _confidenceThresholdBase;
     }
@@ -370,8 +353,6 @@ contract HCVoting is IForwarder, AragonApp {
 
     /**
     * @notice Vote `_supports ? 'yes' : 'no'` in proposal #`_proposalId`
-    * @dev Initialization check is implicitly provided by `_proposalExists()` as new proposals can only be
-    *      created via `createProposal(),` which requires initialization
     * @param _proposalId Id for vote
     * @param _supports Whether voter supports the vote
     */
@@ -380,8 +361,8 @@ contract HCVoting is IForwarder, AragonApp {
         require(_userHasVotingPower(_proposalId, msg.sender), ERROR_INSUFFICIENT_TOKENS);
 
         Proposal storage proposal_ = proposals[_proposalId];
-        require(proposal_.state != ProposalState.Expired, ERROR_PROPOSAL_IS_CLOSED);
         require(proposal_.state != ProposalState.Resolved, ERROR_PROPOSAL_IS_CLOSED);
+        require(getTimestamp64() < proposal_.startDate.add(proposal_.lifetime), ERROR_PROPOSAL_IS_CLOSED);
 
         // Get the user's voting power.
         uint256 votingPower = voteToken.balanceOfAt(msg.sender, proposal_.snapshotBlock);
@@ -411,25 +392,15 @@ contract HCVoting is IForwarder, AragonApp {
 
         emit VoteCasted(_proposalId,msg.sender, _supports, votingPower);
 
-        // A vote can change the state of a proposal, e.g. resolving it.
         _updateProposalAfterVoting(_proposalId);
     }
 
     function _updateProposalAfterVoting(uint256 _proposalId) internal {
 
-        // Evaluate proposal resolution by absolute majority,
-        // no matter if it is boosted or not.
-        // Note: boosted proposals cannot auto-resolve.
+        // If proposal is boosted, evaluate if a change in support
+        // was made during its quiet ending period, and if so,
+        // extend its lifetime.
         Proposal storage proposal_ = proposals[_proposalId];
-        VoteState absoluteSupport = _calculateProposalSupport(proposal_, false);
-        if(absoluteSupport == VoteState.Yea) {
-            _updateProposalState(_proposalId, ProposalState.Resolved);
-            _executeProposal(proposal_);
-            return;
-        }
-
-        // If proposal is boosted, evaluate quiet endings
-        // and possible extensions to its lifetime.
         if(proposal_.state == ProposalState.Boosted) {
             VoteState currentSupport = proposal_.lastRelativeSupport;
             VoteState newSupport = _calculateProposalSupport(proposal_, true);
@@ -466,9 +437,9 @@ contract HCVoting is IForwarder, AragonApp {
         require(stakeToken.balanceOf(msg.sender) >= _amount, ERROR_INSUFFICIENT_TOKENS);
 
         Proposal storage proposal_ = proposals[_proposalId];
-        require(proposal_.state != ProposalState.Expired, ERROR_PROPOSAL_IS_CLOSED);
         require(proposal_.state != ProposalState.Resolved, ERROR_PROPOSAL_IS_CLOSED);
         require(proposal_.state != ProposalState.Boosted, ERROR_PROPOSAL_IS_BOOSTED);
+        require(getTimestamp64() < proposal_.startDate.add(proposal_.lifetime), ERROR_PROPOSAL_IS_CLOSED);
 
         // Update the proposal's stake.
         if(_supports) proposal_.upstake = proposal_.upstake.add(_amount);
@@ -501,8 +472,6 @@ contract HCVoting is IForwarder, AragonApp {
         require(_proposalExists(_proposalId), ERROR_PROPOSAL_DOES_NOT_EXIST);
 
         Proposal storage proposal_ = proposals[_proposalId];
-        require(proposal_.state != ProposalState.Expired, ERROR_PROPOSAL_IS_CLOSED);
-        require(proposal_.state != ProposalState.Resolved, ERROR_PROPOSAL_IS_CLOSED);
         require(proposal_.state != ProposalState.Boosted, ERROR_PROPOSAL_IS_BOOSTED);
 
         // Verify that the sender holds the required stake to be removed.
@@ -549,8 +518,6 @@ contract HCVoting is IForwarder, AragonApp {
               _updateProposalState(_proposalId, ProposalState.Unpended);
           }
         }
-
-        // TODO: Shouldn't we be able to also automatically boost proposals here?
     }
 
     /*
@@ -565,9 +532,9 @@ contract HCVoting is IForwarder, AragonApp {
         require(_proposalExists(_proposalId), ERROR_PROPOSAL_DOES_NOT_EXIST);
 
         Proposal storage proposal_ = proposals[_proposalId];
-        require(proposal_.state != ProposalState.Expired, ERROR_PROPOSAL_IS_CLOSED);
         require(proposal_.state != ProposalState.Resolved, ERROR_PROPOSAL_IS_CLOSED);
         require(proposal_.state != ProposalState.Boosted, ERROR_PROPOSAL_IS_BOOSTED);
+        require(getTimestamp64() >= proposal_.startDate.add(proposal_.lifetime), ERROR_PROPOSAL_IS_ACTIVE);
 
         // Require that the proposal is currently pended.
         require(proposal_.state == ProposalState.Pended);
@@ -575,11 +542,6 @@ contract HCVoting is IForwarder, AragonApp {
         // Require that the proposal has had enough confidence for a period of time.
         require(_proposalHasEnoughConfidence(_proposalId), ERROR_PROPOSAL_DOESNT_HAVE_ENOUGH_CONFIDENCE);
         require(getTimestamp64() >= proposal_.lastPendedDate.add(pendedBoostPeriod), ERROR_PROPOSAL_HASNT_HAD_CONFIDENCE_ENOUGH_TIME);
-
-        // Compensate the caller.
-        uint256 fee = _calculateCompensationFee(_proposalId, proposal_.lastPendedDate.add(pendedBoostPeriod));
-        require(stakeToken.balanceOf(address(this)) >= fee, ERROR_INSUFFICIENT_TOKENS);
-        stakeToken.transfer(msg.sender, fee);
 
         // Boost the proposal.
         _updateProposalState(_proposalId, ProposalState.Boosted);
@@ -592,76 +554,30 @@ contract HCVoting is IForwarder, AragonApp {
      */
 
     /**
-    * @notice Resolve boosted proposal #`_proposalId`
+    * @notice Resolve proposal #`_proposalId`
     * @param _proposalId uint256 Id of proposal to resolve
     */
-    function resolveBoostedProposal(uint256 _proposalId) public {
+    function resolveProposal(uint256 _proposalId) public {
+        _evaluateProposalResolution(_proposalId);
+    }
+
+    function _evaluateProposalResolution(uint256 _proposalId) internal {
         require(_proposalExists(_proposalId), ERROR_PROPOSAL_DOES_NOT_EXIST);
-
         Proposal storage proposal_ = proposals[_proposalId];
-        require(proposal_.state == ProposalState.Boosted, ERROR_PROPOSAL_IS_NOT_BOOSTED);
-
-        // Verify that the proposal lifetime has ended.
+        require(proposal_.state != ProposalState.Resolved, ERROR_PROPOSAL_IS_CLOSED);
         require(getTimestamp64() >= proposal_.startDate.add(proposal_.lifetime), ERROR_PROPOSAL_IS_ACTIVE);
 
-        // Compensate the caller.
-        uint256 fee = _calculateCompensationFee(_proposalId, proposal_.startDate.add(proposal_.lifetime));
-        require(stakeToken.balanceOf(address(this)) >= fee, ERROR_INSUFFICIENT_TOKENS);
-        stakeToken.transfer(msg.sender, fee);
+        proposal_.state = ProposalState.Resolved;
 
-        // Resolve the proposal.
-        _updateProposalState(_proposalId, ProposalState.Resolved);
-        VoteState absoluteSupport = _calculateProposalSupport(proposal_, true);
-        if(absoluteSupport == VoteState.Yea) {
-            _executeProposal(proposal_);
+        // Execute?
+        if(proposal_.state == ProposalState.Boosted) {
+            VoteState relativeSupport = _calculateProposalSupport(proposal_, true);
+            if(relativeSupport == VoteState.Yea) _executeProposal(proposal_);
         }
-    }
-
-    /**
-    * @notice Expire non boosted proposal #`_proposalId`
-    * @param _proposalId uint256 Id of proposal to expire
-    */
-    function expireNonBoostedProposal(uint256 _proposalId) public {
-        require(_proposalExists(_proposalId), ERROR_PROPOSAL_DOES_NOT_EXIST);
-
-        Proposal storage proposal_ = proposals[_proposalId];
-        require(proposal_.state != ProposalState.Boosted, ERROR_PROPOSAL_IS_BOOSTED);
-        require(proposal_.state != ProposalState.Expired, ERROR_PROPOSAL_IS_CLOSED);
-
-        // Verify that the proposal's lifetime has ended.
-        require(getTimestamp64() >= proposal_.startDate.add(proposal_.lifetime), ERROR_PROPOSAL_IS_ACTIVE);
-
-        // Compensate the caller.
-        uint256 fee = _calculateCompensationFee(_proposalId, proposal_.startDate.add(proposal_.lifetime));
-        require(stakeToken.balanceOf(address(this)) >= fee, ERROR_INSUFFICIENT_TOKENS);
-        stakeToken.transfer(msg.sender, fee);
-
-        // Update the proposal's state and emit an event.
-        _updateProposalState(_proposalId, ProposalState.Expired);
-    }
-
-    function _calculateCompensationFee(uint256 _proposalId, uint64 _cutoffDate) internal view returns(uint256 _fee) {
-
-        // Require that the proposal has potentially expired.
-        // This is necessary because the fee depends on the time since expiration.
-        // If the proposal hasn't expired, the calculation would yield a negative fee.
-        Proposal storage proposal_ = proposals[_proposalId];
-
-        // Calculate fee.
-        /* 
-           fee
-           ^
-           |     ___________ max = compensationFeePct * total upstake
-           |    /
-           |   /
-           |  /
-           | /
-           |/______________> time elapsed since resolution
-        */
-        // Note: this assumes that now > _cutoffDate, and it is the responsibility of the calling function to verify that.
-        _fee = uint256(getTimestamp64().sub(_cutoffDate)).div(compensationFeePct);
-        uint256 max = proposal_.upstake.mul(PRECISION_MULTIPLIER).div(compensationFeePct);
-        if(_fee.mul(PRECISION_MULTIPLIER) > max) _fee = max.div(PRECISION_MULTIPLIER);
+        else {
+            VoteState absoluteSupport = _calculateProposalSupport(proposal_, false);
+            if(absoluteSupport == VoteState.Yea) _executeProposal(proposal_);
+        }
     }
 
     function _executeProposal(Proposal storage proposal_) internal {
@@ -685,11 +601,12 @@ contract HCVoting is IForwarder, AragonApp {
     * @notice Withdraw stake from expired proposal
     * @param _proposalId uint256 Id of proposal to withdraw stake from
     */
-    function withdrawStakeFromExpiredQueuedProposal(uint256 _proposalId) public {
+    function withdrawStakeFromExpiredProposal(uint256 _proposalId) public {
         require(_proposalExists(_proposalId), ERROR_PROPOSAL_DOES_NOT_EXIST);
 
         Proposal storage proposal_ = proposals[_proposalId];
-        require(proposal_.state == ProposalState.Expired, ERROR_PROPOSAL_IS_ACTIVE);
+        require(proposal_.state != ProposalState.Resolved, ERROR_PROPOSAL_IS_CLOSED);
+        require(getTimestamp64() >= proposal_.startDate.add(proposal_.lifetime), ERROR_PROPOSAL_IS_ACTIVE);
 
         // Calculate the amount of that the user has staked.
         uint256 senderUpstake = proposal_.upstakes[msg.sender];

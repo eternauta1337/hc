@@ -57,7 +57,6 @@ const common = {
     test.CREATE_PROPOSALS_ROLE            = await appBase.CREATE_PROPOSALS_ROLE();
     test.MODIFY_SUPPORT_PERCENT_ROLE      = await appBase.MODIFY_SUPPORT_PERCENT_ROLE();
     test.MODIFY_PERIODS_ROLE              = await appBase.MODIFY_PERIODS_ROLE();
-    test.MODIFY_COMPENSATION_FEES_ROLE    = await appBase.MODIFY_COMPENSATION_FEES_ROLE();
     test.MODIFY_CONFIDENCE_THRESHOLD_ROLE = await appBase.MODIFY_CONFIDENCE_THRESHOLD_ROLE();
 
     const daoInstanceReceipt = await test.dao.newAppInstance(

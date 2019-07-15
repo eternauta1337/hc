@@ -16,11 +16,6 @@
       "params": []
     },
     {
-      "name": "Modifies compensation fee parameters",
-      "id": "MODIFY_COMPENSATION_FEES_ROLE",
-      "params": []
-    },
-    {
       "name": "Modifies the confidence threshold parameter",
       "id": "MODIFY_CONFIDENCE_THRESHOLD_ROLE",
       "params": []

@@ -31,7 +31,7 @@ contract('HCVoting', accounts => {
 
   const HOLDER_2_STAKING = HOLDER_2_STAKE_BALANCE * 0.5;
 
-  describe('When stakes withdraw rewards from resolved proposals', () => {
+  describe('When withdrawing rewards', () => {
 
     beforeEach(async () => {
       await defaultSetup(this, appManager);

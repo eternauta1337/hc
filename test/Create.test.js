@@ -37,8 +37,9 @@ contract('HCVoting', ([appManager, proposalCreator]) => {
             `Proposal message ${i}`,
             { from: proposalCreator }
           );
+          const [,,startDate,,] = await this.app.getProposalTimeInfo(i);
+          proposalCreationDates.push(startDate.toNumber());
           proposalCreationReceipts.push(receipt);
-          proposalCreationDates.push(new Date().getTime() / 1000);
         }
       });
 
@@ -60,8 +61,7 @@ contract('HCVoting', ([appManager, proposalCreator]) => {
       it('Proposals created should be retrievable and be apropriately setup', async () => {
         for(let i = 0; i < NUM_PROPOSALS; i++) {
           const [,lifetime,startDate,,] = await this.app.getProposalTimeInfo(i);
-          const startDateDeltaSecs = proposalCreationDates[i] - parseInt(startDate.toString(), 10);
-          expect(startDateDeltaSecs).to.be.below(2);
+          expect(startDate.toNumber()).to.be.closeTo(proposalCreationDates[i], 60);
           expect(lifetime.toString()).to.equal(`${QUEUE_PERIOD_SECS}`);
         }
       });

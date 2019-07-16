@@ -81,12 +81,13 @@ contract('HCVoting', accounts => {
 
     describe('When a proposal reaches enough confidence', () => {
 
-      let lastPendedDateRecording;
+      let pendedDateRecording;
 
       beforeEach(async () => {
-        await this.app.stake(0, HOLDER_5_STAKE_BALANCE, true, { from: stakeHolder5 });
         await this.app.stake(0, HOLDER_1_STAKE_BALANCE, false, { from: stakeHolder1 });
-        lastPendedDateRecording = new Date().getTime() / 1000;
+        await this.app.stake(0, HOLDER_5_STAKE_BALANCE, true, { from: stakeHolder5 });
+        const [,,,lastPendedDate,] = await this.app.getProposalTimeInfo(0);
+        pendedDateRecording = lastPendedDate.toNumber();
       });
 
       it('The confidence threshold should be reached', async () => {
@@ -97,12 +98,6 @@ contract('HCVoting', accounts => {
       it('The proposal\'s state should change to Pended', async () => {
         const [,,state,] = await this.app.getProposalInfo(0);
         expect(state.toString()).to.equal(`2`); // ProposalState '2' = Pended
-      });
-
-      it('The last pended date should be set to the current date', async () => {
-        const [,,,lastPendedDate,] = await this.app.getProposalTimeInfo(0);
-        const pendedDateDeltaSecs = lastPendedDateRecording - parseInt(lastPendedDate.toString(), 10);
-        expect(pendedDateDeltaSecs).to.be.below(2);
       });
 
       it('A decrease in confidence should set the proposal\'s state to Unpended', async () => {
@@ -117,6 +112,17 @@ contract('HCVoting', accounts => {
           const timeToSkip = PENDED_BOOST_PERIOD_SECS / 2;
           await timeUtil.advanceTimeAndBlock(web3, timeToSkip);
           timeElapsed += timeToSkip;
+        });
+
+        it('The lastPendedDate should not have changed', async () => {
+          const [,,,lastPendedDate,] = await this.app.getProposalTimeInfo(0);
+          expect(lastPendedDate.toNumber()).to.be.equal(pendedDateRecording);
+        });
+
+        it('The lastPendedDate should not change after an increase in confidence', async () => {
+          await this.app.stake(0, HOLDER_2_STAKE_BALANCE, true, { from: stakeHolder2 });
+          const [,,,lastPendedDate,] = await this.app.getProposalTimeInfo(0);
+          expect(lastPendedDate.toNumber()).to.be.equal(pendedDateRecording);
         });
 
         it('An external account should not be able to boost it', async () => {
@@ -142,12 +148,6 @@ contract('HCVoting', accounts => {
           await this.app.stake(0, HOLDER_2_STAKE_BALANCE, true, { from: stakeHolder2 });
           const [,,state,] = await this.app.getProposalInfo(0);
           expect(state.toString()).to.equal(`2`); // ProposalState '2' = Pended
-        });
-
-        it('The lastPendedDate should not change after an increase in confidence', async () => {
-          const [,,,lastPendedDate,] = await this.app.getProposalTimeInfo(0);
-          const pendedDateDeltaSecs = lastPendedDateRecording - parseInt(lastPendedDate.toString(), 10);
-          expect(pendedDateDeltaSecs).to.be.below(2);
         });
 
         describe('After pendedBoostPeriod (and a little more) elapses', async () => {

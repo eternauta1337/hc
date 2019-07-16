@@ -415,13 +415,16 @@ contract HCVoting is IForwarder, AragonApp {
         // extend its lifetime.
         Proposal storage proposal_ = proposals[_proposalId];
         if(proposal_.state == ProposalState.Boosted) {
-            VoteState currentSupport = proposal_.lastRelativeSupport;
-            VoteState newSupport = _calculateProposalSupport(proposal_, true);
-            if(newSupport != currentSupport) {
-                proposal_.lastRelativeSupportFlipDate = getTimestamp64();
-                proposal_.lastRelativeSupport = newSupport;
-                proposal_.lifetime = proposal_.lifetime.add(quietEndingPeriod);
-                emit ProposalLifetimeExtended(_proposalId, proposal_.lifetime);
+            uint64 quietEndingTime = proposal_.startDate.add(proposal_.lifetime).sub(quietEndingPeriod);
+            if(getTimestamp64() >= quietEndingTime) {
+              VoteState currentSupport = proposal_.lastRelativeSupport;
+              VoteState newSupport = _calculateProposalSupport(proposal_, true);
+              if(newSupport != currentSupport) {
+                  proposal_.lastRelativeSupportFlipDate = getTimestamp64();
+                  proposal_.lastRelativeSupport = newSupport;
+                  proposal_.lifetime = proposal_.lifetime.add(quietEndingPeriod);
+                  emit ProposalLifetimeExtended(_proposalId, proposal_.lifetime);
+              }
             }
         }
     }
@@ -551,13 +554,12 @@ contract HCVoting is IForwarder, AragonApp {
         require(getTimestamp64() < proposal_.startDate.add(proposal_.lifetime), ERROR_PROPOSAL_IS_CLOSED);
 
         // Require that the proposal has had enough confidence for a period of time.
-        require(proposal_.state == ProposalState.Pended);
         require(_proposalHasEnoughConfidence(_proposalId), ERROR_PROPOSAL_DOESNT_HAVE_ENOUGH_CONFIDENCE);
+        require(proposal_.state == ProposalState.Pended, ERROR_PROPOSAL_DOESNT_HAVE_ENOUGH_CONFIDENCE);
         require(getTimestamp64() >= proposal_.lastPendedDate.add(pendedBoostPeriod), ERROR_PROPOSAL_HASNT_HAD_CONFIDENCE_ENOUGH_TIME);
 
         // Boost the proposal.
         _updateProposalState(_proposalId, ProposalState.Boosted);
-        proposal_.startDate = getTimestamp64();
         proposal_.lifetime = boostPeriod;
     }
 

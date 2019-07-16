@@ -107,8 +107,37 @@ contract('HCVoting', accounts => {
       expect((await this.app.getVote(0, holder6)).toString()).to.equal(`1`);
     });
 
-    it.skip('Should allow a voter to change it\'s vote from yea to nay and viceversa');
-    it.skip('Should not allow an attack in which a vote token holder votes and moves the tokens to vote again')
+    it('Should allow a voter to change it\'s vote from yea to nay and viceversa', async () => {
+
+      await this.app.vote(0, true, { from: holder1 });
+      expect((await this.app.getVote(0, holder1)).toString()).to.equal(`1`);
+      await this.app.vote(0, false, { from: holder1 });
+      expect((await this.app.getVote(0, holder1)).toString()).to.equal(`2`);
+
+      await this.app.vote(0, false, { from: holder2 });
+      expect((await this.app.getVote(0, holder1)).toString()).to.equal(`2`);
+      await this.app.vote(0, true, { from: holder2 });
+      expect((await this.app.getVote(0, holder2)).toString()).to.equal(`1`);
+    });
+
+    it('Should not allow an attack in which a vote token holder votes and moves the tokens to another account to vote again', async () => {
+
+      // 1st vote.
+      await this.app.vote(0, true, { from: holder1 });
+      let [ yea, nay ] = await this.app.getProposalVotes(0);
+      expect(yea.toString()).to.equal(`${HOLDER_1_BALANCE}`);
+
+      // Transfer to another account.
+      await this.voteToken.transfer(nonHolder, HOLDER_1_BALANCE, { from: holder1 });
+      const nonHolderBalance = (await this.voteToken.balanceOf(nonHolder)).toString();
+      expect(nonHolderBalance).to.equal(`${HOLDER_1_BALANCE}`);
+
+      // 2nd vote (with the same tokens).
+      await assertRevert(
+        this.app.vote(0, true, { from: nonHolder }),
+        `INSUFFICIENT_TOKENS`
+      );
+    });
 
   });
 });

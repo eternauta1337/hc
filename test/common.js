@@ -87,7 +87,7 @@ const common = {
   },
 
   deployTokens: async (test) => {
-    test.voteToken = await MiniMeToken.new(common.ZERO_ADDRESS, common.ZERO_ADDRESS, 0, 'VoteToken', 18, 'ANT', false);
+    test.voteToken = await MiniMeToken.new(common.ZERO_ADDRESS, common.ZERO_ADDRESS, 0, 'VoteToken', 18, 'ANT', true);
     test.stakeToken = await MiniMeToken.new(common.ZERO_ADDRESS, common.ZERO_ADDRESS, 0, 'StakeToken', 18, 'GEN', true);
   },
 

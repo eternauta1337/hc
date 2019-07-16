@@ -72,8 +72,6 @@ contract('HCVoting', ([appManager, proposalCreator]) => {
         }
       });
 
-      it.skip('Only vote token holders should be able to create proposals');
-      
     });
   });
 });

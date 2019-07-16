@@ -7,6 +7,7 @@ const {
   QUIET_ENDING_PERIOD_SECS
 } = require('./common.js');
 const { EMPTY_SCRIPT } = require('@aragon/test-helpers/evmScript');
+const { assertRevert } = require('@aragon/test-helpers/assertThrow');
 const timeUtil = require('../scripts/timeUtil.js');
 
 contract('HCVoting', accounts => {
@@ -37,6 +38,8 @@ contract('HCVoting', accounts => {
 
   describe('When boosting proposals', () => {
 
+    let timeElapsed = 0;
+
     beforeEach(async () => {
       await defaultSetup(this, appManager);
 
@@ -57,6 +60,7 @@ contract('HCVoting', accounts => {
       await this.stakeToken.approve(this.app.address, INIFINITE_ALLOWANCE, { from: stakeHolder5 });
 
       await this.app.createProposal(EMPTY_SCRIPT, `Proposal message`);
+      timeElapsed = 0;
     });
     
     it('A proposal\'s confidence factor should be available', async () => {
@@ -67,8 +71,11 @@ contract('HCVoting', accounts => {
 
     describe('When a proposal doesn\'t have enough confidence or is not pended', () => {
       
-      it.skip('An external account should not be able to boost it', async () => {
-        
+      it('An external account should not be able to boost it', async () => {
+        await assertRevert(
+          this.app.boostProposal(0, { from: stakeHolder1 }),
+          `PROPOSAL_DOESNT_HAVE_ENOUGH_CONFIDENCE`
+        );
       });
     });
 
@@ -120,13 +127,19 @@ contract('HCVoting', accounts => {
         expect(state.toString()).to.equal(`1`); // ProposalState '1' = Unpended
       });
 
-      it.skip('External callers should not be able to boost a proposal that hasn\'t been pended');
-      it.skip('External callers should not be able to boost a proposal that hasn\'t been pended for enough time');
-      
       describe('After 1/2 of pendedBoostPeriod elapses', () => {
         
         beforeEach(async () => {
-          await timeUtil.advanceTimeAndBlock(web3, PENDED_BOOST_PERIOD_SECS / 2);
+          const timeToSkip = PENDED_BOOST_PERIOD_SECS / 2;
+          await timeUtil.advanceTimeAndBlock(web3, timeToSkip);
+          timeElapsed += timeToSkip;
+        });
+
+        it('An external account should not be able to boost it', async () => {
+          await assertRevert(
+            this.app.boostProposal(0, { from: stakeHolder1 }),
+            `PROPOSAL_HASNT_HAD_CONFIDENCE_ENOUGH_TIME`
+          );
         });
 
         it('A decrease in confidence by an opposing stake should set the proposal\'s state to Unpended', async () => {
@@ -140,8 +153,15 @@ contract('HCVoting', accounts => {
           expect(state.toString()).to.equal(`1`); // ProposalState '1' = Unpended
         });
 
-        it.skip('A decrease in confidence by a withdrawal of stake should set the proposal\'s state to Unpended', async () => {
-          
+        it('A decrease in confidence by a withdrawal of stake should set the proposal\'s state to Unpended', async () => {
+          await this.app.unstake(0, HOLDER_5_STAKE_BALANCE, true, { from: stakeHolder5 });
+          const [
+            votingPower, 
+            executionScript, 
+            state, 
+            lastRelativeSupport
+          ] = await this.app.getProposalInfo(0);
+          expect(state.toString()).to.equal(`1`); // ProposalState '1' = Unpended
         });
 
         it('An increase in confidence should keep the proposal\'s state as Pended', async () => {
@@ -170,7 +190,9 @@ contract('HCVoting', accounts => {
         describe('After pendedBoostPeriod (and a little more) elapses', async () => {
 
           beforeEach(async () => {
-            await timeUtil.advanceTimeAndBlock(web3, 2 * 3600 + PENDED_BOOST_PERIOD_SECS / 2);
+            const timeToSkip = 2 * 3600 + PENDED_BOOST_PERIOD_SECS / 2;
+            await timeUtil.advanceTimeAndBlock(web3, timeToSkip);
+            timeElapsed += timeToSkip;
           });
 
           it('An external caller should be able to boost the proposal, and receive a compensation for it', async () => {
@@ -200,7 +222,7 @@ contract('HCVoting', accounts => {
               expect(state.toString()).to.equal(`3`); // ProposalState '3' = Boosted
             });
 
-            it('The proposals lifetime and startDate should be changed', async () => {
+            it('The proposals lifetime should be changed', async () => {
               const [
                 snapshotBlock,
                 lifetime,
@@ -209,8 +231,6 @@ contract('HCVoting', accounts => {
                 lastRelativeSupportFlipDate
               ] = await this.app.getProposalTimeInfo(0);
               expect(lifetime.toString()).to.equal(`${BOOST_PERIOD_SECS}`);
-              const startDateDeltaSecs = boostDateRecording - parseInt(startDate.toString(), 10);
-              expect(startDateDeltaSecs).to.be.below(2);
             });
 
             it('A ProposalStateChanged event should be triggered', async () => {
@@ -220,10 +240,38 @@ contract('HCVoting', accounts => {
               expect(event.args._newState.toString()).to.equal(`3`); // ProposalState '3' = Boosted
             });
 
-            it.skip('Stakers should not be able to stake');
-            it.skip('Stakers should not be able to unstake');
-            it.skip('An external caller shouldn\'t be able to boost a proposal once it has already been boosted');
-            it.skip('A decision flip before the quiet ending period should not extend it\'s lifetime')
+            it('Stakers should not be able to stake', async () => {
+              await assertRevert(
+                this.app.stake(0, HOLDER_2_STAKE_BALANCE, true, { from: stakeHolder2}),
+                `PROPOSAL_IS_BOOSTED`
+              );
+            });
+
+            it('Stakers should not be able to unstake', async () => {
+              await assertRevert(
+                this.app.unstake(0, HOLDER_5_STAKE_BALANCE, true, { from: stakeHolder5}),
+                `PROPOSAL_IS_BOOSTED`
+              );
+            });
+
+            it('An external caller shouldn\'t be able to boost a proposal once it has already been boosted', async () => {
+              await assertRevert(
+                this.app.boostProposal(0, { from: stakeHolder5}),
+                `PROPOSAL_IS_BOOSTED`
+              );
+            });
+
+            it('A decision flip before the quiet ending period should not extend it\'s lifetime', async () => {
+              await this.app.vote(0, false, { from: voteHolder3 });
+              const [
+                snapshotBlock,
+                lifetime,
+                startDate,
+                lastPendedDate,
+                lastRelativeSupportFlipDate
+              ] = await this.app.getProposalTimeInfo(0);
+              expect(lifetime.toString()).to.equal(`${BOOST_PERIOD_SECS}`);
+            });
 
             describe('In the quiet ending period of a proposal', () => {
               
@@ -235,8 +283,9 @@ contract('HCVoting', accounts => {
                   lastPendedDate,
                   lastRelativeSupportFlipDate
                 ] = await this.app.getProposalTimeInfo(0);
-                const timeToSkip = BOOST_PERIOD_SECS - parseInt(startDate.toString(), 10) - QUIET_ENDING_PERIOD_SECS + 1 * 3600;
+                const timeToSkip = BOOST_PERIOD_SECS - timeElapsed - QUIET_ENDING_PERIOD_SECS / 2;
                 await timeUtil.advanceTimeAndBlock(web3, timeToSkip);
+                timeElapsed += timeToSkip;
               });
 
               describe('When there is a decision flip in the quiet ending period of a proposal', () => {

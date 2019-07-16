@@ -485,6 +485,7 @@ contract HCVoting is IForwarder, AragonApp {
         require(_proposalExists(_proposalId), ERROR_PROPOSAL_DOES_NOT_EXIST);
 
         Proposal storage proposal_ = proposals[_proposalId];
+        require(proposal_.state != ProposalState.Resolved, ERROR_PROPOSAL_IS_CLOSED);
         require(proposal_.state != ProposalState.Boosted, ERROR_PROPOSAL_IS_BOOSTED);
 
         // Verify that the sender holds the required stake to be removed.
@@ -574,16 +575,21 @@ contract HCVoting is IForwarder, AragonApp {
         Proposal storage proposal_ = proposals[_proposalId];
         require(proposal_.state != ProposalState.Resolved, ERROR_PROPOSAL_IS_CLOSED);
 
+        // A proposal with absolute support can be resolved at any time.
+        VoteState absoluteSupport = _calculateProposalSupport(proposal_, false);
+        if(absoluteSupport != VoteState.Absent) {
+          _updateProposalState(0, ProposalState.Resolved);
+          if(absoluteSupport == VoteState.Yea) _executeProposal(proposal_);
+          return;
+        }
+
+        // A boosted proposal can be resolved with relative support,
+        // but only after its boosted lifetime period has ended.
         if(proposal_.state == ProposalState.Boosted) {
             require(getTimestamp64() >= proposal_.startDate.add(proposal_.lifetime), ERROR_PROPOSAL_IS_ACTIVE);
             VoteState relativeSupport = _calculateProposalSupport(proposal_, true);
             if(relativeSupport != VoteState.Absent) _updateProposalState(0, ProposalState.Resolved);
             if(relativeSupport == VoteState.Yea) _executeProposal(proposal_);
-        }
-        else {
-            VoteState absoluteSupport = _calculateProposalSupport(proposal_, false);
-            if(absoluteSupport != VoteState.Absent) _updateProposalState(0, ProposalState.Resolved);
-            if(absoluteSupport == VoteState.Yea) _executeProposal(proposal_);
         }
     }
 

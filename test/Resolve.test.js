@@ -35,7 +35,11 @@ contract('HCVoting', accounts => {
   const INITIAL_APP_STAKE_BALANCE = 100000000000000000;
   const INIFINITE_ALLOWANCE = 100000000000000000;
 
+  const HOLDER_2_STAKING = HOLDER_2_STAKE_BALANCE * 0.5;
+
   describe('When resolving proposals', () => {
+
+    let resolveReceipt;
 
     beforeEach(async () => {
       await defaultSetup(this, appManager);
@@ -77,12 +81,18 @@ contract('HCVoting', accounts => {
 
     describe('When a Queued proposal reaches absolute majority', () => {
 
-      let resolveReceipt;
-
       beforeEach(async () => {
-        await this.app.vote(0, true, { from: voteHolder1 });
+
+        // Stake, but without enough confidence for pending or boosting.
+        await this.app.stake(0, HOLDER_4_STAKE_BALANCE, false, { from: stakeHolder4 });
+        await this.app.stake(0, HOLDER_1_STAKE_BALANCE, true, { from: stakeHolder1 });
+        await this.app.stake(0, HOLDER_2_STAKING, true, { from: stakeHolder2 });
+
+        // Vote with absolute support.
+        await this.app.vote(0, false, { from: voteHolder1 });
         await this.app.vote(0, true, { from: voteHolder2 });
         await this.app.vote(0, true, { from: voteHolder3 });
+
         resolveReceipt = await this.app.resolveProposal(0);
       });
 
@@ -93,7 +103,7 @@ contract('HCVoting', accounts => {
         expect(event.args._newState.toString()).to.equal(`4`); // ProposalState '4' = Resolved
       });
 
-      it('The retrieved proposal\'s state should be Resolved', async () => {
+      it('The proposal\'s state should be Resolved', async () => {
         const [
           votingPower, 
           executionScript, 
@@ -110,91 +120,120 @@ contract('HCVoting', accounts => {
         );
       });
 
-      it('Should not allow staking on a resolved proposal', async () => {
+      it('Should not allow staking/unstaking on a resolved proposal', async () => {
         await assertRevert(
-          this.app.stake(0, 1, false, { from: stakeHolder1 }),
+          this.app.stake(0, HOLDER_2_STAKING, true, { from: stakeHolder2 }),
+          `PROPOSAL_IS_CLOSED`
+        );
+        await assertRevert(
+          this.app.unstake(0, HOLDER_4_STAKE_BALANCE, false, { from: stakeHolder4 }),
           `PROPOSAL_IS_CLOSED`
         );
       });
 
-      it.skip('Stakers should be able to withdraw their stake', async () => {
-        
-      });
-
     });
 
-    describe.skip('When a Queued proposal does not reach absolute majority within its lifetime', () => {
-
-      // TODO: Before each, skip time to expire
-      
-      it.skip('External callers should be able to expire a proposal from Queue and be compensated for it', async () => {
-        
-      });
-
-      it.skip('Stakers should be able to withdraw their stake', async () => {
-        
-      });
-
-    });
-
-    describe('When a proposal is boosted and reaches the end of its lifetime', () => {
+    describe('When a proposal gets boosted', () => {
 
       beforeEach(async () => {
+
+        // Vote, but without reaching absolute support.
         await this.app.vote(0, true, { from: voteHolder1 });
         await this.app.vote(0, true, { from: voteHolder2 });
+
+        // Stake with enough confidence to pend and boost the proposal later.
         await this.app.stake(0, HOLDER_1_STAKE_BALANCE, false, { from: stakeHolder1 });
         await this.app.stake(0, HOLDER_5_STAKE_BALANCE, true, { from: stakeHolder5 });
+
+        // Skip pendedBoostTime and boost the proposal.
         await timeUtil.advanceTimeAndBlock(web3, PENDED_BOOST_PERIOD_SECS);
         await this.app.boostProposal(0, { from: stakeHolder1 });
-        await timeUtil.advanceTimeAndBlock(web3, BOOST_PERIOD_SECS + 2 * 3600);
       });
-
-      it('An external caller should be able to resolve the proposal', async () => {
-        await this.app.resolveProposal(0, { from: stakeHolder1 });
-      });
-
-      describe('When a boosted proposal is resolved by an external caller', () => {
+      
+      describe('Before the boosted proposal\'s lifetime ends', () => {
 
         beforeEach(async () => {
-          await this.app.resolveProposal(0);
+          await timeUtil.advanceTimeAndBlock(web3, BOOST_PERIOD_SECS / 2);
         });
 
-        it.skip('A ProposalStateChanged should be triggered');
-
-        it('The proposal state should be set to resolved', async () => {
-          const [
-            votingPower, 
-            executionScript, 
-            state, 
-            lastRelativeSupport
-          ] = await this.app.getProposalInfo(0);
+        it('A proposal should be resolvable before its lifetime ends if it reaches absolute majority', async () => {
+          await this.app.vote(0, true, { from: voteHolder3 });
+          await this.app.resolveProposal(0, { from: stakeHolder3 });
+          const [,,state,] = await this.app.getProposalInfo(0);
           expect(state.toString()).to.equal(`4`); // ProposalState '4' = Resolved
         });
 
-        it('Should have been executed', async () => {
-          const [
-            votingPower, 
-            executionScript, 
-            state, 
-            lastRelativeSupport,
-            executed
-          ] = await this.app.getProposalInfo(0);
-          expect(executed).to.equal(true);
+        describe('When a proposal is boosted and reaches the end of its lifetime', () => {
+
+          beforeEach(async () => {
+            await timeUtil.advanceTimeAndBlock(web3, BOOST_PERIOD_SECS / 2 + 2 * 3600);
+          });
+
+          it('An external caller should be able to resolve the proposal', async () => {
+            await this.app.resolveProposal(0, { from: stakeHolder1 });
+          });
+
+          describe('When a boosted proposal is resolved by an external caller', () => {
+
+            beforeEach(async () => {
+              resolveReceipt = await this.app.resolveProposal(0);
+            });
+
+            it('A ProposalStateChanged event with the Resolved state should be emitted', async () => {
+              const event = resolveReceipt.logs.filter(l => l.event === 'ProposalStateChanged')[0];
+              expect(event).to.be.an('object');
+              expect(event.args._proposalId.toString()).to.equal(`0`);
+              expect(event.args._newState.toString()).to.equal(`4`); // ProposalState '4' = Resolved
+            });
+
+
+            it('The proposal state should be set to resolved', async () => {
+              const [
+                votingPower, 
+                executionScript, 
+                state, 
+                lastRelativeSupport
+              ] = await this.app.getProposalInfo(0);
+              expect(state.toString()).to.equal(`4`); // ProposalState '4' = Resolved
+            });
+
+            it('Should have been executed', async () => {
+              const [
+                votingPower, 
+                executionScript, 
+                state, 
+                lastRelativeSupport,
+                executed
+              ] = await this.app.getProposalInfo(0);
+              expect(executed).to.equal(true);
+            });
+
+            it('Should not allow additional votes on a resolved proposal', async () => {
+              await assertRevert(
+                this.app.vote(0, false, { from: voteHolder3 }),
+                `PROPOSAL_IS_CLOSED`
+              );
+            });
+
+            it('Should not allow staking/unstaking on a resolved proposal', async () => {
+              await assertRevert(
+                this.app.stake(0, HOLDER_2_STAKING, true, { from: stakeHolder2 }),
+                `PROPOSAL_IS_CLOSED`
+              );
+              await assertRevert(
+                this.app.unstake(0, HOLDER_4_STAKE_BALANCE, false, { from: stakeHolder4 }),
+                `PROPOSAL_IS_CLOSED`
+              );
+            });
+            
+          });
+          
         });
-        
-      });
-      
-    });
 
-    describe('When a proposal does not have relative support', () => {
-      
-      beforeEach(async () => {
-        await this.app.vote(0, true, { from: voteHolder1 });
-        await this.app.vote(0, false, { from: voteHolder2 });
       });
 
     });
-    
+
   });
   
 });

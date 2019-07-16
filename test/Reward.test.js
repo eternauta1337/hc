@@ -27,7 +27,6 @@ contract('HCVoting', accounts => {
   const HOLDER_2_VOTE_BALANCE = 100;
   const HOLDER_3_VOTE_BALANCE = 200;
 
-  const INITIAL_APP_STAKE_BALANCE = 100000000000000000;
   const INIFINITE_ALLOWANCE = 100000000000000000;
 
   const HOLDER_2_STAKING = HOLDER_2_STAKE_BALANCE * 0.5;
@@ -50,8 +49,6 @@ contract('HCVoting', accounts => {
       await this.stakeToken.approve(this.app.address, INIFINITE_ALLOWANCE, { from: stakeHolder2 });
       await this.stakeToken.approve(this.app.address, INIFINITE_ALLOWANCE, { from: stakeHolder3 });
       await this.stakeToken.approve(this.app.address, INIFINITE_ALLOWANCE, { from: stakeHolder4 });
-
-      await this.stakeToken.generateTokens(this.app.address, INITIAL_APP_STAKE_BALANCE);
 
       await this.app.createProposal(EMPTY_SCRIPT, `Proposal message`);
 

@@ -66,13 +66,7 @@ contract('HCVoting', accounts => {
 
       await this.app.vote(0, true, { from: voteHolder1 });
       await this.app.vote(0, false, { from: voteHolder3 });
-
-      const [
-        votingPower, 
-        executionScript, 
-        state, 
-        lastRelativeSupport
-      ] = await this.app.getProposalInfo(0);
+      const [,,state,] = await this.app.getProposalInfo(0);
       expect(state.toString()).to.equal(`0`); // ProposalState '0' = Queued
     });
 
@@ -101,12 +95,7 @@ contract('HCVoting', accounts => {
       });
 
       it('The proposal\'s state should be Resolved', async () => {
-        const [
-          votingPower, 
-          executionScript, 
-          state, 
-          lastRelativeSupport
-        ] = await this.app.getProposalInfo(0);
+        const [,,state,] = await this.app.getProposalInfo(0);
         expect(state.toString()).to.equal(`4`); // ProposalState '4' = Resolved
       });
 
@@ -185,23 +174,12 @@ contract('HCVoting', accounts => {
 
 
             it('The proposal state should be set to resolved', async () => {
-              const [
-                votingPower, 
-                executionScript, 
-                state, 
-                lastRelativeSupport
-              ] = await this.app.getProposalInfo(0);
+              const [,,state,] = await this.app.getProposalInfo(0);
               expect(state.toString()).to.equal(`4`); // ProposalState '4' = Resolved
             });
 
             it('Should have been executed', async () => {
-              const [
-                votingPower, 
-                executionScript, 
-                state, 
-                lastRelativeSupport,
-                executed
-              ] = await this.app.getProposalInfo(0);
+              const [,,,,executed] = await this.app.getProposalInfo(0);
               expect(executed).to.equal(true);
             });
 

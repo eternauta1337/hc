@@ -140,11 +140,7 @@ contract('HCVoting', accounts => {
       await stake(10, false, stakeHolder3);
       await unstake(5, false, stakeHolder3);
 
-      const [
-        upstake,
-        downstake
-      ] = await this.app.getProposalStakes(0);
-
+      const [ upstake, downstake ] = await this.app.getProposalStakes(0);
       expect(upstake.toString()).to.equal(`${proposalUpstake}`);
       expect(downstake.toString()).to.equal(`${proposalDownstake}`);
     });

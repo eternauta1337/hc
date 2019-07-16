@@ -95,35 +95,19 @@ contract('HCVoting', accounts => {
       });
 
       it('The proposal\'s state should change to Pended', async () => {
-        const [
-          votingPower, 
-          executionScript, 
-          state, 
-          lastRelativeSupport
-        ] = await this.app.getProposalInfo(0);
+        const [,,state,] = await this.app.getProposalInfo(0);
         expect(state.toString()).to.equal(`2`); // ProposalState '2' = Pended
       });
 
       it('The last pended date should be set to the current date', async () => {
-        const [
-          snapshotBlock,
-          lifetime,
-          startDate,
-          lastPendedDate,
-          lastRelativeSupportFlipDate
-        ] = await this.app.getProposalTimeInfo(0);
+        const [,,,lastPendedDate,] = await this.app.getProposalTimeInfo(0);
         const pendedDateDeltaSecs = lastPendedDateRecording - parseInt(lastPendedDate.toString(), 10);
         expect(pendedDateDeltaSecs).to.be.below(2);
       });
 
       it('A decrease in confidence should set the proposal\'s state to Unpended', async () => {
         await this.app.stake(0, HOLDER_2_STAKE_BALANCE, false, { from: stakeHolder2 });
-        const [
-          votingPower, 
-          executionScript, 
-          state, 
-          lastRelativeSupport
-        ] = await this.app.getProposalInfo(0);
+        const [,,state,] = await this.app.getProposalInfo(0);
         expect(state.toString()).to.equal(`1`); // ProposalState '1' = Unpended
       });
 
@@ -144,45 +128,24 @@ contract('HCVoting', accounts => {
 
         it('A decrease in confidence by an opposing stake should set the proposal\'s state to Unpended', async () => {
           await this.app.stake(0, HOLDER_2_STAKE_BALANCE, false, { from: stakeHolder2 });
-          const [
-            votingPower, 
-            executionScript, 
-            state, 
-            lastRelativeSupport
-          ] = await this.app.getProposalInfo(0);
+          const [,,state,] = await this.app.getProposalInfo(0);
           expect(state.toString()).to.equal(`1`); // ProposalState '1' = Unpended
         });
 
         it('A decrease in confidence by a withdrawal of stake should set the proposal\'s state to Unpended', async () => {
           await this.app.unstake(0, HOLDER_5_STAKE_BALANCE, true, { from: stakeHolder5 });
-          const [
-            votingPower, 
-            executionScript, 
-            state, 
-            lastRelativeSupport
-          ] = await this.app.getProposalInfo(0);
+          const [,,state,] = await this.app.getProposalInfo(0);
           expect(state.toString()).to.equal(`1`); // ProposalState '1' = Unpended
         });
 
         it('An increase in confidence should keep the proposal\'s state as Pended', async () => {
           await this.app.stake(0, HOLDER_2_STAKE_BALANCE, true, { from: stakeHolder2 });
-          const [
-            votingPower, 
-            executionScript, 
-            state, 
-            lastRelativeSupport
-          ] = await this.app.getProposalInfo(0);
+          const [,,state,] = await this.app.getProposalInfo(0);
           expect(state.toString()).to.equal(`2`); // ProposalState '2' = Pended
         });
 
         it('The lastPendedDate should not change after an increase in confidence', async () => {
-          const [
-            snapshotBlock,
-            lifetime,
-            startDate,
-            lastPendedDate,
-            lastRelativeSupportFlipDate
-          ] = await this.app.getProposalTimeInfo(0);
+          const [,,,lastPendedDate,] = await this.app.getProposalTimeInfo(0);
           const pendedDateDeltaSecs = lastPendedDateRecording - parseInt(lastPendedDate.toString(), 10);
           expect(pendedDateDeltaSecs).to.be.below(2);
         });
@@ -213,23 +176,12 @@ contract('HCVoting', accounts => {
             });
             
             it('The proposal\'s state should be changed to boosted', async () => {
-              const [
-                votingPower, 
-                executionScript, 
-                state, 
-                lastRelativeSupport
-              ] = await this.app.getProposalInfo(0);
+              const [,,state,] = await this.app.getProposalInfo(0);
               expect(state.toString()).to.equal(`3`); // ProposalState '3' = Boosted
             });
 
             it('The proposals lifetime should be changed', async () => {
-              const [
-                snapshotBlock,
-                lifetime,
-                startDate,
-                lastPendedDate,
-                lastRelativeSupportFlipDate
-              ] = await this.app.getProposalTimeInfo(0);
+              const [,lifetime,,,] = await this.app.getProposalTimeInfo(0);
               expect(lifetime.toString()).to.equal(`${BOOST_PERIOD_SECS}`);
             });
 
@@ -263,26 +215,13 @@ contract('HCVoting', accounts => {
 
             it('A decision flip before the quiet ending period should not extend it\'s lifetime', async () => {
               await this.app.vote(0, false, { from: voteHolder3 });
-              const [
-                snapshotBlock,
-                lifetime,
-                startDate,
-                lastPendedDate,
-                lastRelativeSupportFlipDate
-              ] = await this.app.getProposalTimeInfo(0);
+              const [,lifetime,,,] = await this.app.getProposalTimeInfo(0);
               expect(lifetime.toString()).to.equal(`${BOOST_PERIOD_SECS}`);
             });
 
             describe('In the quiet ending period of a proposal', () => {
               
               beforeEach(async () => {
-                const [
-                  snapshotBlock,
-                  lifetime,
-                  startDate,
-                  lastPendedDate,
-                  lastRelativeSupportFlipDate
-                ] = await this.app.getProposalTimeInfo(0);
                 const timeToSkip = BOOST_PERIOD_SECS - timeElapsed - QUIET_ENDING_PERIOD_SECS / 2;
                 await timeUtil.advanceTimeAndBlock(web3, timeToSkip);
                 timeElapsed += timeToSkip;
@@ -304,13 +243,7 @@ contract('HCVoting', accounts => {
                 });
                 
                 it('The proposal\'s lifetime should have changed', async () => {
-                  const [
-                    snapshotBlock,
-                    lifetime,
-                    startDate,
-                    lastPendedDate,
-                    lastRelativeSupportFlipDate
-                  ] = await this.app.getProposalTimeInfo(0);
+                  const [,lifetime,,,] = await this.app.getProposalTimeInfo(0);
                   expect(lifetime.toString()).to.equal(`${BOOST_PERIOD_SECS + QUIET_ENDING_PERIOD_SECS}`);
                 });
                 

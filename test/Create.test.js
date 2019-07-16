@@ -59,13 +59,7 @@ contract('HCVoting', ([appManager, proposalCreator]) => {
 
       it('Proposals created should be retrievable and be apropriately setup', async () => {
         for(let i = 0; i < NUM_PROPOSALS; i++) {
-          const [
-            snapshotBlock,
-            lifetime,
-            startDate,
-            lastPendedDate,
-            lastRelativeSupportFlipDate
-          ] = await this.app.getProposalTimeInfo(i);
+          const [,lifetime,startDate,,] = await this.app.getProposalTimeInfo(i);
           const startDateDeltaSecs = proposalCreationDates[i] - parseInt(startDate.toString(), 10);
           expect(startDateDeltaSecs).to.be.below(2);
           expect(lifetime.toString()).to.equal(`${QUEUE_PERIOD_SECS}`);

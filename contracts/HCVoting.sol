@@ -53,7 +53,7 @@ contract HCVoting is IForwarder, AragonApp {
     string internal constant ERROR_PROPOSAL_HASNT_HAD_CONFIDENCE_ENOUGH_TIME = "PROPOSAL_HASNT_HAD_CONFIDENCE_ENOUGH_TIME";
     string internal constant ERROR_PROPOSAL_DOES_NOT_EXIST                   = "PROPOSAL_DOES_NOT_EXIST";
     string internal constant ERROR_PROPOSAL_IS_CLOSED                        = "PROPOSAL_IS_CLOSED";
-    string internal constant ERROR_INVALID_SUPPORT_PCT                       = "ERROR_INVALID_SUPPORT_PCT";
+    string internal constant ERROR_INVALID_SUPPORT_PCT                       = "INVALID_SUPPORT_PCT";
     string internal constant ERROR_NOT_ENOUGH_SUPPORT                        = "NOT_ENOUGH_SUPPORT";
     string internal constant ERROR_PROPOSAL_IS_ACTIVE                        = "PROPOSAL_IS_ACTIVE";
     string internal constant ERROR_NO_STAKE_TO_WITHDRAW                      = "NO_STAKE_TO_WITHDRAW";
@@ -637,8 +637,8 @@ contract HCVoting is IForwarder, AragonApp {
         // Calculate the sender's reward.
         uint256 totalWinningStake = supported ? proposal_.upstake : proposal_.downstake;
         uint256 totalLosingStake = supported ? proposal_.downstake : proposal_.upstake;
-        uint256 sendersWinningRatio = winningStake.mul(PRECISION_MULTIPLIER) / totalWinningStake;
-        uint256 reward = sendersWinningRatio.mul(totalLosingStake) / PRECISION_MULTIPLIER;
+        uint256 sendersWinningRatio = winningStake.mul(PRECISION_MULTIPLIER).div(totalWinningStake);
+        uint256 reward = sendersWinningRatio.mul(totalLosingStake).div(PRECISION_MULTIPLIER);
         uint256 total = winningStake.add(reward);
 
         // Transfer the tokens to the winner.
@@ -682,7 +682,7 @@ contract HCVoting is IForwarder, AragonApp {
     }
 
     function _votesToPct(uint256 votes, uint256 totalVotes) internal pure returns (uint256) {
-        return votes.mul(uint256(100).mul(PRECISION_MULTIPLIER)) / totalVotes;
+        return votes.mul(uint256(100).mul(PRECISION_MULTIPLIER)).div(totalVotes);
     }
 
     function _userHasVotingPower(uint256 _proposalId, address _voter) internal view returns (bool) {

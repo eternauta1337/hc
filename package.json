@@ -48,7 +48,7 @@
     "lint:fix": "eslint . --fix & solium --dir ./contracts --fix",
     "coverage": "cross-env SOLIDITY_COVERAGE=true npm run ganache-cli:test",
     "ganache-cli:test": "sh ./node_modules/@aragon/test-helpers/ganache-cli.sh",
-    "ganache-unlimited": "ganache-cli --deterministic --gasLimit 100000000 --allowUnlimitedContractSize",
+    "ganache-unlimited": "ganache-cli --deterministic --gasLimit 100000000 --gasPrice 1 --allowUnlimitedContractSize",
     "test-unlimited": "truffle test --network development"
   }
 }

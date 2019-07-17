@@ -1,16 +1,22 @@
 const { 
   defaultSetup,
+  deployDAOFactory,
+  deployDAO,
+  deployTokens,
+  deployApp,
   SUPPORT_PERCENT,
   QUEUE_PERIOD_SECS,
   PENDED_BOOST_PERIOD_SECS,
   BOOST_PERIOD_SECS,
   QUIET_ENDING_PERIOD_SECS,
+  CONFIDENCE_THRESHOLD_BASE,
   COMPENSATION_FEE_PERCENT
 } = require('./common.js');
+const { assertRevert } = require('@aragon/test-helpers/assertThrow');
 
 contract('HCVoting', ([appManager]) => {
 
-  describe('When deploying the app', () => {
+  describe('When deploying the app with valid parameters', () => {
 
     beforeEach(() => defaultSetup(this, appManager));
     
@@ -36,4 +42,47 @@ contract('HCVoting', ([appManager]) => {
       expect((await this.app.quietEndingPeriod()).toString()).to.equal(`${QUIET_ENDING_PERIOD_SECS}`);
     });
   });
+
+  describe('When deploying the app with invalid parameters', () => {
+    
+    beforeEach(async () => {
+      await deployDAOFactory(this);
+      await deployDAO(this, appManager);
+      await deployApp(this, appManager);
+      await deployTokens(this);
+    });
+
+    it('Fails when using an invalid supportPct value', async () => {
+      await assertRevert(
+        this.app.initialize(
+          this.voteToken.address, 
+          this.stakeToken.address, 
+          101,
+          QUEUE_PERIOD_SECS,
+          BOOST_PERIOD_SECS,
+          QUIET_ENDING_PERIOD_SECS,
+          PENDED_BOOST_PERIOD_SECS,
+          CONFIDENCE_THRESHOLD_BASE
+        ),
+        `INVALID_SUPPORT_PCT`
+      );
+      await assertRevert(
+        this.app.initialize(
+          this.voteToken.address, 
+          this.stakeToken.address, 
+          49,
+          QUEUE_PERIOD_SECS,
+          BOOST_PERIOD_SECS,
+          QUIET_ENDING_PERIOD_SECS,
+          PENDED_BOOST_PERIOD_SECS,
+          CONFIDENCE_THRESHOLD_BASE
+        ),
+        `INVALID_SUPPORT_PCT`
+      );
+    });
+
+    // TODO: Implement other validators
+
+  });
+
 });

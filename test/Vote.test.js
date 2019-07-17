@@ -98,26 +98,26 @@ contract('HCVoting', accounts => {
       await this.app.vote(0, true,  { from: holder5 });
       await this.app.vote(0, true,  { from: holder6 });
 
-      expect((await this.app.getVote(0, nonHolder)).toString()).to.equal(`0`);
-      expect((await this.app.getVote(0, holder1)).toString()).to.equal(`0`);
-      expect((await this.app.getVote(0, holder2)).toString()).to.equal(`2`);
-      expect((await this.app.getVote(0, holder3)).toString()).to.equal(`2`);
-      expect((await this.app.getVote(0, holder4)).toString()).to.equal(`2`);
-      expect((await this.app.getVote(0, holder5)).toString()).to.equal(`1`);
-      expect((await this.app.getVote(0, holder6)).toString()).to.equal(`1`);
+      expect((await this.app.getUserVote(0, nonHolder)).toString()).to.equal(`0`);
+      expect((await this.app.getUserVote(0, holder1)).toString()).to.equal(`0`);
+      expect((await this.app.getUserVote(0, holder2)).toString()).to.equal(`2`);
+      expect((await this.app.getUserVote(0, holder3)).toString()).to.equal(`2`);
+      expect((await this.app.getUserVote(0, holder4)).toString()).to.equal(`2`);
+      expect((await this.app.getUserVote(0, holder5)).toString()).to.equal(`1`);
+      expect((await this.app.getUserVote(0, holder6)).toString()).to.equal(`1`);
     });
 
     it('Should allow a voter to change it\'s vote from yea to nay and viceversa', async () => {
 
       await this.app.vote(0, true, { from: holder1 });
-      expect((await this.app.getVote(0, holder1)).toString()).to.equal(`1`);
+      expect((await this.app.getUserVote(0, holder1)).toString()).to.equal(`1`);
       await this.app.vote(0, false, { from: holder1 });
-      expect((await this.app.getVote(0, holder1)).toString()).to.equal(`2`);
+      expect((await this.app.getUserVote(0, holder1)).toString()).to.equal(`2`);
 
       await this.app.vote(0, false, { from: holder2 });
-      expect((await this.app.getVote(0, holder1)).toString()).to.equal(`2`);
+      expect((await this.app.getUserVote(0, holder1)).toString()).to.equal(`2`);
       await this.app.vote(0, true, { from: holder2 });
-      expect((await this.app.getVote(0, holder2)).toString()).to.equal(`1`);
+      expect((await this.app.getUserVote(0, holder2)).toString()).to.equal(`1`);
     });
 
     it('Should not allow an attack in which a vote token holder votes and moves the tokens to another account to vote again', async () => {

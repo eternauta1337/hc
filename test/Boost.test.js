@@ -66,7 +66,7 @@ contract('HCVoting', accounts => {
     it('A proposal\'s confidence factor should be available', async () => {
       await this.app.stake(0, 200, true, { from: stakeHolder4 });
       await this.app.stake(0, 100, false, { from: stakeHolder2 });
-      expect((await this.app.getConfidence(0)).toString()).to.equal(`${2 * PRECISION_MULTIPLIER}`);
+      expect((await this.app.getProposalConfidence(0)).toString()).to.equal(`${2 * PRECISION_MULTIPLIER}`);
     });
 
     describe('When a proposal doesn\'t have enough confidence or is not pended', () => {
@@ -92,7 +92,7 @@ contract('HCVoting', accounts => {
 
       it('The confidence threshold should be reached', async () => {
         const threshold = CONFIDENCE_THRESHOLD_BASE * PRECISION_MULTIPLIER;
-        expect((await this.app.getConfidence(0)).toString()).to.equal(`${threshold}`);
+        expect((await this.app.getProposalConfidence(0)).toString()).to.equal(`${threshold}`);
       });
 
       it('The proposal\'s state should change to Pended', async () => {

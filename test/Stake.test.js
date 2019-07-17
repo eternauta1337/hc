@@ -169,8 +169,8 @@ contract('HCVoting', accounts => {
       await stake(10, false);
       await unstake(5, false);
 
-      expect((await this.app.getUpstake(0, stakeHolder1)).toString()).to.equal(`${holderUpstake}`);
-      expect((await this.app.getDownstake(0, stakeHolder1)).toString()).to.equal(`${holderDownstake}`);
+      expect((await this.app.getUserUpstake(0, stakeHolder1)).toString()).to.equal(`${holderUpstake}`);
+      expect((await this.app.getUserDownstake(0, stakeHolder1)).toString()).to.equal(`${holderDownstake}`);
     });
 
     it('Should not allow unstaking from upstake if the stake was made in downstake, and viceversa', async () => {

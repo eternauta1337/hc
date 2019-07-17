@@ -243,8 +243,7 @@ contract HCVoting is IForwarder, AragonApp {
         downstake = proposal_.downstake;
     }
 
-    // TODO: Reconsider naming to make the difference between getVote and getProposalVotes
-    function getVote(uint256 _proposalId, address _voter) public view returns (VoteState) {
+    function getUserVote(uint256 _proposalId, address _voter) public view returns (VoteState) {
         require(_proposalExists(_proposalId), ERROR_PROPOSAL_DOES_NOT_EXIST);
 
         // Retrieve the voter's vote.
@@ -252,21 +251,19 @@ contract HCVoting is IForwarder, AragonApp {
         return proposal_.votes[_voter];
     }
 
-    // TODO: As above, reconsider renaming to make it clearer to know when dealing with a sender
-    // upstake or a proposal upstake
-    function getUpstake(uint256 _proposalId, address _staker) public view returns (uint256) {
+    function getUserUpstake(uint256 _proposalId, address _staker) public view returns (uint256) {
         require(_proposalExists(_proposalId), ERROR_PROPOSAL_DOES_NOT_EXIST);
         Proposal storage proposal_ = proposals[_proposalId];
         return proposal_.upstakes[_staker];
     }
 
-    function getDownstake(uint256 _proposalId, address _staker) public view returns (uint256) {
+    function getUserDownstake(uint256 _proposalId, address _staker) public view returns (uint256) {
         require(_proposalExists(_proposalId), ERROR_PROPOSAL_DOES_NOT_EXIST);
         Proposal storage proposal_ = proposals[_proposalId];
         return proposal_.downstakes[_staker];
     }
 
-    function getConfidence(uint256 _proposalId) public view returns (uint256 _confidence) {
+    function getProposalConfidence(uint256 _proposalId) public view returns (uint256 _confidence) {
         require(_proposalExists(_proposalId), ERROR_PROPOSAL_DOES_NOT_EXIST);
         Proposal storage proposal_ = proposals[_proposalId];
         if(proposal_.downstake == 0) _confidence = proposal_.upstake.mul(PRECISION_MULTIPLIER);
@@ -695,7 +692,7 @@ contract HCVoting is IForwarder, AragonApp {
     }
 
     function _proposalHasEnoughConfidence(uint256 _proposalId) internal view returns (bool _hasConfidence) {
-        uint256 currentConfidence = getConfidence(_proposalId);
+        uint256 currentConfidence = getProposalConfidence(_proposalId);
         uint256 exponent = numBoostedProposals > 0 ? numBoostedProposals + 1 : 1;
         uint256 confidenceThreshold = (confidenceThresholdBase ** exponent).mul(PRECISION_MULTIPLIER);
         _hasConfidence = currentConfidence >= confidenceThreshold;

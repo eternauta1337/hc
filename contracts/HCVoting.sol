@@ -71,11 +71,11 @@ contract HCVoting is IForwarder, AragonApp {
     }
 
     enum ProposalState { 
-        Queued,   // The proposal has just been created, expires in queuePeriod and can only be resolved with absolute majority.
-        Unpended, // The proposal had been pended, but who's confindence dropped before pendedBoostPeriod elapses.
-        Pended,   // The proposal has received enough confidence at a given moment.
-        Boosted,  // the proposal has received enough confidence for pendedBoostPeriod, and can be resolved by relative majority.
-        Resolved  // The proposal was resolved positively either by absolute or relative majority.
+        Queued,   // 0, The proposal has just been created, expires in queuePeriod and can only be resolved with absolute majority.
+        Unpended, // 1, The proposal had been pended, but who's confindence dropped before pendedBoostPeriod elapses.
+        Pended,   // 2, The proposal has received enough confidence at a given moment.
+        Boosted,  // 3, the proposal has received enough confidence for pendedBoostPeriod, and can be resolved by relative majority.
+        Resolved  // 4, The proposal was resolved positively either by absolute or relative majority.
     }
 
     struct Proposal {
@@ -101,6 +101,9 @@ contract HCVoting is IForwarder, AragonApp {
     // Store proposals in a mapping, by numeric id.
     mapping (uint256 => Proposal) internal proposals;
     uint256 public numProposals;
+
+    // Stores the number of currently boosted proposals.
+    uint256 public numBoostedProposals;
 
     /*
      * Property modifiers.
@@ -267,7 +270,7 @@ contract HCVoting is IForwarder, AragonApp {
         require(_proposalExists(_proposalId), ERROR_PROPOSAL_DOES_NOT_EXIST);
         Proposal storage proposal_ = proposals[_proposalId];
         if(proposal_.downstake == 0) _confidence = proposal_.upstake.mul(PRECISION_MULTIPLIER);
-        else _confidence = proposal_.upstake.mul(PRECISION_MULTIPLIER) / proposal_.downstake;
+        else _confidence = proposal_.upstake.mul(PRECISION_MULTIPLIER).div(proposal_.downstake);
     }
 
     /*
@@ -580,7 +583,7 @@ contract HCVoting is IForwarder, AragonApp {
         // A proposal with absolute support can be resolved at any time.
         VoteState absoluteSupport = _calculateProposalSupport(proposal_, false);
         if(absoluteSupport != VoteState.Absent) {
-          _updateProposalState(0, ProposalState.Resolved);
+          _updateProposalState(_proposalId, ProposalState.Resolved);
           if(absoluteSupport == VoteState.Yea) _executeProposal(proposal_);
           return;
         }
@@ -590,8 +593,10 @@ contract HCVoting is IForwarder, AragonApp {
         if(proposal_.state == ProposalState.Boosted) {
             require(getTimestamp64() >= proposal_.startDate.add(proposal_.lifetime), ERROR_PROPOSAL_IS_ACTIVE);
             VoteState relativeSupport = _calculateProposalSupport(proposal_, true);
-            if(relativeSupport != VoteState.Absent) _updateProposalState(0, ProposalState.Resolved);
-            if(relativeSupport == VoteState.Yea) _executeProposal(proposal_);
+            if(relativeSupport != VoteState.Absent) {
+                _updateProposalState(_proposalId, ProposalState.Resolved);
+                if(relativeSupport == VoteState.Yea) _executeProposal(proposal_);
+            }
         }
     }
 
@@ -665,7 +670,12 @@ contract HCVoting is IForwarder, AragonApp {
 
     function _updateProposalState(uint256 _proposalId, ProposalState _newState) internal {
         Proposal storage proposal_ = proposals[_proposalId];
-        if(proposal_.state != _newState) {
+        if(_newState != proposal_.state) {
+
+            // Update # of Boosted proposals.
+            if(_newState == ProposalState.Boosted) numBoostedProposals = numBoostedProposals.add(1);
+            else if(proposal_.state == ProposalState.Boosted) numBoostedProposals = numBoostedProposals.sub(1);
+
             proposal_.state = _newState;
             emit ProposalStateChanged(_proposalId, _newState);
         }
@@ -686,8 +696,8 @@ contract HCVoting is IForwarder, AragonApp {
 
     function _proposalHasEnoughConfidence(uint256 _proposalId) internal view returns (bool _hasConfidence) {
         uint256 currentConfidence = getConfidence(_proposalId);
-        // TODO: The threshold should be elevated to the power of the number of currently boosted proposals.
-        uint256 confidenceThreshold = confidenceThresholdBase.mul(PRECISION_MULTIPLIER);
+        uint256 exponent = numBoostedProposals > 0 ? numBoostedProposals + 1 : 1;
+        uint256 confidenceThreshold = (confidenceThresholdBase ** exponent).mul(PRECISION_MULTIPLIER);
         _hasConfidence = currentConfidence >= confidenceThreshold;
     }
 }

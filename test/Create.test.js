@@ -31,6 +31,7 @@ contract('HCVoting', ([appManager, proposalCreator]) => {
 
         await this.voteToken.generateTokens(ANY_ADDRESS, 999);
 
+        // Create multiple proposals.
         for(let i = 0; i < NUM_PROPOSALS; i++) {
           const receipt = await this.app.createProposal(
             EMPTY_SCRIPT, 

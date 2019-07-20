@@ -13,6 +13,7 @@ contract('HCVoting', ([appManager, proposalCreator]) => {
     const proposalCreationReceipts = [];
     const proposalCreationDates = [];
     const NUM_PROPOSALS = 8;
+    const TOTAL_TOKENS = 999;
 
     beforeEach(() => defaultSetup(this, appManager));
 
@@ -29,7 +30,7 @@ contract('HCVoting', ([appManager, proposalCreator]) => {
       
       beforeEach(async () => {
 
-        await this.voteToken.generateTokens(ANY_ADDRESS, 999);
+        await this.voteToken.generateTokens(ANY_ADDRESS, TOTAL_TOKENS);
 
         // Create multiple proposals.
         for(let i = 0; i < NUM_PROPOSALS; i++) {
@@ -70,6 +71,17 @@ contract('HCVoting', ([appManager, proposalCreator]) => {
           expect(startDate.toNumber()).to.be.closeTo(proposalCreationDates[i], 60);
           expect(lifetime.toString()).to.equal(`${QUEUE_PERIOD_SECS}`);
         }
+      });
+
+      it('Proposals should record the correct voting power', async () => {
+        const [votingPower] = await this.app.getProposalInfo(0);
+        expect(votingPower.toNumber()).to.equal(TOTAL_TOKENS);
+      });
+
+      it('Proposals record the correct votingPower even if tokens are minted after their creation', async () => {
+        await this.voteToken.generateTokens(ANY_ADDRESS, 999999);
+        const [votingPower] = await this.app.getProposalInfo(0);
+        expect(votingPower.toNumber()).to.equal(TOTAL_TOKENS);
       });
 
     });

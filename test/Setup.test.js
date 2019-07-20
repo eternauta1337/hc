@@ -15,7 +15,7 @@ const {
 } = require('./common.js');
 const { assertRevert } = require('@aragon/test-helpers/assertThrow');
 
-contract('HCVoting', ([appManager]) => {
+contract.only('HCVoting', ([appManager]) => {
 
   describe('When interacting with the base app', () => {
     
@@ -81,7 +81,11 @@ contract('HCVoting', ([appManager]) => {
         ),
         `INIT_ALREADY_INITIALIZED`
       );
+
     });
+    it('The app is a forwarder', async () => {
+      assert.isTrue(await this.app.isForwarder());
+    })
   });
 
   describe('When initializing the app with invalid parameters', () => {

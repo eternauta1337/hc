@@ -48,6 +48,11 @@ contract('HCVoting', ([appManager, proposalCreator]) => {
         expect((await this.app.numProposals()).toString()).to.equal(`${NUM_PROPOSALS}`);
       });
 
+      it('Forwarding creates a proposal', async () => {
+        await this.app.forward(EMPTY_SCRIPT);
+        expect((await this.app.numProposals()).toString()).to.equal(`${NUM_PROPOSALS + 1}`);
+      });
+
       it('ProposalCreated events should have been emitted', async () => {
         for(let i = 0; i < NUM_PROPOSALS; i++) {
           const receipt = proposalCreationReceipts[i];

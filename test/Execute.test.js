@@ -69,6 +69,41 @@ contract('HCVoting', accounts => {
       expect(supportPct.toString()).to.equal(`${newSupportPct}`);
     });
 
+    it('Should execute a proposal\'s script with multiple actions', async () => {
+      
+      // Create the proposal to change the app's supportPct.
+      const newSupportPct = 60;
+      const action1 = { 
+        to: this.app.address, 
+        calldata: this.app.contract.changeSupportPct.getData(newSupportPct) 
+      };
+      const newConfidenceThresholdBase = 6;
+      const action2 = { 
+        to: this.app.address, 
+        calldata: this.app.contract.changeConfidenceThresholdBase.getData(newConfidenceThresholdBase) 
+      };
+      const newQueuePeriod = 7 * 24 * 3600; // 1 week
+      const action3 = { 
+        to: this.app.address, 
+        calldata: this.app.contract.changeQueuePeriod.getData(newQueuePeriod) 
+      };
+      const script = encodeCallScript([action1, action2, action3])
+      await this.app.createProposal(script, `Modify some parameters`);
+      
+      // Support proposal with absolute majority so that it executes.
+      await this.app.vote(0, false, { from: holder1 });
+      await this.app.vote(0, true,  { from: holder2 });
+      await this.app.vote(0, true,  { from: holder3 });
+
+      // Trigger the execution of the proposal.
+      await this.app.resolveProposal(0);
+
+      // Retrieve new values.
+      expect((await this.app.supportPct()).toString()).to.equal(`${newSupportPct}`);
+      expect((await this.app.confidenceThresholdBase()).toString()).to.equal(`${newConfidenceThresholdBase}`);
+      expect((await this.app.queuePeriod()).toString()).to.equal(`${newQueuePeriod}`);
+    });
+
     it('Should not execute a proposal\'s script if it targets a blacklisted address', async () => {
       
       // Create the proposal to withdraw stake tokens.

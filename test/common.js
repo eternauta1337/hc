@@ -78,11 +78,24 @@ const common = {
       appManager,
       { from: appManager }
     );
-
     await test.acl.createPermission(
       test.app.address,
       test.app.address,
       test.MODIFY_SUPPORT_PERCENT_ROLE,
+      appManager,
+      { from: appManager }
+    );
+    await test.acl.createPermission(
+      test.app.address,
+      test.app.address,
+      test.MODIFY_PERIODS_ROLE,
+      appManager,
+      { from: appManager }
+    );
+    await test.acl.createPermission(
+      test.app.address,
+      test.app.address,
+      test.MODIFY_CONFIDENCE_THRESHOLD_ROLE,
       appManager,
       { from: appManager }
     );

@@ -117,6 +117,13 @@ contract('HCVoting', accounts => {
         );
       });
 
+      it('Should not allow to re-resolve the proposal', async () => {
+        await assertRevert(
+          this.app.resolveProposal(0),
+          `PROPOSAL_IS_CLOSED`
+        );
+      });
+
     });
 
     describe('When a proposal gets boosted', () => {

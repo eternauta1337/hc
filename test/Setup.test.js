@@ -15,7 +15,7 @@ const {
 } = require('./common.js');
 const { assertRevert } = require('@aragon/test-helpers/assertThrow');
 
-contract.only('HCVoting', ([appManager]) => {
+contract('HCVoting', ([appManager]) => {
 
   describe('When interacting with the base app', () => {
     

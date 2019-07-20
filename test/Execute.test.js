@@ -27,6 +27,23 @@ contract('HCVoting', accounts => {
       await this.voteToken.generateTokens(holder2, HOLDER_2_BALANCE);
       await this.voteToken.generateTokens(holder3, HOLDER_3_BALANCE);
     });
+
+    it('Should allow empty scripts in a proposal', async () => {
+      await this.app.createProposal(EMPTY_SCRIPT, `Modify support percent`);
+
+      // Support proposal with absolute majority so that it executes.
+      await this.app.vote(0, false, { from: holder1 });
+      await this.app.vote(0, true,  { from: holder2 });
+      await this.app.vote(0, true,  { from: holder3 });
+
+      // Trigger the execution of the proposal.
+      await this.app.resolveProposal(0);
+
+      // Verify proposal state.
+      const [,,state,,executed] = await this.app.getProposalInfo(0);
+      expect(state.toNumber()).to.equal(4); // ProposalState 4 = Resolved
+      expect(executed).to.equal(true);
+    });
     
     it('Should execute a proposal\'s script', async () => {
       
@@ -37,7 +54,7 @@ contract('HCVoting', accounts => {
         calldata: this.app.contract.changeSupportPct.getData(newSupportPct) 
       };
       const script = encodeCallScript([action])
-      const receipt = await this.app.createProposal(script, `Modify support percent`);
+      await this.app.createProposal(script, `Modify support percent`);
       
       // Support proposal with absolute majority so that it executes.
       await this.app.vote(0, false, { from: holder1 });
@@ -61,7 +78,7 @@ contract('HCVoting', accounts => {
         calldata: this.stakeToken.contract.transfer.getData(ANY_ADDRESS, 1000) 
       };
       const script = encodeCallScript([action])
-      const receipt = await this.app.createProposal(script, `Remove some stake from the voting app`);
+      await this.app.createProposal(script, `Remove some stake from the voting app`);
       
       // Support the proposal.
       await this.app.vote(0, false, { from: holder1 });

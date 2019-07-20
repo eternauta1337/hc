@@ -139,5 +139,23 @@ contract('HCVoting', accounts => {
       );
     });
 
+    it('Should consider tokens held at the moment a proposal was created', async () => {
+
+      // Give the tokens away.
+      await this.voteToken.transfer(nonHolder, 100, { from: holder6 })
+
+      // Verify that the tokens were transfered.
+      expect((await this.voteToken.balanceOf(nonHolder)).toNumber()).to.equal(100);
+      expect((await this.voteToken.balanceOf(holder6)).toNumber()).to.equal(0);
+
+      // Should still be able to vote, because the tokens
+      // were given away after the proposal was created.
+      await this.app.vote(0, true, { from: holder6 })
+
+      // Verify that the vote was accepted.
+      let [ yea, nay ] = await this.app.getProposalVotes(0);
+      expect(yea.toString()).to.equal(`${HOLDER_6_BALANCE}`);
+    });
+
   });
 });

@@ -11,9 +11,11 @@ const {
   BOOST_PERIOD_SECS,
   QUIET_ENDING_PERIOD_SECS,
   CONFIDENCE_THRESHOLD_BASE,
-  COMPENSATION_FEE_PERCENT
+  COMPENSATION_FEE_PERCENT,
+  ANY_ADDRESS
 } = require('./common.js');
 const { assertRevert } = require('@aragon/test-helpers/assertThrow');
+const { EMPTY_SCRIPT } = require('@aragon/test-helpers/evmScript');
 
 contract('HCVoting', ([appManager]) => {
 
@@ -86,6 +88,23 @@ contract('HCVoting', ([appManager]) => {
     it('The app is a forwarder', async () => {
       assert.isTrue(await this.app.isForwarder());
     })
+  });
+
+  describe('When attempting to interact with an un-initialized app', () => {
+    
+    beforeEach(async () => {
+      await deployDAOFactory(this);
+      await deployDAO(this, appManager);
+      await deployApp(this, appManager);
+      await deployTokens(this);
+    });
+
+    it('Reverts when trying to create a proposal', async () => {
+      await assertRevert(
+        this.app.createProposal(EMPTY_SCRIPT, "Some proposal"),
+        `APP_AUTH_FAILED`
+      );
+    });
   });
 
   describe('When initializing the app with invalid parameters', () => {

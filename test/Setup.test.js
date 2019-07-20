@@ -1,4 +1,5 @@
 const { 
+  HCVoting,
   defaultSetup,
   deployDAOFactory,
   deployDAO,
@@ -16,7 +17,31 @@ const { assertRevert } = require('@aragon/test-helpers/assertThrow');
 
 contract('HCVoting', ([appManager]) => {
 
-  describe('When deploying the app with valid parameters', () => {
+  describe('When interacting with the base app', () => {
+    
+    beforeEach(async () => {
+      await deployTokens(this);
+      this.base = await HCVoting.new();
+    });
+
+    it('It is petrified and cannot be initialized', async () => {
+      assert.isTrue(await this.base.isPetrified());
+      await assertRevert(
+        this.base.initialize(
+          this.voteToken.address, 
+          this.stakeToken.address, 
+          SUPPORT_PERCENT,
+          QUEUE_PERIOD_SECS,
+          BOOST_PERIOD_SECS,
+          QUIET_ENDING_PERIOD_SECS,
+          PENDED_BOOST_PERIOD_SECS,
+          CONFIDENCE_THRESHOLD_BASE
+        )
+      );
+    });
+  });
+
+  describe('When initializing the app with valid parameters', () => {
 
     beforeEach(() => defaultSetup(this, appManager));
     
@@ -41,9 +66,25 @@ contract('HCVoting', ([appManager]) => {
       expect((await this.app.boostPeriod()).toString()).to.equal(`${BOOST_PERIOD_SECS}`);
       expect((await this.app.quietEndingPeriod()).toString()).to.equal(`${QUIET_ENDING_PERIOD_SECS}`);
     });
+
+    it('App cannot be re-initialized', async () => {
+      await assertRevert(
+        this.app.initialize(
+          this.voteToken.address, 
+          this.stakeToken.address, 
+          SUPPORT_PERCENT,
+          QUEUE_PERIOD_SECS,
+          BOOST_PERIOD_SECS,
+          QUIET_ENDING_PERIOD_SECS,
+          PENDED_BOOST_PERIOD_SECS,
+          CONFIDENCE_THRESHOLD_BASE
+        ),
+        `INIT_ALREADY_INITIALIZED`
+      );
+    });
   });
 
-  describe('When deploying the app with invalid parameters', () => {
+  describe('When initializing the app with invalid parameters', () => {
     
     beforeEach(async () => {
       await deployDAOFactory(this);

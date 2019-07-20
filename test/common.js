@@ -10,6 +10,8 @@ const HOURS = 60 * 60;
 
 const common = {
 
+  HCVoting,
+
   SUPPORT_PERCENT: 51,
   QUEUE_PERIOD_SECS: 24 * HOURS,
   PENDED_BOOST_PERIOD_SECS: 1 * HOURS,

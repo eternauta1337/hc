@@ -271,8 +271,8 @@ contract HCVoting is IForwarder, AragonApp {
     }
 
     /*
-     * Initializers 
-     * Note: there are is constructor, since this is intended to be used as a proxy.
+     * Initializer 
+     * Note: There is no constructor, since this is intended to be used as a proxy.
      */
 
     /**
@@ -644,7 +644,7 @@ contract HCVoting is IForwarder, AragonApp {
     }
 
     /*
-     * IForwarer interface implementation.
+     * IForwarder interface implementation.
      */
 
     function isForwarder() external pure returns (bool) {

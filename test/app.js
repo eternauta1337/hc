@@ -1,7 +1,7 @@
 /* global artifacts contract beforeEach it assert */
 
 const { assertRevert } = require('@aragon/test-helpers/assertThrow')
-const { getEventArgument } = require('@aragon/test-helpers/events')
+const { getEventArgument, getEventAt } = require('@aragon/test-helpers/events')
 const { hash } = require('eth-ens-namehash')
 const deployDAO = require('./helpers/deployDAO')
 
@@ -9,7 +9,7 @@ const HCVoting = artifacts.require('HCVoting.sol')
 
 const ANY_ADDRESS = '0xffffffffffffffffffffffffffffffffffffffff'
 
-contract('HCVoting', ([appManager, user]) => {
+contract('HCVoting', ([appManager, creator1, creator2, voter1, voter2, voter3]) => {
   let app
 
   beforeEach('deploy dao and app', async () => {
@@ -49,7 +49,107 @@ contract('HCVoting', ([appManager, user]) => {
     await app.initialize()
   })
 
-  it('dummy', async () => {
-    // Test me!
+  describe('when creating proposals', () => {
+    let proposalCreationReceipt1, proposalCreationReceipt2
+
+    const proposalMetadata1 = 'Transfer 10000 dai from the DAO\'s vault to 0xb4124cEB3451635DAcedd11767f004d8a28c6eE7'
+    const proposalMetadata2 = 'Mint 100 DAO tokens to 0xb4124cEB3451635DAcedd11767f004d8a28c6eE7'
+
+    beforeEach('create some proposals', async () => {
+      proposalCreationReceipt1 = await app.createProposal(proposalMetadata1, { from: creator1 })
+      proposalCreationReceipt2 = await app.createProposal(proposalMetadata2, { from: creator2 })
+    })
+
+		it('should emit ProposalCreated events', async () => {
+      const event1 = getEventAt(proposalCreationReceipt1, 'ProposalCreated')
+      assert.equal(event1.args.proposalId.toNumber(), 0, 'invalid proposal id')
+      assert.equal(event1.args.creator, creator1, 'invalid creator')
+      assert.equal(event1.args.metadata, proposalMetadata1, 'invalid proposal metadata')
+
+      const event2 = getEventAt(proposalCreationReceipt2, 'ProposalCreated')
+      assert.equal(event2.args.proposalId.toNumber(), 1, 'invalid proposal id')
+      assert.equal(event2.args.creator, creator2, 'invalid creator')
+      assert.equal(event2.args.metadata, proposalMetadata2, 'invalid proposal metadata')
+    })
+
+    it('should have increased the number of proposals', async () => {
+      assert.equal((await app.numProposals()).toNumber(), 2)
+    })
+
+    describe('when voting on a proposal that does not exist', () => {
+      it('should revert', async () => {
+        await assertRevert(
+          app.vote(2, true, { from: voter1 }),
+          'HCVOTING_PROPOSAL_DOES_NOT_EXIST'
+        )
+      })
+    })
+
+    describe('when voting on proposals that exist', () => {
+
+      let voteReceipt1, voteReceipt2, voteReceipt3, voteReceipt4
+
+      beforeEach('cast some votes', async () => {
+        voteReceipt1 = await app.vote(0, true, { from: voter1 })
+        voteReceipt2 = await app.vote(0, false, { from: voter2 })
+
+        voteReceipt3 = await app.vote(1, false, { from: voter1 })
+        voteReceipt4 = await app.vote(1, true, { from: voter2 })
+      })
+
+      it('should emit VoteCasted events', async () => {
+        const event1 = getEventAt(voteReceipt1, 'VoteCasted')
+        assert.equal(event1.args.proposalId.toNumber(), 0, 'invalid proposal id')
+        assert.equal(event1.args.voter, voter1, 'invalid voter')
+        assert.equal(event1.args.supports, true, 'invalid vote support')
+
+        const event2 = getEventAt(voteReceipt2, 'VoteCasted')
+        assert.equal(event2.args.proposalId.toNumber(), 0, 'invalid proposal id')
+        assert.equal(event2.args.voter, voter2, 'invalid voter')
+        assert.equal(event2.args.supports, false, 'invalid vote support')
+
+        const event3 = getEventAt(voteReceipt3, 'VoteCasted')
+        assert.equal(event3.args.proposalId.toNumber(), 1, 'invalid proposal id')
+        assert.equal(event3.args.voter, voter1, 'invalid voter')
+        assert.equal(event3.args.supports, false, 'invalid vote support')
+
+        const event4 = getEventAt(voteReceipt4, 'VoteCasted')
+        assert.equal(event4.args.proposalId.toNumber(), 1, 'invalid proposal id')
+        assert.equal(event4.args.voter, voter2, 'invalid voter')
+        assert.equal(event4.args.supports, true, 'invalid vote support')
+      })
+
+      it('should register the correct number of yeas and nays on each proposal', async () => {
+        assert.equal((await app.getProposalYeas(0)).toNumber(), 1, 'invalid yeas')
+        assert.equal((await app.getProposalNays(0)).toNumber(), 1, 'invalid nays')
+
+        assert.equal((await app.getProposalYeas(1)).toNumber(), 1, 'invalid yeas')
+        assert.equal((await app.getProposalNays(1)).toNumber(), 1, 'invalid nays')
+      })
+
+      it('should keep track of each vote, per user', async () => {
+        assert.equal((await app.getVote(0, voter1)).toString(), '1')
+        assert.equal((await app.getVote(0, voter2)).toString(), '2')
+        assert.equal((await app.getVote(0, voter3)).toString(), '0')
+
+        assert.equal((await app.getVote(1, voter1)).toString(), '2')
+        assert.equal((await app.getVote(1, voter2)).toString(), '1')
+        assert.equal((await app.getVote(1, voter3)).toString(), '0')
+      })
+
+      it('should not allow redundant votes', async () => {
+        await assertRevert(
+          app.vote(0, true, { from: voter1 }),
+          'HCVOTING_VOTE_ALREADY_CASTED'
+        )
+      })
+
+      it('should allow a vote to be changed from yea to nay and viceversa', async () => {
+        await app.vote(0, false, { from: voter1 })
+
+        assert.equal((await app.getProposalYeas(0)).toNumber(), 0, 'invalid yeas')
+        assert.equal((await app.getVote(0, voter1)).toString(), '2')
+      })
+    })
   })
 })

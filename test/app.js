@@ -65,6 +65,11 @@ contract('HCVoting', ([appManager, creator1, creator2, voter1, voter2, voter3]) 
         proposalCreationReceipt2 = await app.createProposal(proposalMetadata2, { from: creator2 })
       })
 
+      it('should properly store the current block number for when the proposal was created', async () => {
+        assert.equal((await app.getProposalCreationBlock(0)).toNumber(), proposalCreationReceipt1.receipt.blockNumber - 1)
+        assert.equal((await app.getProposalCreationBlock(1)).toNumber(), proposalCreationReceipt2.receipt.blockNumber - 1)
+      })
+
       it('should not allow a voter with no voting power to vote', async () => {
         await assertRevert(
           app.vote(0, true, { from: voter3 }),
@@ -168,6 +173,19 @@ contract('HCVoting', ([appManager, creator1, creator2, voter1, voter2, voter3]) 
 
           await app.vote(1, true, { from: voter1 })
           assert.equal(await app.getProposalSupport(1), true)
+        })
+
+        it('should not allow a voter to double vote by transferring tokens', async () => {
+          await voteToken.transfer(voter3, VOTER_BALANCE, { from: voter1 })
+          await assertRevert(
+            app.vote(0, true, { from: voter3 }),
+            'HCVOTING_NO_VOTING_POWER'
+          )
+        })
+
+        it('should not change calculated support if vote token supply changes', async () => {
+          await voteToken.generateTokens(voter3, VOTER_BALANCE)
+          assert.equal(await app.getProposalSupport(1), false)
         })
       })
     })

@@ -37,6 +37,7 @@ contract HCVoting is AragonApp {
     enum Vote { Absent, Yea, Nay }
 
     struct Proposal {
+        uint64 creationBlock;
         uint256 totalYeas;
         uint256 totalNays;
         mapping (address => Vote) votes;
@@ -67,14 +68,20 @@ contract HCVoting is AragonApp {
      */
 
     function createProposal(string _metadata) public {
-        emit ProposalCreated(numProposals, msg.sender, _metadata);
+        uint256 proposalId = numProposals;
         numProposals++;
+
+        Proposal storage proposal_ = _getProposal(proposalId);
+        uint64 creationBlock = getBlockNumber64() - 1;
+        proposal_.creationBlock = creationBlock;
+
+        emit ProposalCreated(proposalId, msg.sender, _metadata);
     }
 
     function vote(uint256 _proposalId, bool _supports) public {
         Proposal storage proposal_ = _getProposal(_proposalId);
 
-        uint256 userVotingPower = voteToken.balanceOf(msg.sender);
+        uint256 userVotingPower = voteToken.balanceOfAt(msg.sender, proposal_.creationBlock);
         require(userVotingPower > 0, ERROR_NO_VOTING_POWER);
 
         // Reject redundant votes.
@@ -129,9 +136,14 @@ contract HCVoting is AragonApp {
     function getProposalSupport(uint256 _proposalId) public view returns (bool) {
         Proposal storage proposal_ = _getProposal(_proposalId);
 
-        uint256 votingPower = voteToken.totalSupply();
+        uint256 votingPower = voteToken.totalSupplyAt(proposal_.creationBlock);
         uint256 yeaPPM = _calculatePPM(proposal_.totalYeas, votingPower);
         return yeaPPM > supportPPM;
+    }
+
+    function getProposalCreationBlock(uint256 _proposalId) public view returns (uint256) {
+        Proposal storage proposal_ = _getProposal(_proposalId);
+        return proposal_.creationBlock;
     }
 
     /*

@@ -1,12 +1,12 @@
 /* global artifacts contract beforeEach it assert */
 
 const { assertRevert } = require('@aragon/test-helpers/assertThrow')
+const { encodeCallScript, EMPTY_SCRIPT } = require('@aragon/test-helpers/evmScript')
 const { getEventAt } = require('@aragon/test-helpers/events')
 const deployDAO = require('./helpers/deployDAO')
 const deployApp = require('./helpers/deployApp')
 const { deployVoteToken } = require('./helpers/deployTokens')
 
-const ANY_ADDRESS = '0xffffffffffffffffffffffffffffffffffffffff'
 const VOTER_BALANCE = 100
 const REQUIRED_SUPPORT_PPM = 510000
 
@@ -61,8 +61,8 @@ contract('HCVoting', ([appManager, creator1, creator2, voter1, voter2, voter3]) 
       const proposalMetadata2 = 'Mint 100 DAO tokens to 0xb4124cEB3451635DAcedd11767f004d8a28c6eE7'
 
       beforeEach('create some proposals', async () => {
-        proposalCreationReceipt1 = await app.createProposal(proposalMetadata1, { from: creator1 })
-        proposalCreationReceipt2 = await app.createProposal(proposalMetadata2, { from: creator2 })
+        proposalCreationReceipt1 = await app.createProposal(EMPTY_SCRIPT, proposalMetadata1, { from: creator1 })
+        proposalCreationReceipt2 = await app.createProposal(EMPTY_SCRIPT, proposalMetadata2, { from: creator2 })
       })
 
       it('should properly store the current block number for when the proposal was created', async () => {
@@ -186,6 +186,49 @@ contract('HCVoting', ([appManager, creator1, creator2, voter1, voter2, voter3]) 
         it('should not change calculated support if vote token supply changes', async () => {
           await voteToken.generateTokens(voter3, VOTER_BALANCE)
           assert.equal(await app.getProposalSupport(1), false)
+        })
+      })
+
+      describe('when executing proposals', () => {
+        const newSupportPPM = 400000;
+
+        beforeEach('create a proposal with a script that is not empty', async () => {
+          const action = {
+            to: app.address,
+            calldata: app.contract.changeSupportPPM.getData(newSupportPPM)
+          }
+          const script = encodeCallScript([action])
+
+          await app.createProposal(script, 'Modify support')
+        })
+
+        it('reverts when trying to execute a proposal that doesn\'t have enough support', async () => {
+          assert.equal(await app.getProposalSupport(2), false)
+          await assertRevert(
+            app.executeProposal(2),
+            'HCVOTING_NOT_ENOUGH_SUPPORT'
+          )
+        })
+
+        it('executes the script when executing a proposal that has enough support', async () => {
+          await app.vote(2, true, { from: voter1 })
+          await app.vote(2, true, { from: voter2 })
+          assert.equal(await app.getProposalSupport(2), true)
+
+          await app.executeProposal(2)
+          assert.equal((await app.supportPPM()).toNumber(), newSupportPPM)
+        })
+
+        it('reverts when trying to execute a proposal a second time', async () => {
+          await app.vote(2, true, { from: voter1 })
+          await app.vote(2, true, { from: voter2 })
+          assert.equal(await app.getProposalSupport(2), true)
+
+          await app.executeProposal(2)
+          await assertRevert(
+            app.executeProposal(2),
+            'HCVOTING_ALREADY_EXECUTED'
+          )
         })
       })
     })

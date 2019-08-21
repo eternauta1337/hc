@@ -1,13 +1,13 @@
 {
   "roles": [
     {
-      "name": "Increment the counter",
-      "id": "INCREMENT_ROLE",
+      "name": "Creates a proposal",
+      "id": "CREATE_PROPOSALS_ROLE",
       "params": []
     },
     {
-      "name": "Decrement the counter",
-      "id": "DECREMENT_ROLE",
+      "name": "Changes required support for proposals",
+      "id": "CHANGE_SUPPORT_ROLE",
       "params": []
     }
   ],

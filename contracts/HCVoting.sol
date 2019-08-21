@@ -2,6 +2,8 @@ import "@aragon/os/contracts/apps/AragonApp.sol";
 
 import "@aragon/os/contracts/lib/math/SafeMath.sol";
 
+import "@aragon/apps-shared-minime/contracts/MiniMeToken.sol";
+
 
 contract HCVoting is AragonApp {
     using SafeMath for uint256;
@@ -12,6 +14,7 @@ contract HCVoting is AragonApp {
 
     string internal constant ERROR_PROPOSAL_DOES_NOT_EXIST = "HCVOTING_PROPOSAL_DOES_NOT_EXIST";
     string internal constant ERROR_VOTE_ALREADY_CASTED     = "HCVOTING_VOTE_ALREADY_CASTED";
+    string internal constant ERROR_NO_VOTING_POWER         = "HCVOTING_NO_VOTING_POWER";
 
     /*
      * Events
@@ -35,12 +38,16 @@ contract HCVoting is AragonApp {
     mapping (uint256 => Proposal) proposals;
     uint256 public numProposals;
 
+    MiniMeToken public voteToken;
+
     /*
      * Init
      */
 
-    function initialize() public onlyInit {
+    function initialize(MiniMeToken _voteToken) public onlyInit {
         initialized();
+
+        voteToken = _voteToken;
     }
 
     /*
@@ -55,6 +62,9 @@ contract HCVoting is AragonApp {
     function vote(uint256 _proposalId, bool _supports) public {
         Proposal storage proposal_ = _getProposal(_proposalId);
 
+        uint256 userVotingPower = voteToken.balanceOf(msg.sender);
+        require(userVotingPower > 0, ERROR_NO_VOTING_POWER);
+
         // Reject redundant votes.
         Vote previousVote = proposal_.votes[msg.sender];
         require(
@@ -65,17 +75,17 @@ contract HCVoting is AragonApp {
         // Update yea/nay count.
         if (previousVote == Vote.Absent) {
             if (_supports) {
-                proposal_.totalYeas = proposal_.totalYeas.add(1);
+                proposal_.totalYeas = proposal_.totalYeas.add(userVotingPower);
             } else {
-                proposal_.totalNays = proposal_.totalNays.add(1);
+                proposal_.totalNays = proposal_.totalNays.add(userVotingPower);
             }
         } else {
             if (previousVote == Vote.Yea && !_supports) {
-                proposal_.totalYeas = proposal_.totalYeas.sub(1);
-                proposal_.totalNays = proposal_.totalNays.add(1);
+                proposal_.totalYeas = proposal_.totalYeas.sub(userVotingPower);
+                proposal_.totalNays = proposal_.totalNays.add(userVotingPower);
             } else if (previousVote == Vote.Nay && _supports) {
-                proposal_.totalNays = proposal_.totalNays.sub(1);
-                proposal_.totalYeas = proposal_.totalYeas.add(1);
+                proposal_.totalNays = proposal_.totalNays.sub(userVotingPower);
+                proposal_.totalYeas = proposal_.totalYeas.add(userVotingPower);
             }
         }
 

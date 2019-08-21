@@ -15,6 +15,7 @@ contract HCVoting is AragonApp {
     string internal constant ERROR_PROPOSAL_DOES_NOT_EXIST = "HCVOTING_PROPOSAL_DOES_NOT_EXIST";
     string internal constant ERROR_VOTE_ALREADY_CASTED     = "HCVOTING_VOTE_ALREADY_CASTED";
     string internal constant ERROR_NO_VOTING_POWER         = "HCVOTING_NO_VOTING_POWER";
+    string internal constant ERROR_INVALID_SUPPORT         = "HCVOTING_INVALID_SUPPORT";
 
     /*
      * Events
@@ -22,6 +23,12 @@ contract HCVoting is AragonApp {
 
     event ProposalCreated(uint256 proposalId, address creator, string metadata);
     event VoteCasted(uint256 proposalId, address voter, bool supports);
+
+    /*
+     * Constants
+     */
+
+    uint256 public constant MILLION = 1000000;
 
     /*
      * Properties
@@ -40,14 +47,19 @@ contract HCVoting is AragonApp {
 
     MiniMeToken public voteToken;
 
+    uint256 public supportPPM;
+
     /*
      * Init
      */
 
-    function initialize(MiniMeToken _voteToken) public onlyInit {
+    function initialize(MiniMeToken _voteToken, uint256 _supportPPM) public onlyInit {
+        require(_supportPPM > 0, ERROR_INVALID_SUPPORT);
+
         initialized();
 
         voteToken = _voteToken;
+        supportPPM = _supportPPM;
     }
 
     /*
@@ -114,9 +126,21 @@ contract HCVoting is AragonApp {
         return proposal_.totalNays;
     }
 
+    function getProposalSupport(uint256 _proposalId) public view returns (bool) {
+        Proposal storage proposal_ = _getProposal(_proposalId);
+
+        uint256 votingPower = voteToken.totalSupply();
+        uint256 yeaPPM = _calculatePPM(proposal_.totalYeas, votingPower);
+        return yeaPPM > supportPPM;
+    }
+
     /*
      * Internal
      */
+
+    function _calculatePPM(uint256 _votes, uint256 _total) internal pure returns (uint256) {
+        return _votes.mul(MILLION).div(_total);
+    }
 
     function _getProposal(uint256 _proposalId) internal view returns (Proposal storage) {
         require(_proposalId < numProposals, ERROR_PROPOSAL_DOES_NOT_EXIST);

@@ -33,6 +33,12 @@ contract HCVoting is IForwarder, AragonApp {
     string internal constant ERROR_TOKEN_TRANSFER_FAILED   = "HCVOTING_TOKEN_TRANSFER_FAILED";
     string internal constant ERROR_INSUFFICIENT_STAKE      = "HCVOTING_INSUFFICIENT_STAKE";
     string internal constant ERROR_INVALID_DURATION        = "HCVOTING_INVALID_DURATION";
+    string internal constant ERROR_INV_BOOSTING_DURATION   = "HCVOTING_INV_BOOSTING_DURATION";
+    string internal constant ERROR_INV_BOOSTED_DURATION    = "HCVOTING_INV_BOOSTED_DURATION";
+    string internal constant ERROR_PROPOSAL_STILL_BOOSTING = "HCVOTING_PROPOSAL_STILL_BOOSTING";
+    string internal constant ERROR_PROPOSAL_NOT_BOOSTING   = "HCVOTING_PROPOSAL_NOT_BOOSTING";
+    string internal constant ERROR_NOT_ENOUGH_CONFIDENCE   = "HCVOTING_NOT_ENOUGH_CONFIDENCE";
+    string internal constant ERROR_PROPOSAL_IS_BOOSTED     = "HCVOTING_PROPOSAL_IS_BOOSTED";
 
     /*
      * Events
@@ -59,6 +65,8 @@ contract HCVoting is IForwarder, AragonApp {
 
     enum ProposalState {
         Active,
+        Boosting,
+        Boosted,
         Resolved,
         Closed
     }
@@ -66,8 +74,10 @@ contract HCVoting is IForwarder, AragonApp {
     struct Proposal {
         uint64 creationDate;
         uint64 closeDate;
+        uint64 boostingDate;
         uint64 creationBlock;
         bytes executionScript;
+        bool boosted;
         bool executed;
         uint256 totalYeas;
         uint256 totalNays;
@@ -86,6 +96,8 @@ contract HCVoting is IForwarder, AragonApp {
 
     uint256 public supportPPM;
     uint64 public proposalDuration;
+    uint64 public boostingDuration;
+    uint64 public boostedDuration;
 
     /*
      * Set properties
@@ -104,12 +116,16 @@ contract HCVoting is IForwarder, AragonApp {
         MiniMeToken _voteToken,
         MiniMeToken _stakeToken,
         uint256 _supportPPM,
-        uint64 _proposalDuration
+        uint64 _proposalDuration,
+        uint64 _boostingDuration,
+        uint64 _boostedDuration
     )
         public onlyInit
     {
         require(_supportPPM > 0, ERROR_INVALID_SUPPORT);
         require(_proposalDuration > 0, ERROR_INVALID_DURATION);
+        require(_boostingDuration > 0, ERROR_INV_BOOSTING_DURATION);
+        require(_boostedDuration > 0, ERROR_INV_BOOSTED_DURATION);
 
         initialized();
 
@@ -117,6 +133,8 @@ contract HCVoting is IForwarder, AragonApp {
         stakeToken = _stakeToken;
         supportPPM = _supportPPM;
         proposalDuration = _proposalDuration;
+        boostingDuration = _boostingDuration;
+        boostedDuration = _boostedDuration;
     }
 
     /*
@@ -195,13 +213,35 @@ contract HCVoting is IForwarder, AragonApp {
         _withdrawStake(_proposalId, _amount, false);
     }
 
+    function boostProposal(uint256 _proposalId) public {
+        Proposal storage proposal_ = _getProposal(_proposalId);
+
+        ProposalState state = getProposalState(_proposalId);
+        require(state != ProposalState.Resolved, ERROR_PROPOSAL_IS_RESOLVED);
+        require(state != ProposalState.Closed, ERROR_PROPOSAL_IS_CLOSED);
+        require(state != ProposalState.Boosted, ERROR_PROPOSAL_IS_BOOSTED);
+
+        require(hasConfidence(_proposalId), ERROR_NOT_ENOUGH_CONFIDENCE);
+        require(hasMaintainedConfidence(_proposalId), ERROR_PROPOSAL_STILL_BOOSTING);
+
+        proposal_.boosted = true;
+        proposal_.closeDate = proposal_.creationDate.add(boostedDuration);
+    }
+
     function executeProposal(uint256 _proposalId) public {
         Proposal storage proposal_ = _getProposal(_proposalId);
 
         ProposalState state = getProposalState(_proposalId);
         require(state != ProposalState.Resolved, ERROR_PROPOSAL_IS_RESOLVED);
 
-        require(getProposalSupport(_proposalId), ERROR_NOT_ENOUGH_SUPPORT);
+        // require(getProposalSupport(_proposalId), ERROR_NOT_ENOUGH_SUPPORT);
+        bool supported = getProposalSupport(_proposalId);
+        if (!supported && state == ProposalState.Boosted) {
+            require(getTimestamp64() > proposal_.closeDate, ERROR_PROPOSAL_STILL_BOOSTING);
+            uint256 relativeVotingPower = proposal_.totalYeas.add(proposal_.totalNays);
+            supported = getProposalSupport(_proposalId, relativeVotingPower);
+        }
+        require(supported, ERROR_NOT_ENOUGH_SUPPORT);
 
         address[] memory blacklist = new address[](0);
         bytes memory input = new bytes(0);
@@ -237,9 +277,26 @@ contract HCVoting is IForwarder, AragonApp {
         return yeaPPM > supportPPM;
     }
 
+    function getProposalSupport(uint256 _proposalId, uint256 _votingPower) public view returns (bool) {
+        Proposal storage proposal_ = _getProposal(_proposalId);
+
+        uint256 yeaPPM = _calculatePPM(proposal_.totalYeas, _votingPower);
+        return yeaPPM > supportPPM;
+    }
+
     function getProposalCreationBlock(uint256 _proposalId) public view returns (uint256) {
         Proposal storage proposal_ = _getProposal(_proposalId);
         return proposal_.creationBlock;
+    }
+
+    function getCreationDate(uint256 _proposalId) public view returns (uint256) {
+        Proposal storage proposal_ = _getProposal(_proposalId);
+        return proposal_.creationDate;
+    }
+
+    function getCloseDate(uint256 _proposalId) public view returns (uint256) {
+        Proposal storage proposal_ = _getProposal(_proposalId);
+        return proposal_.closeDate;
     }
 
     function getProposalUpstake(uint256 _proposalId) public view returns (uint256) {
@@ -262,11 +319,42 @@ contract HCVoting is IForwarder, AragonApp {
         return proposal_.downstakes[_user];
     }
 
+    function getConfidenceRatio(uint256 _proposalId) public view returns (uint256) {
+        Proposal storage proposal_ = _getProposal(_proposalId);
+
+        if (proposal_.totalDownstake == 0) {
+            return proposal_.totalUpstake.mul(MILLION);
+        }
+
+        return proposal_.totalUpstake.mul(MILLION).div(proposal_.totalDownstake);
+    }
+
+    function hasConfidence(uint256 _proposalId) public view returns (bool) {
+        return getConfidenceRatio(_proposalId) >= uint256(4).mul(MILLION);
+    }
+
+    function hasMaintainedConfidence(uint256 _proposalId) public view returns (bool) {
+        Proposal storage proposal_ = _getProposal(_proposalId);
+
+        require(proposal_.boostingDate > 0, ERROR_PROPOSAL_NOT_BOOSTING);
+        require(hasConfidence(_proposalId), ERROR_PROPOSAL_NOT_BOOSTING);
+
+        return getTimestamp64() > proposal_.boostingDate.add(boostingDuration);
+    }
+
     function getProposalState(uint256 _proposalId) internal view returns (ProposalState) {
         Proposal storage proposal_ = _getProposal(_proposalId);
 
         if (proposal_.executed) {
             return ProposalState.Resolved;
+        }
+
+        if (proposal_.boosted) {
+            return ProposalState.Boosted;
+        }
+
+        if (proposal_.boostingDate > 0) {
+            return ProposalState.Boosting;
         }
 
         if (getTimestamp64() > proposal_.closeDate) {
@@ -320,6 +408,8 @@ contract HCVoting is IForwarder, AragonApp {
             stakeToken.transferFrom(msg.sender, address(this), _amount),
             ERROR_TOKEN_TRANSFER_FAILED
         );
+
+        _updateBoostingDate(_proposalId);
     }
 
     function _withdrawStake(uint256 _proposalId, uint256 _amount, bool _upstake) internal {
@@ -345,6 +435,23 @@ contract HCVoting is IForwarder, AragonApp {
             stakeToken.transfer(msg.sender, _amount),
             ERROR_TOKEN_TRANSFER_FAILED
         );
+
+        _updateBoostingDate(_proposalId);
+    }
+
+    function _updateBoostingDate(uint256 _proposalId) internal {
+        Proposal storage proposal_ = _getProposal(_proposalId);
+
+        ProposalState state = getProposalState(_proposalId);
+        if (state == ProposalState.Resolved || state == ProposalState.Boosted) {
+            return;
+        }
+
+        if (hasConfidence(_proposalId) && state == ProposalState.Active) {
+            proposal_.boostingDate = getTimestamp64();
+        } else if (state == ProposalState.Boosting) {
+            proposal_.boostingDate = 0;
+        }
     }
 
     function _calculatePPM(uint256 _votes, uint256 _total) internal pure returns (uint256) {

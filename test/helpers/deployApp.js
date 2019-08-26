@@ -5,18 +5,18 @@ const { hash } = require('eth-ens-namehash')
 const deployDAO = require('./deployDAO.js')
 const { deployVoteToken, deployStakeToken } = require('./deployTokens.js')
 
-const HCVoting = artifacts.require('HCVoting.sol')
+const HCVoting = artifacts.require('HCVotingTimeMock.sol')
 
 const ANY_ADDRESS = '0xffffffffffffffffffffffffffffffffffffffff'
 
-const deployAllAndInitializeApp = async (appManager, supportPPM) => {
+const deployAllAndInitializeApp = async (appManager, supportPPM, proposalDuration) => {
   const { dao, acl } = await deployDAO(appManager)
 
   const voteToken = await deployVoteToken()
   const stakeToken = await deployStakeToken()
 
   const app = await deployApp(dao, acl, appManager)
-  await app.initialize(voteToken.address, stakeToken.address, supportPPM)
+  await app.initialize(voteToken.address, stakeToken.address, supportPPM, proposalDuration)
 
   return { dao, acl, voteToken, stakeToken, app }
 }

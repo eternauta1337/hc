@@ -7,9 +7,10 @@ const { deployAllAndInitializeApp } = require('./helpers/deployApp')
 
 const STAKER_BALANCE = 100
 const REQUIRED_SUPPORT_PPM = 510000
+const PROPOSAL_DURATION = 24 * 60 * 60
 
-contract('HCVoting (stake)', ([appManager, creator, staker1, staker2, staker3]) => {
-  let app, stakeToken
+contract('HCVoting (stake)', ([appManager, creator, voter, staker1, staker2, staker3]) => {
+  let app, voteToken, stakeToken
 
   const mintStakeTokens = async (staker) => {
     await stakeToken.generateTokens(staker, STAKER_BALANCE)
@@ -17,9 +18,10 @@ contract('HCVoting (stake)', ([appManager, creator, staker1, staker2, staker3]) 
   }
 
   beforeEach('deploy app', async () => {
-    ({ app, stakeToken } = await deployAllAndInitializeApp(
+    ({ app, voteToken, stakeToken } = await deployAllAndInitializeApp(
       appManager,
-      REQUIRED_SUPPORT_PPM
+      REQUIRED_SUPPORT_PPM,
+      PROPOSAL_DURATION
     ))
   })
 
@@ -35,6 +37,10 @@ contract('HCVoting (stake)', ([appManager, creator, staker1, staker2, staker3]) 
   })
 
   describe('when staking on proposals', () => {
+    beforeEach('mint vote tokens', async () => {
+      await voteToken.generateTokens(voter, 100)
+    })
+
     beforeEach('create a proposal', async () => {
       await app.createProposal(EMPTY_SCRIPT, 'Proposal metadata')
     })
@@ -204,6 +210,36 @@ contract('HCVoting (stake)', ([appManager, creator, staker1, staker2, staker3]) 
 
       assert.equal(recordedUpstake.toNumber(), totalUpstake)
       assert.equal(recordedDownstake.toNumber(), totalDownstake)
+    })
+
+    it('should not allow staking on a proposal that has been resolved', async () => {
+      const proposalId = (await app.numProposals()).toNumber() - 1
+      await app.vote(proposalId, true, { from: voter })
+      assert.equal(await app.getProposalSupport(proposalId), true)
+
+      await app.executeProposal(proposalId)
+
+      await mintStakeTokens(staker1)
+      await assertRevert(
+        app.upstake(proposalId, STAKER_BALANCE, { from: staker1 }),
+        'HCVOTING_PROPOSAL_IS_RESOLVED'
+      )
+    })
+
+    it('should not allow staking on a proposal that has expired', async () => {
+      const now = Math.floor(new Date().getTime() / 1000)
+      await app.mockSetTimestamp(now + PROPOSAL_DURATION + 1)
+
+      await assertRevert(
+        app.upstake(0, STAKER_BALANCE, { from: staker1 }),
+        'HCVOTING_PROPOSAL_IS_CLOSED'
+      )
+      await assertRevert(
+        app.downstake(0, STAKER_BALANCE, { from: staker1 }),
+        'HCVOTING_PROPOSAL_IS_CLOSED'
+      )
+
+      await app.mockSetTimestamp(now)
     })
   })
 })

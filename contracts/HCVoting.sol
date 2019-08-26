@@ -2,12 +2,14 @@ import "@aragon/os/contracts/apps/AragonApp.sol";
 import "@aragon/os/contracts/common/IForwarder.sol";
 
 import "@aragon/os/contracts/lib/math/SafeMath.sol";
+import "@aragon/os/contracts/lib/math/SafeMath64.sol";
 
 import "@aragon/apps-shared-minime/contracts/MiniMeToken.sol";
 
 
 contract HCVoting is IForwarder, AragonApp {
     using SafeMath for uint256;
+    using SafeMath64 for uint64;
 
     /*
      * Roles
@@ -26,9 +28,11 @@ contract HCVoting is IForwarder, AragonApp {
     string internal constant ERROR_INVALID_SUPPORT         = "HCVOTING_INVALID_SUPPORT";
     string internal constant ERROR_CAN_NOT_FORWARD         = "HCVOTING_CAN_NOT_FORWARD";
     string internal constant ERROR_NOT_ENOUGH_SUPPORT      = "HCVOTING_NOT_ENOUGH_SUPPORT";
+    string internal constant ERROR_PROPOSAL_IS_RESOLVED    = "HCVOTING_PROPOSAL_IS_RESOLVED";
     string internal constant ERROR_PROPOSAL_IS_CLOSED      = "HCVOTING_PROPOSAL_IS_CLOSED";
     string internal constant ERROR_TOKEN_TRANSFER_FAILED   = "HCVOTING_TOKEN_TRANSFER_FAILED";
     string internal constant ERROR_INSUFFICIENT_STAKE      = "HCVOTING_INSUFFICIENT_STAKE";
+    string internal constant ERROR_INVALID_DURATION        = "HCVOTING_INVALID_DURATION";
 
     /*
      * Events
@@ -53,7 +57,15 @@ contract HCVoting is IForwarder, AragonApp {
 
     enum Vote { Absent, Yea, Nay }
 
+    enum ProposalState {
+        Active,
+        Resolved,
+        Closed
+    }
+
     struct Proposal {
+        uint64 creationDate;
+        uint64 closeDate;
         uint64 creationBlock;
         bytes executionScript;
         bool executed;
@@ -73,6 +85,7 @@ contract HCVoting is IForwarder, AragonApp {
     MiniMeToken public stakeToken;
 
     uint256 public supportPPM;
+    uint64 public proposalDuration;
 
     /*
      * Set properties
@@ -87,14 +100,23 @@ contract HCVoting is IForwarder, AragonApp {
      * Init
      */
 
-    function initialize(MiniMeToken _voteToken, MiniMeToken _stakeToken, uint256 _supportPPM) public onlyInit {
+    function initialize(
+        MiniMeToken _voteToken,
+        MiniMeToken _stakeToken,
+        uint256 _supportPPM,
+        uint64 _proposalDuration
+    )
+        public onlyInit
+    {
         require(_supportPPM > 0, ERROR_INVALID_SUPPORT);
+        require(_proposalDuration > 0, ERROR_INVALID_DURATION);
 
         initialized();
 
         voteToken = _voteToken;
         stakeToken = _stakeToken;
         supportPPM = _supportPPM;
+        proposalDuration = _proposalDuration;
     }
 
     /*
@@ -110,13 +132,19 @@ contract HCVoting is IForwarder, AragonApp {
         proposal_.creationBlock = creationBlock;
         proposal_.executionScript = _executionScript;
 
+        uint64 currentDate = getTimestamp64();
+        proposal_.creationDate = currentDate;
+        proposal_.closeDate = currentDate.add(proposalDuration);
+
         emit ProposalCreated(proposalId, msg.sender, _metadata);
     }
 
     function vote(uint256 _proposalId, bool _supports) public {
         Proposal storage proposal_ = _getProposal(_proposalId);
 
-        require(!proposal_.executed, ERROR_PROPOSAL_IS_CLOSED);
+        ProposalState state = getProposalState(_proposalId);
+        require(state != ProposalState.Resolved, ERROR_PROPOSAL_IS_RESOLVED);
+        require(state != ProposalState.Closed, ERROR_PROPOSAL_IS_CLOSED);
 
         uint256 userVotingPower = voteToken.balanceOfAt(msg.sender, proposal_.creationBlock);
         require(userVotingPower > 0, ERROR_NO_VOTING_POWER);
@@ -170,7 +198,9 @@ contract HCVoting is IForwarder, AragonApp {
     function executeProposal(uint256 _proposalId) public {
         Proposal storage proposal_ = _getProposal(_proposalId);
 
-        require(!proposal_.executed, ERROR_PROPOSAL_IS_CLOSED);
+        ProposalState state = getProposalState(_proposalId);
+        require(state != ProposalState.Resolved, ERROR_PROPOSAL_IS_RESOLVED);
+
         require(getProposalSupport(_proposalId), ERROR_NOT_ENOUGH_SUPPORT);
 
         address[] memory blacklist = new address[](0);
@@ -232,6 +262,20 @@ contract HCVoting is IForwarder, AragonApp {
         return proposal_.downstakes[_user];
     }
 
+    function getProposalState(uint256 _proposalId) internal view returns (ProposalState) {
+        Proposal storage proposal_ = _getProposal(_proposalId);
+
+        if (proposal_.executed) {
+            return ProposalState.Resolved;
+        }
+
+        if (getTimestamp64() > proposal_.closeDate) {
+            return ProposalState.Closed;
+        }
+
+        return ProposalState.Active;
+    }
+
     /*
      * Forwarding
      */
@@ -256,7 +300,9 @@ contract HCVoting is IForwarder, AragonApp {
     function _stake(uint256 _proposalId, uint256 _amount, bool _upstake) internal {
         Proposal storage proposal_ = _getProposal(_proposalId);
 
-        require(!proposal_.executed, ERROR_PROPOSAL_IS_CLOSED);
+        ProposalState state = getProposalState(_proposalId);
+        require(state != ProposalState.Resolved, ERROR_PROPOSAL_IS_RESOLVED);
+        require(state != ProposalState.Closed, ERROR_PROPOSAL_IS_CLOSED);
 
         if (_upstake) {
             proposal_.totalUpstake = proposal_.totalUpstake.add(_amount);

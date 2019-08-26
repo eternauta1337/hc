@@ -6,6 +6,7 @@ const { deployAllAndInitializeApp } = require('./helpers/deployApp')
 
 const VOTER_BALANCE = 100
 const REQUIRED_SUPPORT_PPM = 510000
+const PROPOSAL_DURATION = 24 * 60 * 60
 
 contract('HCVoting (execute)', ([appManager, creator, voter]) => {
   let app, voteToken
@@ -13,7 +14,8 @@ contract('HCVoting (execute)', ([appManager, creator, voter]) => {
   before('deploy app', async () => {
     ({ app, voteToken } = await deployAllAndInitializeApp(
       appManager,
-      REQUIRED_SUPPORT_PPM
+      REQUIRED_SUPPORT_PPM,
+      PROPOSAL_DURATION
     ))
   })
 
@@ -60,7 +62,7 @@ contract('HCVoting (execute)', ([appManager, creator, voter]) => {
       await app.executeProposal(proposalId)
       await assertRevert(
         app.executeProposal(proposalId),
-        'HCVOTING_PROPOSAL_IS_CLOSED'
+        'HCVOTING_PROPOSAL_IS_RESOLVED'
       )
     })
   })

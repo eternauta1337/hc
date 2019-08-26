@@ -7,6 +7,7 @@ const { deployAllAndInitializeApp } = require('./helpers/deployApp')
 
 const VOTER_BALANCE = 100
 const REQUIRED_SUPPORT_PPM = 510000
+const PROPOSAL_DURATION = 24 * 60 * 60
 
 const VOTE = {
   ABSENT: '0',
@@ -20,7 +21,8 @@ contract('HCVoting (vote)', ([appManager, creator, voter1, voter2, voter3]) => {
   before('deploy app', async () => {
     ({ app, voteToken } = await deployAllAndInitializeApp(
       appManager,
-      REQUIRED_SUPPORT_PPM
+      REQUIRED_SUPPORT_PPM,
+      PROPOSAL_DURATION
     ))
   })
 
@@ -139,6 +141,36 @@ contract('HCVoting (vote)', ([appManager, creator, voter1, voter2, voter3]) => {
 
       await voteToken.generateTokens(voter3, VOTER_BALANCE)
       assert.equal(await app.getProposalSupport(proposalId), true)
+    })
+
+    it('should not allow voting on a proposal that has been resolved', async () => {
+      await app.createProposal(EMPTY_SCRIPT, 'Proposal metadata', { from: creator })
+      const proposalId = (await app.numProposals()).toNumber() - 1
+
+      await app.vote(proposalId, true, { from: voter1 })
+      await app.vote(proposalId, true, { from: voter2 })
+      assert.equal(await app.getProposalSupport(proposalId), true)
+
+      await app.executeProposal(proposalId)
+      await assertRevert(
+        app.vote(proposalId, false, { from: voter2 }),
+        'HCVOTING_PROPOSAL_IS_RESOLVED'
+      )
+    })
+
+    it('should not allow voting on a proposal that has expired', async () => {
+      await app.createProposal(EMPTY_SCRIPT, 'Proposal metadata', { from: creator })
+      const proposalId = (await app.numProposals()).toNumber() - 1
+
+      const now = Math.floor(new Date().getTime() / 1000)
+      await app.mockSetTimestamp(now + PROPOSAL_DURATION + 1)
+
+      await assertRevert(
+        app.vote(proposalId, true, { from: voter1 }),
+        'HCVOTING_PROPOSAL_IS_CLOSED'
+      )
+
+      await app.mockSetTimestamp(now)
     })
   })
 })

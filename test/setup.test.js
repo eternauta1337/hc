@@ -7,6 +7,7 @@ const { deployVoteToken, deployStakeToken } = require('./helpers/deployTokens')
 const deployDAO = require('./helpers/deployDAO')
 
 const REQUIRED_SUPPORT_PPM = 510000
+const PROPOSAL_DURATION = 24 * 60 * 60
 
 contract('HCVoting (setup)', ([appManager]) => {
   let app, voteToken, stakeToken
@@ -15,7 +16,8 @@ contract('HCVoting (setup)', ([appManager]) => {
     before('deploy app', async () => {
       ({ app } = await deployAllAndInitializeApp(
         appManager,
-        REQUIRED_SUPPORT_PPM
+        REQUIRED_SUPPORT_PPM,
+        PROPOSAL_DURATION
       ))
     })
 
@@ -30,6 +32,10 @@ contract('HCVoting (setup)', ([appManager]) => {
     it('has supportPPM set', async () => {
       assert.equal((await app.supportPPM()).toNumber(), REQUIRED_SUPPORT_PPM)
     })
+
+    it('has proposalDuration set', async () => {
+      assert.equal((await app.proposalDuration()).toNumber(), PROPOSAL_DURATION)
+    })
   })
 
   describe('when initializing the app with invalid parameters', () => {
@@ -38,7 +44,8 @@ contract('HCVoting (setup)', ([appManager]) => {
     const toParamsArray = (params) => [
       params.voteToken,
       params.stakeToken,
-      params.supportPPM
+      params.supportPPM,
+      params.proposalDuration
     ]
 
     before('deploy dao, tokens and app', async () => {
@@ -50,7 +57,8 @@ contract('HCVoting (setup)', ([appManager]) => {
       validParams = {
         voteToken: voteToken.address,
         stakeToken: stakeToken.address,
-        supportPPM: REQUIRED_SUPPORT_PPM
+        supportPPM: REQUIRED_SUPPORT_PPM,
+        proposalDuration: PROPOSAL_DURATION
       }
     })
 
@@ -61,6 +69,16 @@ contract('HCVoting (setup)', ([appManager]) => {
           supportPPM: 0
         })),
         'HCVOTING_INVALID_SUPPORT'
+      )
+    })
+
+    it('reverts when using an invalid queue period parameter', async () => {
+      await assertRevert(
+        app.initialize(...toParamsArray({
+          ...validParams,
+          proposalDuration: 0
+        })),
+        'HCVOTING_INVALID_DURATION'
       )
     })
   })

@@ -26,10 +26,9 @@ contract HCVoting is IForwarder, AragonApp {
     string internal constant ERROR_INVALID_SUPPORT         = "HCVOTING_INVALID_SUPPORT";
     string internal constant ERROR_CAN_NOT_FORWARD         = "HCVOTING_CAN_NOT_FORWARD";
     string internal constant ERROR_NOT_ENOUGH_SUPPORT      = "HCVOTING_NOT_ENOUGH_SUPPORT";
-    string internal constant ERROR_ALREADY_EXECUTED        = "HCVOTING_ALREADY_EXECUTED";
+    string internal constant ERROR_PROPOSAL_IS_CLOSED      = "HCVOTING_PROPOSAL_IS_CLOSED";
     string internal constant ERROR_TOKEN_TRANSFER_FAILED   = "HCVOTING_TOKEN_TRANSFER_FAILED";
     string internal constant ERROR_INSUFFICIENT_STAKE      = "HCVOTING_INSUFFICIENT_STAKE";
-    string internal constant ERROR_PROPOSAL_IS_CLOSED      = "HCVOTING_PROPOSAL_IS_CLOSED";
 
     /*
      * Events
@@ -170,7 +169,8 @@ contract HCVoting is IForwarder, AragonApp {
 
     function executeProposal(uint256 _proposalId) public {
         Proposal storage proposal_ = _getProposal(_proposalId);
-        require(!proposal_.executed, ERROR_ALREADY_EXECUTED);
+
+        require(!proposal_.executed, ERROR_PROPOSAL_IS_CLOSED);
         require(getProposalSupport(_proposalId), ERROR_NOT_ENOUGH_SUPPORT);
 
         address[] memory blacklist = new address[](0);

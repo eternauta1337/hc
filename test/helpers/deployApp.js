@@ -2,10 +2,24 @@
 
 const { getEventArgument } = require('@aragon/test-helpers/events')
 const { hash } = require('eth-ens-namehash')
+const deployDAO = require('./deployDAO.js')
+const { deployVoteToken, deployStakeToken } = require('./deployTokens.js')
 
 const HCVoting = artifacts.require('HCVoting.sol')
 
 const ANY_ADDRESS = '0xffffffffffffffffffffffffffffffffffffffff'
+
+const deployAllAndInitializeApp = async (appManager, supportPPM) => {
+  const { dao, acl } = await deployDAO(appManager)
+
+  const voteToken = await deployVoteToken()
+  const stakeToken = await deployStakeToken()
+
+  const app = await deployApp(dao, acl, appManager)
+  await app.initialize(voteToken.address, stakeToken.address, supportPPM)
+
+  return { dao, acl, voteToken, stakeToken, app }
+}
 
 const deployApp = async (dao, acl, appManager) => {
   // Deploy the app's base contract.
@@ -42,4 +56,7 @@ const deployApp = async (dao, acl, appManager) => {
   return app
 }
 
-module.exports = deployApp
+module.exports = {
+  deployApp,
+  deployAllAndInitializeApp
+}

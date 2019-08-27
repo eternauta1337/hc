@@ -1,57 +1,76 @@
 /* global artifacts contract beforeEach it assert */
 
 const { assertRevert } = require('@aragon/test-helpers/assertThrow')
-const { encodeCallScript, EMPTY_SCRIPT } = require('@aragon/test-helpers/evmScript')
+const { EMPTY_SCRIPT } = require('@aragon/test-helpers/evmScript')
 const { getEventAt } = require('@aragon/test-helpers/events')
-const { deployAllAndInitializeApp } = require('./helpers/deployApp')
+const { defaultParams, deployAllAndInitializeApp } = require('./helpers/deployApp')
 
-const REQUIRED_SUPPORT_PPM = 510000
-const PROPOSAL_DURATION = 24 * 60 * 60
-const BOOSTING_DURATION = 1 * 60 * 60
-const BOOSTED_DURATION = 6 * 60 * 60
+contract.only('HCVoting (create)', ([appManager, user1, user2]) => {
+  let app, voteToken
+  let proposalId = -1
 
-contract.skip('HCVoting (create)', ([appManager, creator1, creator2]) => {
-  let app
-  let proposalCreationReceipt1, proposalCreationReceipt2
-
-  const proposalMetadata1 = 'Transfer 10000 dai from the DAO\'s vault to 0xb4124cEB3451635DAcedd11767f004d8a28c6eE7'
-  const proposalMetadata2 = 'Mint 100 DAO tokens to 0xb4124cEB3451635DAcedd11767f004d8a28c6eE7'
+  const createProposal = async (creator) => {
+    proposalId++
+    return app.createProposal(EMPTY_SCRIPT, `Proposal metadata ${proposalId}`, { from: creator })
+  }
 
   before('deploy app', async () => {
-    ({ app } = await deployAllAndInitializeApp(
-      appManager,
-      REQUIRED_SUPPORT_PPM,
-      PROPOSAL_DURATION,
-      BOOSTING_DURATION,
-      BOOSTED_DURATION
-    ))
+    ({ app, voteToken } = await deployAllAndInitializeApp(appManager))
   })
 
-  describe('when creating some proposals', () => {
-    before('create some proposals', async () => {
-      proposalCreationReceipt1 = await app.createProposal(EMPTY_SCRIPT, proposalMetadata1, { from: creator1 })
-      proposalCreationReceipt2 = await app.createProposal(EMPTY_SCRIPT, proposalMetadata2, { from: creator2 })
+  describe('when no vote tokens exist', () => {
+    it('should revert when attempting to create a proposal', async () => {
+      await assertRevert(
+        app.createProposal(EMPTY_SCRIPT, 'Proposal metadata'),
+        'HCVOTING_NO_VOTING_POWER'
+      )
+    })
+  })
+
+  describe('when vote tokens exist', () => {
+    before('mint vote tokens', async () => {
+      await voteToken.generateTokens(user1, 1)
     })
 
-    it('should properly store the current block number for when the proposal was created', async () => {
-      assert.equal((await app.getProposalCreationBlock(0)).toNumber(), proposalCreationReceipt1.receipt.blockNumber - 1)
-      assert.equal((await app.getProposalCreationBlock(1)).toNumber(), proposalCreationReceipt2.receipt.blockNumber - 1)
+    it('can create a proposal', async () => {
+      await createProposal(user1)
     })
 
-    it('should emit ProposalCreated events', async () => {
-      const event1 = getEventAt(proposalCreationReceipt1, 'ProposalCreated')
-      assert.equal(event1.args.proposalId.toNumber(), 0, 'invalid proposal id')
-      assert.equal(event1.args.creator, creator1, 'invalid creator')
-      assert.equal(event1.args.metadata, proposalMetadata1, 'invalid proposal metadata')
+    describe('when creating a proposal', () => {
+      let creationReceipt
 
-      const event2 = getEventAt(proposalCreationReceipt2, 'ProposalCreated')
-      assert.equal(event2.args.proposalId.toNumber(), 1, 'invalid proposal id')
-      assert.equal(event2.args.creator, creator2, 'invalid creator')
-      assert.equal(event2.args.metadata, proposalMetadata2, 'invalid proposal metadata')
-    })
+      before('create a proposal', async () => {
+        creationReceipt = await createProposal(user2)
+      })
 
-    it('should have increased the number of proposals', async () => {
-      assert.equal((await app.numProposals()).toNumber(), 2)
+      it('should store creationBlock', async () => {
+        assert.equal((await app.getProposalCreationBlock(proposalId)).toNumber(), creationReceipt.receipt.blockNumber - 1)
+      })
+
+      it('should store creationDate', async () => {
+        assert.notEqual((await app.getProposalCreationDate(proposalId)).toNumber(), 0)
+      })
+
+      it('should store closeDate', async () => {
+        const creationDate = (await app.getProposalCreationDate(proposalId)).toNumber()
+        const closeDate = (await app.getProposalCloseDate(proposalId)).toNumber()
+        assert.equal(closeDate, creationDate + defaultParams.proposalDuration)
+      })
+
+      it('should store execution script', async () => {
+        assert.equal(await app.getProposalScript(proposalId), EMPTY_SCRIPT)
+      })
+
+      it('should emit ProposalCreated events', async () => {
+        const creationEvent = getEventAt(creationReceipt, 'ProposalCreated')
+        assert.equal(creationEvent.args.proposalId.toNumber(), proposalId, 'invalid proposal id')
+        assert.equal(creationEvent.args.creator, user2, 'invalid creator')
+        assert.equal(creationEvent.args.metadata, `Proposal metadata ${proposalId}`, 'invalid proposal metadata')
+      })
+
+      it('should have increased the number of proposals', async () => {
+        assert.equal((await app.numProposals()).toNumber(), proposalId + 1)
+      })
     })
   })
 })

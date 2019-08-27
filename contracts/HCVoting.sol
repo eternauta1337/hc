@@ -120,11 +120,13 @@ contract HCVoting is ProposalBase, IForwarder, AragonApp {
      */
 
     function createProposal(bytes _executionScript, string _metadata) public auth(CREATE_PROPOSALS_ROLE) {
+        uint64 creationBlock = getBlockNumber64() - 1;
+        require(voteToken.totalSupplyAt(creationBlock) > 0, ERROR_NO_VOTING_POWER);
+
         uint256 proposalId = numProposals;
         numProposals++;
 
         Proposal storage proposal_ = _getProposal(proposalId);
-        uint64 creationBlock = getBlockNumber64() - 1;
         proposal_.creationBlock = creationBlock;
         proposal_.executionScript = _executionScript;
 

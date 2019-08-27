@@ -103,6 +103,11 @@ contract ProposalBase {
         return proposal_.totalDownstake;
     }
 
+    function getProposalScript(uint256 _proposalId) public view returns (bytes) {
+        Proposal storage proposal_ = _getProposal(_proposalId);
+        return proposal_.executionScript;
+    }
+
     /*
      * Internal
      */

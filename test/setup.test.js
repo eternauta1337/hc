@@ -37,7 +37,6 @@ contract('HCVoting (setup)', ([appManager]) => {
   })
 
   describe('when initializing the app with invalid parameters', () => {
-
     before('deploy', async () => {
       ({ app, voteToken, stakeToken } = await deployAll(appManager))
     })

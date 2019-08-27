@@ -1,3 +1,5 @@
+import "./ProposalBase.sol";
+
 import "@aragon/os/contracts/apps/AragonApp.sol";
 import "@aragon/os/contracts/common/IForwarder.sol";
 
@@ -7,7 +9,7 @@ import "@aragon/os/contracts/lib/math/SafeMath64.sol";
 import "@aragon/apps-shared-minime/contracts/MiniMeToken.sol";
 
 
-contract HCVoting is IForwarder, AragonApp {
+contract HCVoting is ProposalBase, IForwarder, AragonApp {
     using SafeMath for uint256;
     using SafeMath64 for uint64;
 
@@ -22,24 +24,23 @@ contract HCVoting is IForwarder, AragonApp {
      * Errors
      */
 
-    string internal constant ERROR_PROPOSAL_DOES_NOT_EXIST = "HCVOTING_PROPOSAL_DOES_NOT_EXIST";
-    string internal constant ERROR_VOTE_ALREADY_CASTED     = "HCVOTING_VOTE_ALREADY_CASTED";
-    string internal constant ERROR_NO_VOTING_POWER         = "HCVOTING_NO_VOTING_POWER";
-    string internal constant ERROR_INVALID_SUPPORT         = "HCVOTING_INVALID_SUPPORT";
-    string internal constant ERROR_CAN_NOT_FORWARD         = "HCVOTING_CAN_NOT_FORWARD";
-    string internal constant ERROR_CANNOT_RESOLVE          = "HCVOTING_CANNOT_RESOLVE";
+    string internal constant ERROR_BAD_REQUIRED_SUPPORT    = "HCVOTING_BAD_REQUIRED_SUPPORT";
+    string internal constant ERROR_BAD_PROPOSAL_DURATION   = "HCVOTING_BAD_PROPOSAL_DURATION";
+    string internal constant ERROR_BAD_BOOSTING_DURATION   = "HCVOTING_BAD_BOOSTING_DURATION";
+    string internal constant ERROR_BAD_BOOSTED_DURATION    = "HCVOTING_BAD_BOOSTED_DURATION";
     string internal constant ERROR_PROPOSAL_IS_RESOLVED    = "HCVOTING_PROPOSAL_IS_RESOLVED";
     string internal constant ERROR_PROPOSAL_IS_CLOSED      = "HCVOTING_PROPOSAL_IS_CLOSED";
+    string internal constant ERROR_PROPOSAL_IS_BOOSTED     = "HCVOTING_PROPOSAL_IS_BOOSTED";
+    string internal constant ERROR_VOTE_ALREADY_CASTED     = "HCVOTING_VOTE_ALREADY_CASTED";
+    string internal constant ERROR_NO_VOTING_POWER         = "HCVOTING_NO_VOTING_POWER";
+    string internal constant ERROR_CANNOT_RESOLVE          = "HCVOTING_CANNOT_RESOLVE";
     string internal constant ERROR_TOKEN_TRANSFER_FAILED   = "HCVOTING_TOKEN_TRANSFER_FAILED";
     string internal constant ERROR_INSUFFICIENT_STAKE      = "HCVOTING_INSUFFICIENT_STAKE";
-    string internal constant ERROR_INVALID_DURATION        = "HCVOTING_INVALID_DURATION";
-    string internal constant ERROR_INV_BOOSTING_DURATION   = "HCVOTING_INV_BOOSTING_DURATION";
-    string internal constant ERROR_INV_BOOSTED_DURATION    = "HCVOTING_INV_BOOSTED_DURATION";
     string internal constant ERROR_ON_BOOSTING_PERIOD      = "HCVOTING_ON_BOOSTING_PERIOD";
     string internal constant ERROR_ON_BOOST_PERIOD         = "HCVOTING_ON_BOOST_PERIOD";
     string internal constant ERROR_PROPOSAL_NOT_BOOSTING   = "HCVOTING_PROPOSAL_NOT_BOOSTING";
     string internal constant ERROR_NOT_ENOUGH_CONFIDENCE   = "HCVOTING_NOT_ENOUGH_CONFIDENCE";
-    string internal constant ERROR_PROPOSAL_IS_BOOSTED     = "HCVOTING_PROPOSAL_IS_BOOSTED";
+    string internal constant ERROR_CAN_NOT_FORWARD         = "HCVOTING_CAN_NOT_FORWARD";
 
     /*
      * Events
@@ -62,10 +63,8 @@ contract HCVoting is IForwarder, AragonApp {
     uint256 public constant MILLION = 1000000;
 
     /*
-     * Properties
+     * Data strucures
      */
-
-    enum Vote { Absent, Yea, Nay }
 
     enum ProposalState {
         Active,
@@ -75,43 +74,17 @@ contract HCVoting is IForwarder, AragonApp {
         Closed
     }
 
-    struct Proposal {
-        uint64 creationDate;
-        uint64 closeDate;
-        uint64 boostingDate;
-        uint64 creationBlock;
-        bytes executionScript;
-        bool boosted;
-        bool executed;
-        bool resolved;
-        uint256 totalYeas;
-        uint256 totalNays;
-        mapping (address => Vote) votes;
-        uint256 totalUpstake;
-        uint256 totalDownstake;
-        mapping (address => uint256) upstakes;
-        mapping (address => uint256) downstakes;
-    }
-
-    mapping (uint256 => Proposal) proposals;
-    uint256 public numProposals;
+    /*
+     * Properties
+     */
 
     MiniMeToken public voteToken;
     MiniMeToken public stakeToken;
 
-    uint256 public supportPPM;
+    uint256 public requiredSupport; // Expressed in parts per million
     uint64 public proposalDuration;
     uint64 public boostingDuration;
     uint64 public boostedDuration;
-
-    /*
-     * Set properties
-     */
-
-    function changeSupportPPM(uint256 _newSupportPPM) public auth(CHANGE_SUPPORT_ROLE) {
-        require(_newSupportPPM > 0, ERROR_INVALID_SUPPORT);
-        supportPPM = _newSupportPPM;
-    }
 
     /*
      * Init
@@ -120,23 +93,23 @@ contract HCVoting is IForwarder, AragonApp {
     function initialize(
         MiniMeToken _voteToken,
         MiniMeToken _stakeToken,
-        uint256 _supportPPM,
+        uint256 _requiredSupport,
         uint64 _proposalDuration,
         uint64 _boostingDuration,
         uint64 _boostedDuration
     )
         public onlyInit
     {
-        require(_supportPPM > 0, ERROR_INVALID_SUPPORT);
-        require(_proposalDuration > 0, ERROR_INVALID_DURATION);
-        require(_boostingDuration > 0, ERROR_INV_BOOSTING_DURATION);
-        require(_boostedDuration > 0, ERROR_INV_BOOSTED_DURATION);
+        require(_requiredSupport > 0, ERROR_BAD_REQUIRED_SUPPORT);
+        require(_proposalDuration > 0, ERROR_BAD_PROPOSAL_DURATION);
+        require(_boostingDuration > 0, ERROR_BAD_BOOSTING_DURATION);
+        require(_boostedDuration > 0, ERROR_BAD_BOOSTED_DURATION);
 
         initialized();
 
         voteToken = _voteToken;
         stakeToken = _stakeToken;
-        supportPPM = _supportPPM;
+        requiredSupport = _requiredSupport;
         proposalDuration = _proposalDuration;
         boostingDuration = _boostingDuration;
         boostedDuration = _boostedDuration;
@@ -172,14 +145,12 @@ contract HCVoting is IForwarder, AragonApp {
         uint256 userVotingPower = voteToken.balanceOfAt(msg.sender, proposal_.creationBlock);
         require(userVotingPower > 0, ERROR_NO_VOTING_POWER);
 
-        // Reject redundant votes.
         Vote previousVote = proposal_.votes[msg.sender];
         require(
             previousVote == Vote.Absent || !(previousVote == Vote.Yea && _supports || previousVote == Vote.Nay && !_supports),
             ERROR_VOTE_ALREADY_CASTED
         );
 
-        // Update yea/nay count.
         if (previousVote == Vote.Absent) {
             if (_supports) {
                 proposal_.totalYeas = proposal_.totalYeas.add(userVotingPower);
@@ -196,7 +167,6 @@ contract HCVoting is IForwarder, AragonApp {
             }
         }
 
-        // Update vote record for the sender.
         proposal_.votes[msg.sender] = _supports ? Vote.Yea : Vote.Nay;
 
         emit VoteCasted(_proposalId, msg.sender, _supports);
@@ -226,8 +196,8 @@ contract HCVoting is IForwarder, AragonApp {
         require(state != ProposalState.Closed, ERROR_PROPOSAL_IS_CLOSED);
         require(state != ProposalState.Boosted, ERROR_PROPOSAL_IS_BOOSTED);
 
-        require(hasConfidence(_proposalId), ERROR_NOT_ENOUGH_CONFIDENCE);
-        require(hasMaintainedConfidence(_proposalId), ERROR_ON_BOOSTING_PERIOD);
+        require(proposalHasConfidence(_proposalId), ERROR_NOT_ENOUGH_CONFIDENCE);
+        require(proposalHasMaintainedConfidence(_proposalId), ERROR_ON_BOOSTING_PERIOD);
 
         proposal_.boosted = true;
         proposal_.closeDate = proposal_.creationDate.add(boostedDuration);
@@ -258,114 +228,8 @@ contract HCVoting is IForwarder, AragonApp {
     }
 
     /*
-     * Getters
+     * Calculated properties
      */
-
-    function getVote(uint256 _proposalId, address _user) public view returns (Vote) {
-        Proposal storage proposal_ = _getProposal(_proposalId);
-        return proposal_.votes[_user];
-    }
-
-    function getProposalYeas(uint256 _proposalId) public view returns (uint256) {
-        Proposal storage proposal_ = _getProposal(_proposalId);
-        return proposal_.totalYeas;
-    }
-
-    function getProposalNays(uint256 _proposalId) public view returns (uint256) {
-        Proposal storage proposal_ = _getProposal(_proposalId);
-        return proposal_.totalNays;
-    }
-
-    function getProposalSupport(uint256 _proposalId, bool _relative) public view returns (Vote) {
-        Proposal storage proposal_ = _getProposal(_proposalId);
-
-        uint256 votingPower = _relative ? proposal_.totalYeas.add(proposal_.totalNays) : voteToken.totalSupplyAt(proposal_.creationBlock);
-        uint256 yeaPPM = _calculatePPM(proposal_.totalYeas, votingPower);
-        uint256 nayPPM = _calculatePPM(proposal_.totalNays, votingPower);
-
-        if (yeaPPM > supportPPM) {
-            return Vote.Yea;
-        }
-
-        if (nayPPM > supportPPM) {
-            return Vote.Nay;
-        }
-
-        return Vote.Absent;
-    }
-
-    function getProposalResolved(uint256 _proposalId) public view returns (bool) {
-        Proposal storage proposal_ = _getProposal(_proposalId);
-        return proposal_.resolved;
-    }
-
-    function getProposalCreationBlock(uint256 _proposalId) public view returns (uint256) {
-        Proposal storage proposal_ = _getProposal(_proposalId);
-        return proposal_.creationBlock;
-    }
-
-    function getProposalCreationDate(uint256 _proposalId) public view returns (uint256) {
-        Proposal storage proposal_ = _getProposal(_proposalId);
-        return proposal_.creationDate;
-    }
-
-    function getProposalCloseDate(uint256 _proposalId) public view returns (uint256) {
-        Proposal storage proposal_ = _getProposal(_proposalId);
-        return proposal_.closeDate;
-    }
-
-    function getProposalBoostingDate(uint256 _proposalId) public view returns (uint256) {
-        Proposal storage proposal_ = _getProposal(_proposalId);
-        return proposal_.boostingDate;
-    }
-
-    function getProposalUpstake(uint256 _proposalId) public view returns (uint256) {
-        Proposal storage proposal_ = _getProposal(_proposalId);
-        return proposal_.totalUpstake;
-    }
-
-    function getProposalDownstake(uint256 _proposalId) public view returns (uint256) {
-        Proposal storage proposal_ = _getProposal(_proposalId);
-        return proposal_.totalDownstake;
-    }
-
-    function getUpstake(uint256 _proposalId, address _user) public view returns (uint256) {
-        Proposal storage proposal_ = _getProposal(_proposalId);
-        return proposal_.upstakes[_user];
-    }
-
-    function getDownstake(uint256 _proposalId, address _user) public view returns (uint256) {
-        Proposal storage proposal_ = _getProposal(_proposalId);
-        return proposal_.downstakes[_user];
-    }
-
-    function getConfidenceRatio(uint256 _proposalId) public view returns (uint256) {
-        Proposal storage proposal_ = _getProposal(_proposalId);
-
-        if (proposal_.totalDownstake == 0) {
-            return proposal_.totalUpstake.mul(MILLION);
-        }
-
-        return proposal_.totalUpstake.mul(MILLION).div(proposal_.totalDownstake);
-    }
-
-    function hasConfidence(uint256 _proposalId) public view returns (bool) {
-        return getConfidenceRatio(_proposalId) >= uint256(4).mul(MILLION);
-    }
-
-    function hasMaintainedConfidence(uint256 _proposalId) public view returns (bool) {
-        Proposal storage proposal_ = _getProposal(_proposalId);
-
-        if (proposal_.boostingDate == 0) {
-            return false;
-        }
-
-        if (!hasConfidence(_proposalId)) {
-            return false;
-        }
-
-        return getTimestamp64() > proposal_.boostingDate.add(boostingDuration);
-    }
 
     function getProposalState(uint256 _proposalId) public view returns (ProposalState) {
         Proposal storage proposal_ = _getProposal(_proposalId);
@@ -389,21 +253,50 @@ contract HCVoting is IForwarder, AragonApp {
         return ProposalState.Active;
     }
 
-    /*
-     * Forwarding
-     */
+    function getProposalSupport(uint256 _proposalId, bool _relative) public view returns (Vote) {
+        Proposal storage proposal_ = _getProposal(_proposalId);
 
-    function isForwarder() external pure returns (bool) {
-        return true;
+        uint256 votingPower = _relative ? proposal_.totalYeas.add(proposal_.totalNays) : voteToken.totalSupplyAt(proposal_.creationBlock);
+        uint256 yeaPPM = _calculatePPM(proposal_.totalYeas, votingPower);
+        uint256 nayPPM = _calculatePPM(proposal_.totalNays, votingPower);
+
+        if (yeaPPM > requiredSupport) {
+            return Vote.Yea;
+        }
+
+        if (nayPPM > requiredSupport) {
+            return Vote.Nay;
+        }
+
+        return Vote.Absent;
     }
 
-    function forward(bytes _evmScript) public {
-        require(canForward(msg.sender, _evmScript), ERROR_CAN_NOT_FORWARD);
-        createProposal(_evmScript, "");
+    function getProposalConfidence(uint256 _proposalId) public view returns (uint256) {
+        Proposal storage proposal_ = _getProposal(_proposalId);
+
+        if (proposal_.totalDownstake == 0) {
+            return proposal_.totalUpstake.mul(MILLION);
+        }
+
+        return proposal_.totalUpstake.mul(MILLION).div(proposal_.totalDownstake);
     }
 
-    function canForward(address _sender, bytes) public view returns (bool) {
-        return canPerform(_sender, CREATE_PROPOSALS_ROLE, arr());
+    function proposalHasConfidence(uint256 _proposalId) public view returns (bool) {
+        return getProposalConfidence(_proposalId) >= uint256(4).mul(MILLION);
+    }
+
+    function proposalHasMaintainedConfidence(uint256 _proposalId) public view returns (bool) {
+        Proposal storage proposal_ = _getProposal(_proposalId);
+
+        if (proposal_.boostingDate == 0) {
+            return false;
+        }
+
+        if (!proposalHasConfidence(_proposalId)) {
+            return false;
+        }
+
+        return getTimestamp64() > proposal_.boostingDate.add(boostingDuration);
     }
 
     /*
@@ -441,14 +334,14 @@ contract HCVoting is IForwarder, AragonApp {
         Proposal storage proposal_ = _getProposal(_proposalId);
 
         if (_upstake) {
-            require(getUpstake(_proposalId, msg.sender) >= _amount, ERROR_INSUFFICIENT_STAKE);
+            require(getUserUpstake(_proposalId, msg.sender) >= _amount, ERROR_INSUFFICIENT_STAKE);
 
             proposal_.totalUpstake = proposal_.totalUpstake.sub(_amount);
             proposal_.upstakes[msg.sender] = proposal_.upstakes[msg.sender].sub(_amount);
 
             emit UpstakeWithdrawn(_proposalId, msg.sender, _amount);
         } else {
-            require(getDownstake(_proposalId, msg.sender) >= _amount, ERROR_INSUFFICIENT_STAKE);
+            require(getUserDownstake(_proposalId, msg.sender) >= _amount, ERROR_INSUFFICIENT_STAKE);
 
             proposal_.totalDownstake = proposal_.totalDownstake.sub(_amount);
             proposal_.downstakes[msg.sender] = proposal_.downstakes[msg.sender].sub(_amount);
@@ -472,7 +365,7 @@ contract HCVoting is IForwarder, AragonApp {
             return;
         }
 
-        if (hasConfidence(_proposalId)) {
+        if (proposalHasConfidence(_proposalId)) {
             if (state == ProposalState.Active) {
                 proposal_.boostingDate = getTimestamp64();
             }
@@ -487,11 +380,6 @@ contract HCVoting is IForwarder, AragonApp {
         return _votes.mul(MILLION).div(_total);
     }
 
-    function _getProposal(uint256 _proposalId) internal view returns (Proposal storage) {
-        require(_proposalId < numProposals, ERROR_PROPOSAL_DOES_NOT_EXIST);
-        return proposals[_proposalId];
-    }
-
     function _executeProposal(uint256 _proposalId) internal {
         Proposal storage proposal_ = _getProposal(_proposalId);
 
@@ -500,5 +388,31 @@ contract HCVoting is IForwarder, AragonApp {
         runScript(proposal_.executionScript, input, blacklist);
 
         emit ProposalExecuted(_proposalId);
+    }
+
+    /*
+     * Forwarding
+     */
+
+    function isForwarder() external pure returns (bool) {
+        return true;
+    }
+
+    function forward(bytes _evmScript) public {
+        require(canForward(msg.sender, _evmScript), ERROR_CAN_NOT_FORWARD);
+        createProposal(_evmScript, "");
+    }
+
+    function canForward(address _sender, bytes) public view returns (bool) {
+        return canPerform(_sender, CREATE_PROPOSALS_ROLE, arr());
+    }
+
+    /*
+     * Setters
+     */
+
+    function changeRequiredSupport(uint256 _newRequiredSupport) public auth(CHANGE_SUPPORT_ROLE) {
+        require(_newRequiredSupport > 0, ERROR_BAD_REQUIRED_SUPPORT);
+        requiredSupport = _newRequiredSupport;
     }
 }

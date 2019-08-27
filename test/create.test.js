@@ -7,6 +7,8 @@ const { deployAllAndInitializeApp } = require('./helpers/deployApp')
 
 const REQUIRED_SUPPORT_PPM = 510000
 const PROPOSAL_DURATION = 24 * 60 * 60
+const BOOSTING_DURATION = 1 * 60 * 60
+const BOOSTED_DURATION = 6 * 60 * 60
 
 contract('HCVoting (create)', ([appManager, creator1, creator2]) => {
   let app
@@ -19,7 +21,9 @@ contract('HCVoting (create)', ([appManager, creator1, creator2]) => {
     ({ app } = await deployAllAndInitializeApp(
       appManager,
       REQUIRED_SUPPORT_PPM,
-      PROPOSAL_DURATION
+      PROPOSAL_DURATION,
+      BOOSTING_DURATION,
+      BOOSTED_DURATION
     ))
   })
 

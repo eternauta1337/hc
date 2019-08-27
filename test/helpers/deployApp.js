@@ -9,14 +9,21 @@ const HCVoting = artifacts.require('HCVotingTimeMock.sol')
 
 const ANY_ADDRESS = '0xffffffffffffffffffffffffffffffffffffffff'
 
-const deployAllAndInitializeApp = async (appManager, supportPPM, proposalDuration) => {
+const deployAllAndInitializeApp = async (appManager, supportPPM, proposalDuration, boostingDuration, boostedDuration) => {
   const { dao, acl } = await deployDAO(appManager)
 
   const voteToken = await deployVoteToken()
   const stakeToken = await deployStakeToken()
 
   const app = await deployApp(dao, acl, appManager)
-  await app.initialize(voteToken.address, stakeToken.address, supportPPM, proposalDuration)
+  await app.initialize(
+    voteToken.address,
+    stakeToken.address,
+    supportPPM,
+    proposalDuration,
+    boostingDuration,
+    boostedDuration
+  )
 
   return { dao, acl, voteToken, stakeToken, app }
 }

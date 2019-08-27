@@ -35,7 +35,8 @@ contract HCVoting is IForwarder, AragonApp {
     string internal constant ERROR_INVALID_DURATION        = "HCVOTING_INVALID_DURATION";
     string internal constant ERROR_INV_BOOSTING_DURATION   = "HCVOTING_INV_BOOSTING_DURATION";
     string internal constant ERROR_INV_BOOSTED_DURATION    = "HCVOTING_INV_BOOSTED_DURATION";
-    string internal constant ERROR_PROPOSAL_STILL_BOOSTING = "HCVOTING_PROPOSAL_STILL_BOOSTING";
+    string internal constant ERROR_ON_BOOSTING_PERIOD      = "HCVOTING_ON_BOOSTING_PERIOD";
+    string internal constant ERROR_ON_BOOST_PERIOD         = "HCVOTING_ON_BOOST_PERIOD";
     string internal constant ERROR_PROPOSAL_NOT_BOOSTING   = "HCVOTING_PROPOSAL_NOT_BOOSTING";
     string internal constant ERROR_NOT_ENOUGH_CONFIDENCE   = "HCVOTING_NOT_ENOUGH_CONFIDENCE";
     string internal constant ERROR_PROPOSAL_IS_BOOSTED     = "HCVOTING_PROPOSAL_IS_BOOSTED";
@@ -50,6 +51,8 @@ contract HCVoting is IForwarder, AragonApp {
     event ProposalDownstaked(uint256 proposalId, address staker, uint256 amount);
     event UpstakeWithdrawn(uint256 proposalId, address staker, uint256 amount);
     event DownstakeWithdrawn(uint256 proposalId, address staker, uint256 amount);
+    event ProposalExecuted(uint256 proposalId);
+    event ProposalBoosted(uint256 proposalId);
 
     /*
      * Constants
@@ -222,10 +225,12 @@ contract HCVoting is IForwarder, AragonApp {
         require(state != ProposalState.Boosted, ERROR_PROPOSAL_IS_BOOSTED);
 
         require(hasConfidence(_proposalId), ERROR_NOT_ENOUGH_CONFIDENCE);
-        require(hasMaintainedConfidence(_proposalId), ERROR_PROPOSAL_STILL_BOOSTING);
+        require(hasMaintainedConfidence(_proposalId), ERROR_ON_BOOSTING_PERIOD);
 
         proposal_.boosted = true;
         proposal_.closeDate = proposal_.creationDate.add(boostedDuration);
+
+        emit ProposalBoosted(_proposalId);
     }
 
     function executeProposal(uint256 _proposalId) public {
@@ -234,12 +239,11 @@ contract HCVoting is IForwarder, AragonApp {
         ProposalState state = getProposalState(_proposalId);
         require(state != ProposalState.Resolved, ERROR_PROPOSAL_IS_RESOLVED);
 
-        // require(getProposalSupport(_proposalId), ERROR_NOT_ENOUGH_SUPPORT);
         bool supported = getProposalSupport(_proposalId);
         if (!supported && state == ProposalState.Boosted) {
-            require(getTimestamp64() > proposal_.closeDate, ERROR_PROPOSAL_STILL_BOOSTING);
+            require(getTimestamp64() >= proposal_.closeDate, ERROR_ON_BOOST_PERIOD);
             uint256 relativeVotingPower = proposal_.totalYeas.add(proposal_.totalNays);
-            supported = getProposalSupport(_proposalId, relativeVotingPower);
+            supported = getProposalRelativeSupport(_proposalId, relativeVotingPower);
         }
         require(supported, ERROR_NOT_ENOUGH_SUPPORT);
 
@@ -248,6 +252,8 @@ contract HCVoting is IForwarder, AragonApp {
         runScript(proposal_.executionScript, input, blacklist);
 
         proposal_.executed = true;
+
+        emit ProposalExecuted(_proposalId);
     }
 
     /*
@@ -277,7 +283,7 @@ contract HCVoting is IForwarder, AragonApp {
         return yeaPPM > supportPPM;
     }
 
-    function getProposalSupport(uint256 _proposalId, uint256 _votingPower) public view returns (bool) {
+    function getProposalRelativeSupport(uint256 _proposalId, uint256 _votingPower) public view returns (bool) {
         Proposal storage proposal_ = _getProposal(_proposalId);
 
         uint256 yeaPPM = _calculatePPM(proposal_.totalYeas, _votingPower);
@@ -289,14 +295,19 @@ contract HCVoting is IForwarder, AragonApp {
         return proposal_.creationBlock;
     }
 
-    function getCreationDate(uint256 _proposalId) public view returns (uint256) {
+    function getProposalCreationDate(uint256 _proposalId) public view returns (uint256) {
         Proposal storage proposal_ = _getProposal(_proposalId);
         return proposal_.creationDate;
     }
 
-    function getCloseDate(uint256 _proposalId) public view returns (uint256) {
+    function getProposalCloseDate(uint256 _proposalId) public view returns (uint256) {
         Proposal storage proposal_ = _getProposal(_proposalId);
         return proposal_.closeDate;
+    }
+
+    function getProposalBoostingDate(uint256 _proposalId) public view returns (uint256) {
+        Proposal storage proposal_ = _getProposal(_proposalId);
+        return proposal_.boostingDate;
     }
 
     function getProposalUpstake(uint256 _proposalId) public view returns (uint256) {
@@ -336,13 +347,18 @@ contract HCVoting is IForwarder, AragonApp {
     function hasMaintainedConfidence(uint256 _proposalId) public view returns (bool) {
         Proposal storage proposal_ = _getProposal(_proposalId);
 
-        require(proposal_.boostingDate > 0, ERROR_PROPOSAL_NOT_BOOSTING);
-        require(hasConfidence(_proposalId), ERROR_PROPOSAL_NOT_BOOSTING);
+        if (proposal_.boostingDate == 0) {
+            return false;
+        }
+
+        if (!hasConfidence(_proposalId)) {
+            return false;
+        }
 
         return getTimestamp64() > proposal_.boostingDate.add(boostingDuration);
     }
 
-    function getProposalState(uint256 _proposalId) internal view returns (ProposalState) {
+    function getProposalState(uint256 _proposalId) public view returns (ProposalState) {
         Proposal storage proposal_ = _getProposal(_proposalId);
 
         if (proposal_.executed) {
@@ -353,12 +369,12 @@ contract HCVoting is IForwarder, AragonApp {
             return ProposalState.Boosted;
         }
 
-        if (proposal_.boostingDate > 0) {
-            return ProposalState.Boosting;
-        }
-
         if (getTimestamp64() > proposal_.closeDate) {
             return ProposalState.Closed;
+        }
+
+        if (proposal_.boostingDate > 0) {
+            return ProposalState.Boosting;
         }
 
         return ProposalState.Active;
@@ -447,10 +463,14 @@ contract HCVoting is IForwarder, AragonApp {
             return;
         }
 
-        if (hasConfidence(_proposalId) && state == ProposalState.Active) {
-            proposal_.boostingDate = getTimestamp64();
-        } else if (state == ProposalState.Boosting) {
-            proposal_.boostingDate = 0;
+        if (hasConfidence(_proposalId)) {
+            if (state == ProposalState.Active) {
+                proposal_.boostingDate = getTimestamp64();
+            }
+        } else {
+            if (state == ProposalState.Boosting) {
+                proposal_.boostingDate = 0;
+            }
         }
     }
 

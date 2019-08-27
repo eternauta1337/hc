@@ -2,11 +2,14 @@
 
 const { assertRevert } = require('@aragon/test-helpers/assertThrow')
 const { encodeCallScript, EMPTY_SCRIPT } = require('@aragon/test-helpers/evmScript')
+const { getEventAt } = require('@aragon/test-helpers/events')
 const { deployAllAndInitializeApp } = require('./helpers/deployApp')
 
 const VOTER_BALANCE = 100
 const REQUIRED_SUPPORT_PPM = 510000
 const PROPOSAL_DURATION = 24 * 60 * 60
+const BOOSTING_DURATION = 1 * 60 * 60
+const BOOSTED_DURATION = 6 * 60 * 60
 
 contract('HCVoting (execute)', ([appManager, creator, voter]) => {
   let app, voteToken
@@ -15,7 +18,9 @@ contract('HCVoting (execute)', ([appManager, creator, voter]) => {
     ({ app, voteToken } = await deployAllAndInitializeApp(
       appManager,
       REQUIRED_SUPPORT_PPM,
-      PROPOSAL_DURATION
+      PROPOSAL_DURATION,
+      BOOSTING_DURATION,
+      BOOSTED_DURATION
     ))
   })
 
@@ -53,6 +58,15 @@ contract('HCVoting (execute)', ([appManager, creator, voter]) => {
 
       await app.executeProposal(proposalId)
       assert.equal((await app.supportPPM()).toNumber(), newSupportPPM)
+    })
+
+    it('emits a ProposalExecuted event when the proposal is executed', async () => {
+      await app.vote(proposalId, true, { from: voter })
+
+      const executionReceipt = await app.executeProposal(proposalId)
+
+      const executionEvent = getEventAt(executionReceipt, 'ProposalExecuted')
+      assert.equal(executionEvent.args.proposalId.toNumber(), proposalId, 'invalid proposal id')
     })
 
     it('reverts when trying to execute a proposal a second time', async () => {

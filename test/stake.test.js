@@ -8,6 +8,8 @@ const { deployAllAndInitializeApp } = require('./helpers/deployApp')
 const STAKER_BALANCE = 100
 const REQUIRED_SUPPORT_PPM = 510000
 const PROPOSAL_DURATION = 24 * 60 * 60
+const BOOSTING_DURATION = 1 * 60 * 60
+const BOOSTED_DURATION = 6 * 60 * 60
 
 contract('HCVoting (stake)', ([appManager, creator, voter, staker1, staker2, staker3]) => {
   let app, voteToken, stakeToken
@@ -21,7 +23,9 @@ contract('HCVoting (stake)', ([appManager, creator, voter, staker1, staker2, sta
     ({ app, voteToken, stakeToken } = await deployAllAndInitializeApp(
       appManager,
       REQUIRED_SUPPORT_PPM,
-      PROPOSAL_DURATION
+      PROPOSAL_DURATION,
+      BOOSTING_DURATION,
+      BOOSTED_DURATION
     ))
   })
 

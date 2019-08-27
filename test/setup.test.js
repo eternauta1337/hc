@@ -8,6 +8,8 @@ const deployDAO = require('./helpers/deployDAO')
 
 const REQUIRED_SUPPORT_PPM = 510000
 const PROPOSAL_DURATION = 24 * 60 * 60
+const BOOSTING_DURATION = 1 * 60 * 60
+const BOOSTED_DURATION = 6 * 60 * 60
 
 contract('HCVoting (setup)', ([appManager]) => {
   let app, voteToken, stakeToken
@@ -17,7 +19,9 @@ contract('HCVoting (setup)', ([appManager]) => {
       ({ app } = await deployAllAndInitializeApp(
         appManager,
         REQUIRED_SUPPORT_PPM,
-        PROPOSAL_DURATION
+        PROPOSAL_DURATION,
+        BOOSTING_DURATION,
+        BOOSTED_DURATION
       ))
     })
 
@@ -36,6 +40,14 @@ contract('HCVoting (setup)', ([appManager]) => {
     it('has proposalDuration set', async () => {
       assert.equal((await app.proposalDuration()).toNumber(), PROPOSAL_DURATION)
     })
+
+    it('has boostingDuration set', async () => {
+      assert.equal((await app.boostingDuration()).toNumber(), BOOSTING_DURATION)
+    })
+
+    it('has boostedDuration set', async () => {
+      assert.equal((await app.boostedDuration()).toNumber(), BOOSTED_DURATION)
+    })
   })
 
   describe('when initializing the app with invalid parameters', () => {
@@ -45,7 +57,9 @@ contract('HCVoting (setup)', ([appManager]) => {
       params.voteToken,
       params.stakeToken,
       params.supportPPM,
-      params.proposalDuration
+      params.proposalDuration,
+      params.boostingDuration,
+      params.boostedDuration
     ]
 
     before('deploy dao, tokens and app', async () => {
@@ -58,11 +72,13 @@ contract('HCVoting (setup)', ([appManager]) => {
         voteToken: voteToken.address,
         stakeToken: stakeToken.address,
         supportPPM: REQUIRED_SUPPORT_PPM,
-        proposalDuration: PROPOSAL_DURATION
+        proposalDuration: PROPOSAL_DURATION,
+        boostingDuration: BOOSTING_DURATION,
+        boostedDuration: BOOSTED_DURATION
       }
     })
 
-    it('reverts when using an invalid support parameter', async () => {
+    it('reverts when using an invalid supportPPM', async () => {
       await assertRevert(
         app.initialize(...toParamsArray({
           ...validParams,
@@ -72,13 +88,33 @@ contract('HCVoting (setup)', ([appManager]) => {
       )
     })
 
-    it('reverts when using an invalid queue period parameter', async () => {
+    it('reverts when using an invalid proposal duration', async () => {
       await assertRevert(
         app.initialize(...toParamsArray({
           ...validParams,
           proposalDuration: 0
         })),
         'HCVOTING_INVALID_DURATION'
+      )
+    })
+
+    it('reverts when using an invalid boosting duration', async () => {
+      await assertRevert(
+        app.initialize(...toParamsArray({
+          ...validParams,
+          boostingDuration: 0
+        })),
+        'HCVOTING_INV_BOOSTING_DURATION'
+      )
+    })
+
+    it('reverts when using an invalid boosted duration', async () => {
+      await assertRevert(
+        app.initialize(...toParamsArray({
+          ...validParams,
+          boostedDuration: 0
+        })),
+        'HCVOTING_INV_BOOSTED_DURATION'
       )
     })
   })

@@ -120,10 +120,10 @@ contract('HCVoting (vote)', ([appManager, creator, voter1, voter2, voter3]) => {
     })
 
     it('should properly calculate support', async () => {
-      assert.equal(await app.getProposalSupport(0), false)
+      assert.equal(await app.getProposalSupport(0, false), VOTE.NAY)
 
       await app.vote(1, true, { from: voter1 })
-      assert.equal(await app.getProposalSupport(1), true)
+      assert.equal(await app.getProposalSupport(1, false), VOTE.YEA)
     })
 
     it('should not allow a voter to double vote by transferring tokens', async () => {
@@ -141,10 +141,10 @@ contract('HCVoting (vote)', ([appManager, creator, voter1, voter2, voter3]) => {
       const proposalId = (await app.numProposals()).toNumber() - 1
       await app.vote(proposalId, true, { from: voter1 })
       await app.vote(proposalId, true, { from: voter2 })
-      assert.equal(await app.getProposalSupport(proposalId), true)
+      assert.equal(await app.getProposalSupport(proposalId, false), VOTE.YEA)
 
       await voteToken.generateTokens(voter3, VOTER_BALANCE)
-      assert.equal(await app.getProposalSupport(proposalId), true)
+      assert.equal(await app.getProposalSupport(proposalId, false), VOTE.YEA)
     })
 
     it('should not allow voting on a proposal that has been resolved', async () => {
@@ -153,9 +153,9 @@ contract('HCVoting (vote)', ([appManager, creator, voter1, voter2, voter3]) => {
 
       await app.vote(proposalId, true, { from: voter1 })
       await app.vote(proposalId, true, { from: voter2 })
-      assert.equal(await app.getProposalSupport(proposalId), true)
+      assert.equal(await app.getProposalSupport(proposalId, false), VOTE.YEA)
 
-      await app.executeProposal(proposalId)
+      await app.resolveProposal(proposalId)
       await assertRevert(
         app.vote(proposalId, false, { from: voter2 }),
         'HCVOTING_PROPOSAL_IS_RESOLVED'

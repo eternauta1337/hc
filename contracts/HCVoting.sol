@@ -53,6 +53,7 @@ contract HCVoting is IForwarder, AragonApp {
     event DownstakeWithdrawn(uint256 proposalId, address staker, uint256 amount);
     event ProposalExecuted(uint256 proposalId);
     event ProposalBoosted(uint256 proposalId);
+    event ProposalResolved(uint256 proposalId);
 
     /*
      * Constants
@@ -82,6 +83,7 @@ contract HCVoting is IForwarder, AragonApp {
         bytes executionScript;
         bool boosted;
         bool executed;
+        bool resolved;
         uint256 totalYeas;
         uint256 totalNays;
         mapping (address => Vote) votes;
@@ -233,27 +235,37 @@ contract HCVoting is IForwarder, AragonApp {
         emit ProposalBoosted(_proposalId);
     }
 
-    function executeProposal(uint256 _proposalId) public {
+    function resolveProposal(uint256 _proposalId) public {
         Proposal storage proposal_ = _getProposal(_proposalId);
 
         ProposalState state = getProposalState(_proposalId);
         require(state != ProposalState.Resolved, ERROR_PROPOSAL_IS_RESOLVED);
 
-        bool supported = getProposalSupport(_proposalId);
-        if (!supported && state == ProposalState.Boosted) {
+        Vote absoluteSupport = getProposalSupport(_proposalId, false);
+        if (absoluteSupport != Vote.Absent) {
+            proposal_.resolved = true;
+
+            if (absoluteSupport == Vote.Yea) {
+                _executeProposal(_proposalId);
+            }
+
+            emit ProposalResolved(_proposalId);
+        } else if (state == ProposalState.Boosted) {
             require(getTimestamp64() >= proposal_.closeDate, ERROR_ON_BOOST_PERIOD);
-            uint256 relativeVotingPower = proposal_.totalYeas.add(proposal_.totalNays);
-            supported = getProposalRelativeSupport(_proposalId, relativeVotingPower);
+
+            Vote relativeSupport = getProposalSupport(_proposalId, true);
+
+            if (relativeSupport != Vote.Absent) {
+                proposal_.resolved = true;
+                if (relativeSupport == Vote.Yea) {
+                    _executeProposal(_proposalId);
+                }
+            }
+
+            emit ProposalResolved(_proposalId);
+        } else {
+            revert(ERROR_NOT_ENOUGH_SUPPORT);
         }
-        require(supported, ERROR_NOT_ENOUGH_SUPPORT);
-
-        address[] memory blacklist = new address[](0);
-        bytes memory input = new bytes(0);
-        runScript(proposal_.executionScript, input, blacklist);
-
-        proposal_.executed = true;
-
-        emit ProposalExecuted(_proposalId);
     }
 
     /*
@@ -275,19 +287,22 @@ contract HCVoting is IForwarder, AragonApp {
         return proposal_.totalNays;
     }
 
-    function getProposalSupport(uint256 _proposalId) public view returns (bool) {
+    function getProposalSupport(uint256 _proposalId, bool _relative) public view returns (Vote) {
         Proposal storage proposal_ = _getProposal(_proposalId);
 
-        uint256 votingPower = voteToken.totalSupplyAt(proposal_.creationBlock);
+        uint256 votingPower = _relative ? proposal_.totalYeas.add(proposal_.totalNays) : voteToken.totalSupplyAt(proposal_.creationBlock);
         uint256 yeaPPM = _calculatePPM(proposal_.totalYeas, votingPower);
-        return yeaPPM > supportPPM;
-    }
+        uint256 nayPPM = _calculatePPM(proposal_.totalNays, votingPower);
 
-    function getProposalRelativeSupport(uint256 _proposalId, uint256 _votingPower) public view returns (bool) {
-        Proposal storage proposal_ = _getProposal(_proposalId);
+        if (yeaPPM > supportPPM) {
+            return Vote.Yea;
+        }
 
-        uint256 yeaPPM = _calculatePPM(proposal_.totalYeas, _votingPower);
-        return yeaPPM > supportPPM;
+        if (nayPPM > supportPPM) {
+            return Vote.Nay;
+        }
+
+        return Vote.Absent;
     }
 
     function getProposalCreationBlock(uint256 _proposalId) public view returns (uint256) {
@@ -361,7 +376,7 @@ contract HCVoting is IForwarder, AragonApp {
     function getProposalState(uint256 _proposalId) public view returns (ProposalState) {
         Proposal storage proposal_ = _getProposal(_proposalId);
 
-        if (proposal_.executed) {
+        if (proposal_.resolved) {
             return ProposalState.Resolved;
         }
 
@@ -481,5 +496,17 @@ contract HCVoting is IForwarder, AragonApp {
     function _getProposal(uint256 _proposalId) internal view returns (Proposal storage) {
         require(_proposalId < numProposals, ERROR_PROPOSAL_DOES_NOT_EXIST);
         return proposals[_proposalId];
+    }
+
+    function _executeProposal(uint256 _proposalId) internal {
+        Proposal storage proposal_ = _getProposal(_proposalId);
+
+        address[] memory blacklist = new address[](0);
+        bytes memory input = new bytes(0);
+        runScript(proposal_.executionScript, input, blacklist);
+
+        proposal_.executed = true;
+
+        emit ProposalExecuted(_proposalId);
     }
 }

@@ -219,9 +219,9 @@ contract('HCVoting (stake)', ([appManager, creator, voter, staker1, staker2, sta
     it('should not allow staking on a proposal that has been resolved', async () => {
       const proposalId = (await app.numProposals()).toNumber() - 1
       await app.vote(proposalId, true, { from: voter })
-      assert.equal(await app.getProposalSupport(proposalId), true)
+      assert.equal(await app.getProposalSupport(proposalId, false), true)
 
-      await app.executeProposal(proposalId)
+      await app.resolveProposal(proposalId)
 
       await mintStakeTokens(staker1)
       await assertRevert(

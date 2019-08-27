@@ -180,9 +180,9 @@ contract('HCVoting (boost)', ([appManager, voter1, voter2, voter3, staker]) => {
                 await app.vote(0, true, { from: voter1 })
               })
 
-              it('reverts when trying to execute the proposal with relative support before the boost period elapses', async () => {
+              it('reverts when trying to resolve the proposal with relative support before the boost period elapses', async () => {
                 await assertRevert(
-                  app.executeProposal(0),
+                  app.resolveProposal(0),
                   'HCVOTING_ON_BOOST_PERIOD'
                 )
               })
@@ -192,8 +192,8 @@ contract('HCVoting (boost)', ([appManager, voter1, voter2, voter3, staker]) => {
                   await app.mockSetTimestamp(creationDate + BOOSTING_DURATION + BOOSTED_DURATION + 1)
                 })
 
-                it('can execute the proposal with relative support', async () => {
-                  await app.executeProposal(0)
+                it('can resolve the proposal with relative support', async () => {
+                  await app.resolveProposal(0)
                   assert.equal((await app.getProposalState(0)).toString(), PROPOSAL_STATE.RESOLVED)
                 })
               })

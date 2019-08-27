@@ -27,7 +27,7 @@ contract HCVoting is IForwarder, AragonApp {
     string internal constant ERROR_NO_VOTING_POWER         = "HCVOTING_NO_VOTING_POWER";
     string internal constant ERROR_INVALID_SUPPORT         = "HCVOTING_INVALID_SUPPORT";
     string internal constant ERROR_CAN_NOT_FORWARD         = "HCVOTING_CAN_NOT_FORWARD";
-    string internal constant ERROR_NOT_ENOUGH_SUPPORT      = "HCVOTING_NOT_ENOUGH_SUPPORT";
+    string internal constant ERROR_CANNOT_RESOLVE          = "HCVOTING_CANNOT_RESOLVE";
     string internal constant ERROR_PROPOSAL_IS_RESOLVED    = "HCVOTING_PROPOSAL_IS_RESOLVED";
     string internal constant ERROR_PROPOSAL_IS_CLOSED      = "HCVOTING_PROPOSAL_IS_CLOSED";
     string internal constant ERROR_TOKEN_TRANSFER_FAILED   = "HCVOTING_TOKEN_TRANSFER_FAILED";
@@ -241,31 +241,20 @@ contract HCVoting is IForwarder, AragonApp {
         ProposalState state = getProposalState(_proposalId);
         require(state != ProposalState.Resolved, ERROR_PROPOSAL_IS_RESOLVED);
 
-        Vote absoluteSupport = getProposalSupport(_proposalId, false);
-        if (absoluteSupport != Vote.Absent) {
-            proposal_.resolved = true;
-
-            if (absoluteSupport == Vote.Yea) {
-                _executeProposal(_proposalId);
-            }
-
-            emit ProposalResolved(_proposalId);
-        } else if (state == ProposalState.Boosted) {
+        Vote support = getProposalSupport(_proposalId, false);
+        if (support == Vote.Absent && state == ProposalState.Boosted) {
             require(getTimestamp64() >= proposal_.closeDate, ERROR_ON_BOOST_PERIOD);
-
-            Vote relativeSupport = getProposalSupport(_proposalId, true);
-
-            if (relativeSupport != Vote.Absent) {
-                proposal_.resolved = true;
-                if (relativeSupport == Vote.Yea) {
-                    _executeProposal(_proposalId);
-                }
-            }
-
-            emit ProposalResolved(_proposalId);
-        } else {
-            revert(ERROR_NOT_ENOUGH_SUPPORT);
+            support = getProposalSupport(_proposalId, true);
         }
+        require(support != Vote.Absent, ERROR_CANNOT_RESOLVE);
+
+        proposal_.resolved = true;
+
+        if (support == Vote.Yea) {
+            _executeProposal(_proposalId);
+        }
+
+        emit ProposalResolved(_proposalId);
     }
 
     /*
@@ -303,6 +292,11 @@ contract HCVoting is IForwarder, AragonApp {
         }
 
         return Vote.Absent;
+    }
+
+    function getProposalResolved(uint256 _proposalId) public view returns (bool) {
+        Proposal storage proposal_ = _getProposal(_proposalId);
+        return proposal_.resolved;
     }
 
     function getProposalCreationBlock(uint256 _proposalId) public view returns (uint256) {
@@ -504,8 +498,6 @@ contract HCVoting is IForwarder, AragonApp {
         address[] memory blacklist = new address[](0);
         bytes memory input = new bytes(0);
         runScript(proposal_.executionScript, input, blacklist);
-
-        proposal_.executed = true;
 
         emit ProposalExecuted(_proposalId);
     }

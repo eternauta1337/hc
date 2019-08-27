@@ -11,6 +11,12 @@ const PROPOSAL_DURATION = 24 * 60 * 60
 const BOOSTING_DURATION = 1 * 60 * 60
 const BOOSTED_DURATION = 6 * 60 * 60
 
+const VOTE = {
+  ABSENT: '0',
+  YEA: '1',
+  NAY: '2'
+}
+
 contract('HCVoting (stake)', ([appManager, creator, voter, staker1, staker2, staker3]) => {
   let app, voteToken, stakeToken
 
@@ -219,7 +225,7 @@ contract('HCVoting (stake)', ([appManager, creator, voter, staker1, staker2, sta
     it('should not allow staking on a proposal that has been resolved', async () => {
       const proposalId = (await app.numProposals()).toNumber() - 1
       await app.vote(proposalId, true, { from: voter })
-      assert.equal(await app.getProposalSupport(proposalId, false), true)
+      assert.equal(await app.getProposalSupport(proposalId, false), VOTE.YEA)
 
       await app.resolveProposal(proposalId)
 

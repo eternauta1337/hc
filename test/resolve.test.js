@@ -11,6 +11,12 @@ const PROPOSAL_DURATION = 24 * 60 * 60
 const BOOSTING_DURATION = 1 * 60 * 60
 const BOOSTED_DURATION = 6 * 60 * 60
 
+const VOTE = {
+  ABSENT: '0',
+  YEA: '1',
+  NAY: '2'
+}
+
 contract('HCVoting (resolve)', ([appManager, creator, voter]) => {
   let app, voteToken
 
@@ -45,19 +51,28 @@ contract('HCVoting (resolve)', ([appManager, creator, voter]) => {
     })
 
     it('reverts when trying to resolve a proposal that doesn\'t have enough support', async () => {
-      assert.equal(await app.getProposalSupport(proposalId, false), false)
+      assert.equal((await app.getProposalSupport(proposalId, false)).toString(), VOTE.ABSENT)
       await assertRevert(
         app.resolveProposal(proposalId),
-        'HCVOTING_NOT_ENOUGH_SUPPORT'
+        'HCVOTING_CANNOT_RESOLVE'
       )
+    })
+
+    it('can resolve a proposal negatively, without executing its script', async () => {
+      await app.vote(proposalId, false, { from: voter })
+      assert.equal((await app.getProposalSupport(proposalId, false)).toString(), VOTE.NAY)
+
+      await app.resolveProposal(proposalId)
+      assert.equal(await app.getProposalResolved(proposalId), true)
+      assert.equal((await app.supportPPM()).toNumber(), REQUIRED_SUPPORT_PPM)
     })
 
     it('executes the script when resolving a proposal that has enough support', async () => {
       await app.vote(proposalId, true, { from: voter })
-      assert.equal(await app.getProposalSupport(proposalId, false), true)
+      assert.equal(await app.getProposalSupport(proposalId, false), VOTE.YEA)
 
       await app.resolveProposal(proposalId)
-      // assert.equal((await app.supportPPM()).toNumber(), newSupportPPM)
+      assert.equal((await app.supportPPM()).toNumber(), newSupportPPM)
     })
 
     it('emits a ProposalExecuted event when the proposal is executed', async () => {
@@ -71,7 +86,7 @@ contract('HCVoting (resolve)', ([appManager, creator, voter]) => {
 
     it('reverts when trying to resolve a proposal a second time', async () => {
       await app.vote(proposalId, true, { from: voter })
-      assert.equal(await app.getProposalSupport(proposalId, false), true)
+      assert.equal(await app.getProposalSupport(proposalId, false), VOTE.YEA)
 
       await app.resolveProposal(proposalId)
       await assertRevert(

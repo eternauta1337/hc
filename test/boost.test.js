@@ -39,8 +39,8 @@ contract('HCVoting (boost)', ([appManager, voter1, voter2, voter3, staker]) => {
     let creationDate
 
     before('create a proposal', async () => {
-      creationDate = Math.floor(new Date().getTime() / 1000)
       await app.createProposal(EMPTY_SCRIPT, 'Proposal metadata')
+      creationDate = (await app.getProposalCreationDate(0)).toNumber()
     })
 
     before('stake on proposal', async () => {
@@ -64,10 +64,7 @@ contract('HCVoting (boost)', ([appManager, voter1, voter2, voter3, staker]) => {
     })
 
     describe('when a proposal reaches enough confidence', () => {
-      let boostingDate
-
       before('stake on proposal so that confidence is reached', async () => {
-        boostingDate = Math.floor(new Date().getTime() / 1000)
         await app.upstake(0, 1000, { from: staker })
       })
 
@@ -80,7 +77,7 @@ contract('HCVoting (boost)', ([appManager, voter1, voter2, voter3, staker]) => {
       })
 
       it('sets the proposal\'s boostingDate', async () => {
-        assert.equal((await app.getProposalBoostingDate(0)).toNumber(), boostingDate)
+        assert.notEqual((await app.getProposalBoostingDate(0)).toNumber(), 0)
       })
 
       describe('when a proposal looses confidence', () => {
@@ -97,7 +94,6 @@ contract('HCVoting (boost)', ([appManager, voter1, voter2, voter3, staker]) => {
         })
 
         after('restore stake', async () => {
-          boostingDate = Math.floor(new Date().getTime() / 1000)
           await app.upstake(0, 1000, { from: staker })
         })
       })
@@ -121,7 +117,8 @@ contract('HCVoting (boost)', ([appManager, voter1, voter2, voter3, staker]) => {
 
       describe('when half of the boosting period has elapsed', () => {
         before('shift time to half the boosting period', async () => {
-          await app.mockSetTimestamp(creationDate + BOOSTING_DURATION / 2)
+          const boostingDate = (await app.getProposalBoostingDate(0)).toNumber()
+          await app.mockSetTimestamp(boostingDate + BOOSTING_DURATION / 2)
         })
 
         it('reports that the proposal has not yet maintained confidence', async () => {
@@ -137,7 +134,8 @@ contract('HCVoting (boost)', ([appManager, voter1, voter2, voter3, staker]) => {
 
         describe('when the boosting period has elapsed', () => {
           before('shift time to past the boosting period', async () => {
-            await app.mockSetTimestamp(creationDate + BOOSTING_DURATION + 1)
+            const boostingDate = (await app.getProposalBoostingDate(0)).toNumber()
+            await app.mockSetTimestamp(boostingDate + BOOSTING_DURATION + 1)
           })
 
           it('reports that the proposal has maintained confidence', async () => {

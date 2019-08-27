@@ -17,7 +17,7 @@ const VOTE = {
   NAY: '2'
 }
 
-contract('HCVoting (resolve)', ([appManager, creator, voter]) => {
+contract.skip('HCVoting (resolve)', ([appManager, creator, voter]) => {
   let app, voteToken
 
   before('deploy app', async () => {

@@ -17,7 +17,7 @@ const VOTE = {
   NAY: '2'
 }
 
-contract('HCVoting (stake)', ([appManager, creator, voter, staker1, staker2, staker3]) => {
+contract.skip('HCVoting (stake)', ([appManager, creator, voter, staker1, staker2, staker3]) => {
   let app, voteToken, stakeToken
 
   const mintStakeTokens = async (staker) => {

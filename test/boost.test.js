@@ -18,7 +18,7 @@ const PROPOSAL_STATE = {
   CLOSED: '4'
 }
 
-contract('HCVoting (boost)', ([appManager, voter1, voter2, voter3, staker]) => {
+contract.skip('HCVoting (boost)', ([appManager, voter1, voter2, voter3, staker]) => {
   let app, voteToken, stakeToken
 
   before('deploy app and mint some vote tokens', async () => {

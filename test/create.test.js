@@ -10,7 +10,7 @@ const PROPOSAL_DURATION = 24 * 60 * 60
 const BOOSTING_DURATION = 1 * 60 * 60
 const BOOSTED_DURATION = 6 * 60 * 60
 
-contract('HCVoting (create)', ([appManager, creator1, creator2]) => {
+contract.skip('HCVoting (create)', ([appManager, creator1, creator2]) => {
   let app
   let proposalCreationReceipt1, proposalCreationReceipt2
 

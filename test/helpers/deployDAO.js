@@ -40,4 +40,6 @@ const deployDAO = async appManager => {
   return { dao, acl }
 }
 
-module.exports = deployDAO
+module.exports = {
+  deployDAO
+}

@@ -2,30 +2,62 @@
 
 const { getEventArgument } = require('@aragon/test-helpers/events')
 const { hash } = require('eth-ens-namehash')
-const deployDAO = require('./deployDAO.js')
 const { deployVoteToken, deployStakeToken } = require('./deployTokens.js')
+const { deployDAO } = require('./deployDAO.js')
 
 const HCVoting = artifacts.require('HCVotingTimeMock.sol')
 
 const ANY_ADDRESS = '0xffffffffffffffffffffffffffffffffffffffff'
+const HOURS = 60 * 60
 
-const deployAllAndInitializeApp = async (appManager, supportPPM, proposalDuration, boostingDuration, boostedDuration) => {
+const defaultParams = {
+  requiredSupport: 510000,
+  proposalDuration: 24 * HOURS,
+  boostingDuration: 1 * HOURS,
+  boostedDuration: 6 * HOURS
+}
+
+const paramsObjToArr = (paramsObj) => {
+  return [
+    paramsObj.voteToken.address,
+    paramsObj.stakeToken.address,
+    paramsObj.requiredSupport,
+    paramsObj.proposalDuration,
+    paramsObj.boostingDuration,
+    paramsObj.boostedDuration
+  ]
+}
+
+const deployAll = async (appManager) => {
   const { dao, acl } = await deployDAO(appManager)
 
   const voteToken = await deployVoteToken()
   const stakeToken = await deployStakeToken()
 
   const app = await deployApp(dao, acl, appManager)
-  await app.initialize(
-    voteToken.address,
-    stakeToken.address,
-    supportPPM,
-    proposalDuration,
-    boostingDuration,
-    boostedDuration
-  )
 
   return { dao, acl, voteToken, stakeToken, app }
+}
+
+const deployAllAndInitializeApp = async (appManager, params) => {
+  if (!params) {
+    params = defaultParams
+  }
+
+  const deployed = await deployAll(appManager)
+
+  params.voteToken = deployed.voteToken
+  params.stakeToken = deployed.stakeToken
+
+  await initializeAppWithParams(deployed.app, params)
+
+  return deployed
+}
+
+const initializeAppWithParams = async (app, params) => {
+  await app.initialize(
+    ...paramsObjToArr(params)
+  )
 }
 
 const deployApp = async (dao, acl, appManager) => {
@@ -64,6 +96,9 @@ const deployApp = async (dao, acl, appManager) => {
 }
 
 module.exports = {
+  defaultParams,
+  initializeAppWithParams,
   deployApp,
+  deployAll,
   deployAllAndInitializeApp
 }

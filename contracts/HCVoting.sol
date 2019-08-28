@@ -31,7 +31,7 @@ contract HCVoting is ProposalBase, IForwarder, AragonApp {
     string internal constant ERROR_PROPOSAL_IS_RESOLVED  = "HCVOTING_PROPOSAL_IS_RESOLVED";
     string internal constant ERROR_PROPOSAL_IS_CLOSED    = "HCVOTING_PROPOSAL_IS_CLOSED";
     string internal constant ERROR_PROPOSAL_IS_BOOSTED   = "HCVOTING_PROPOSAL_IS_BOOSTED";
-    string internal constant ERROR_VOTE_ALREADY_CASTED   = "HCVOTING_VOTE_ALREADY_CASTED";
+    string internal constant ERROR_REDUNDANT_VOTE        = "HCVOTING_REDUNDANT_VOTE";
     string internal constant ERROR_NO_VOTING_POWER       = "HCVOTING_NO_VOTING_POWER";
     string internal constant ERROR_CANNOT_RESOLVE        = "HCVOTING_CANNOT_RESOLVE";
     string internal constant ERROR_TOKEN_TRANSFER_FAILED = "HCVOTING_TOKEN_TRANSFER_FAILED";
@@ -150,7 +150,7 @@ contract HCVoting is ProposalBase, IForwarder, AragonApp {
         Vote previousVote = proposal_.votes[msg.sender];
         require(
             previousVote == Vote.Absent || !(previousVote == Vote.Yea && _supports || previousVote == Vote.Nay && !_supports),
-            ERROR_VOTE_ALREADY_CASTED
+            ERROR_REDUNDANT_VOTE
         );
 
         if (previousVote == Vote.Absent) {
@@ -213,10 +213,10 @@ contract HCVoting is ProposalBase, IForwarder, AragonApp {
         ProposalState state = getProposalState(_proposalId);
         require(state != ProposalState.Resolved, ERROR_PROPOSAL_IS_RESOLVED);
 
-        Vote support = getProposalSupport(_proposalId, false);
+        Vote support = getProposalConsensus(_proposalId, false);
         if (support == Vote.Absent && state == ProposalState.Boosted) {
             require(getTimestamp64() >= proposal_.closeDate, ERROR_ON_BOOST_PERIOD);
-            support = getProposalSupport(_proposalId, true);
+            support = getProposalConsensus(_proposalId, true);
         }
         require(support != Vote.Absent, ERROR_CANNOT_RESOLVE);
 
@@ -244,7 +244,7 @@ contract HCVoting is ProposalBase, IForwarder, AragonApp {
             return ProposalState.Boosted;
         }
 
-        if (getTimestamp64() > proposal_.closeDate) {
+        if (getTimestamp64() >= proposal_.closeDate) {
             return ProposalState.Closed;
         }
 
@@ -255,12 +255,9 @@ contract HCVoting is ProposalBase, IForwarder, AragonApp {
         return ProposalState.Queued;
     }
 
-    function getProposalSupport(uint256 _proposalId, bool _relative) public view returns (Vote) {
-        Proposal storage proposal_ = _getProposal(_proposalId);
-
-        uint256 votingPower = _relative ? proposal_.totalYeas.add(proposal_.totalNays) : voteToken.totalSupplyAt(proposal_.creationBlock);
-        uint256 yeaPPM = _calculatePPM(proposal_.totalYeas, votingPower);
-        uint256 nayPPM = _calculatePPM(proposal_.totalNays, votingPower);
+    function getProposalConsensus(uint256 _proposalId, bool _relative) public view returns (Vote) {
+        uint256 yeaPPM = getProposalSupport(_proposalId, true, _relative);
+        uint256 nayPPM = getProposalSupport(_proposalId, false, _relative);
 
         if (yeaPPM > requiredSupport) {
             return Vote.Yea;
@@ -271,6 +268,15 @@ contract HCVoting is ProposalBase, IForwarder, AragonApp {
         }
 
         return Vote.Absent;
+    }
+
+    function getProposalSupport(uint _proposalId, bool _supports, bool _relative) public view returns (uint256) {
+        Proposal storage proposal_ = _getProposal(_proposalId);
+
+        uint256 votingPower = _relative ? proposal_.totalYeas.add(proposal_.totalNays) : voteToken.totalSupplyAt(proposal_.creationBlock);
+        uint256 votes = _supports ? proposal_.totalYeas : proposal_.totalNays;
+
+        return votes.mul(MILLION).div(votingPower);
     }
 
     function getProposalConfidence(uint256 _proposalId) public view returns (uint256) {
@@ -376,10 +382,6 @@ contract HCVoting is ProposalBase, IForwarder, AragonApp {
                 proposal_.pendedDate = 0;
             }
         }
-    }
-
-    function _calculatePPM(uint256 _votes, uint256 _total) internal pure returns (uint256) {
-        return _votes.mul(MILLION).div(_total);
     }
 
     function _executeProposal(uint256 _proposalId) internal {

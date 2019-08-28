@@ -7,12 +7,6 @@ const { defaultParams, deployAllAndInitializeApp } = require('./helpers/deployAp
 
 contract('HCVoting (create)', ([appManager, user1, user2]) => {
   let app, voteToken
-  let proposalId = -1
-
-  const createProposal = async (creator) => {
-    proposalId++
-    return app.createProposal(EMPTY_SCRIPT, `Proposal metadata ${proposalId}`, { from: creator })
-  }
 
   before('deploy app', async () => {
     ({ app, voteToken } = await deployAllAndInitializeApp(appManager))
@@ -37,60 +31,56 @@ contract('HCVoting (create)', ([appManager, user1, user2]) => {
       await voteToken.generateTokens(user1, 1)
     })
 
-    it('can create a proposal', async () => {
-      await createProposal(user1)
-    })
-
     describe('when creating a proposal', () => {
       let creationReceipt
 
       before('create a proposal', async () => {
-        creationReceipt = await createProposal(user2)
+        creationReceipt = await app.createProposal(EMPTY_SCRIPT, 'Proposal metadata 0', { from: user2 })
       })
 
       it('should store creationBlock', async () => {
-        assert.equal((await app.getProposalCreationBlock(proposalId)).toNumber(), creationReceipt.receipt.blockNumber - 1)
+        assert.equal((await app.getProposalCreationBlock(0)).toNumber(), creationReceipt.receipt.blockNumber - 1)
       })
 
       it('should store creationDate', async () => {
-        assert.notEqual((await app.getProposalCreationDate(proposalId)).toNumber(), 0)
+        assert.notEqual((await app.getProposalCreationDate(0)).toNumber(), 0)
       })
 
       it('should store closeDate', async () => {
-        const creationDate = (await app.getProposalCreationDate(proposalId)).toNumber()
-        const closeDate = (await app.getProposalCloseDate(proposalId)).toNumber()
+        const creationDate = (await app.getProposalCreationDate(0)).toNumber()
+        const closeDate = (await app.getProposalCloseDate(0)).toNumber()
         assert.equal(closeDate, creationDate + defaultParams.queuePeriod)
       })
 
       it('should store execution script', async () => {
-        assert.equal(await app.getProposalScript(proposalId), EMPTY_SCRIPT)
+        assert.equal(await app.getProposalScript(0), EMPTY_SCRIPT)
       })
 
       it('should emit a ProposalCreated event with the appropriate data', async () => {
         const creationEvent = getEventAt(creationReceipt, 'ProposalCreated')
-        assert.equal(creationEvent.args.proposalId.toNumber(), proposalId, 'invalid proposal id')
+        assert.equal(creationEvent.args.proposalId.toNumber(), 0, 'invalid proposal id')
         assert.equal(creationEvent.args.creator, user2, 'invalid creator')
-        assert.equal(creationEvent.args.metadata, `Proposal metadata ${proposalId}`, 'invalid proposal metadata')
+        assert.equal(creationEvent.args.metadata, 'Proposal metadata 0', 'invalid proposal metadata')
       })
 
       it('should increase numProposals', async () => {
-        assert.equal((await app.numProposals()).toNumber(), proposalId + 1)
+        assert.equal((await app.numProposals()).toNumber(), 1)
       })
 
       describe('when creating another proposal', () => {
         before('create another proposal', async () => {
-          creationReceipt = await createProposal(user1)
+          creationReceipt = await app.createProposal(EMPTY_SCRIPT, 'Proposal metadata 1', { from: user1 })
         })
 
         it('should emit a ProposalCreated event with the appropriate data', async () => {
           const creationEvent = getEventAt(creationReceipt, 'ProposalCreated')
-          assert.equal(creationEvent.args.proposalId.toNumber(), proposalId, 'invalid proposal id')
+          assert.equal(creationEvent.args.proposalId.toNumber(), 1, 'invalid proposal id')
           assert.equal(creationEvent.args.creator, user1, 'invalid creator')
-          assert.equal(creationEvent.args.metadata, `Proposal metadata ${proposalId}`, 'invalid proposal metadata')
+          assert.equal(creationEvent.args.metadata, `Proposal metadata 1`, 'invalid proposal metadata')
         })
 
         it('should increase numProposals', async () => {
-          assert.equal((await app.numProposals()).toNumber(), proposalId + 1)
+          assert.equal((await app.numProposals()).toNumber(), 2)
         })
       })
     })

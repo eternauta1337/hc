@@ -1,33 +1,23 @@
 /* global contract beforeEach it assert */
 
 const { assertRevert } = require('@aragon/test-helpers/assertThrow')
-const { encodeCallScript, EMPTY_SCRIPT } = require('@aragon/test-helpers/evmScript')
+const { EMPTY_SCRIPT } = require('@aragon/test-helpers/evmScript')
 const { getEventAt } = require('@aragon/test-helpers/events')
-const { deployAllAndInitializeApp } = require('./helpers/deployApp')
+const { defaultParams, deployAllAndInitializeApp } = require('./helpers/deployApp')
 
 const VOTER_BALANCE = 100
-const REQUIRED_SUPPORT_PPM = 510000
-const PROPOSAL_DURATION = 24 * 60 * 60
-const BOOSTING_DURATION = 1 * 60 * 60
-const BOOSTED_DURATION = 6 * 60 * 60
-
+const MILLION = 1000000
 const VOTE = {
   ABSENT: '0',
   YEA: '1',
   NAY: '2'
 }
 
-contract.skip('HCVoting (vote)', ([appManager, creator, voter1, voter2, voter3]) => {
+contract('HCVoting (vote)', ([appManager, voter1, voter2, voter3, voter4]) => {
   let app, voteToken
 
   before('deploy app', async () => {
-    ({ app, voteToken } = await deployAllAndInitializeApp(
-      appManager,
-      REQUIRED_SUPPORT_PPM,
-      PROPOSAL_DURATION,
-      BOOSTING_DURATION,
-      BOOSTED_DURATION
-    ))
+    ({ app, voteToken } = await deployAllAndInitializeApp(appManager))
   })
 
   it('should revert when voting on a proposal that doesn\'t exist', async () => {
@@ -37,144 +27,209 @@ contract.skip('HCVoting (vote)', ([appManager, creator, voter1, voter2, voter3])
     )
   })
 
-  describe('when voting on proposals', () => {
-    let voteReceipt1, voteReceipt2, voteReceipt3, voteReceipt4
+  describe('when a proposal exists', () => {
+    let creationDate
+
+    const calculateSupport = (numVotes, numVoters) => {
+      return numVotes * MILLION / numVoters
+    }
 
     before('mint some tokens', async () => {
       await voteToken.generateTokens(voter1, VOTER_BALANCE)
       await voteToken.generateTokens(voter2, VOTER_BALANCE)
     })
 
-    before('create some proposals', async () => {
-      await app.createProposal(EMPTY_SCRIPT, 'Proposal metadata', { from: creator })
-      await app.createProposal(EMPTY_SCRIPT, 'Proposal metadata', { from: creator })
+    before('create a proposal', async () => {
+      await app.createProposal(EMPTY_SCRIPT, 'Proposal metadata 0')
+      creationDate = (await app.getProposalCreationDate(0)).toNumber()
     })
 
-    it('should not allow a voter with no voting power to vote', async () => {
+    it('should not allow a user with no voting power to vote', async () => {
       await assertRevert(
         app.vote(0, true, { from: voter3 }),
         'HCVOTING_NO_VOTING_POWER'
       )
     })
 
-    before('cast some votes', async () => {
-      voteReceipt1 = await app.vote(0, true, { from: voter1 })
-      voteReceipt2 = await app.vote(0, false, { from: voter2 })
+    describe('when voter1 casts a Nay vote on the proposal', () => {
+      let voteReceipt
 
-      voteReceipt3 = await app.vote(1, false, { from: voter1 })
-      voteReceipt4 = await app.vote(1, true, { from: voter2 })
-    })
+      before('cast vote', async () => {
+        voteReceipt = await app.vote(0, false, { from: voter1 })
+      })
 
-    it('should emit VoteCasted events', async () => {
-      const event1 = getEventAt(voteReceipt1, 'VoteCasted')
-      assert.equal(event1.args.proposalId.toNumber(), 0, 'invalid proposal id')
-      assert.equal(event1.args.voter, voter1, 'invalid voter')
-      assert.equal(event1.args.supports, true, 'invalid vote support')
+      it('should emit a VoteCasted event with the appropriate data', async () => {
+        const voteEvent = getEventAt(voteReceipt, 'VoteCasted')
+        assert.equal(voteEvent.args.proposalId.toNumber(), 0, 'invalid proposal id')
+        assert.equal(voteEvent.args.voter, voter1, 'invalid voter')
+        assert.equal(voteEvent.args.supports, false, 'invalid vote support')
+      })
 
-      const event2 = getEventAt(voteReceipt2, 'VoteCasted')
-      assert.equal(event2.args.proposalId.toNumber(), 0, 'invalid proposal id')
-      assert.equal(event2.args.voter, voter2, 'invalid voter')
-      assert.equal(event2.args.supports, false, 'invalid vote support')
+      it('registers the correct totalYeas/totalNays', async () => {
+        assert.equal((await app.getProposalYeas(0)).toNumber(), 0, 'invalid yeas')
+        assert.equal((await app.getProposalNays(0)).toNumber(), VOTER_BALANCE, 'invalid nays')
+      })
 
-      const event3 = getEventAt(voteReceipt3, 'VoteCasted')
-      assert.equal(event3.args.proposalId.toNumber(), 1, 'invalid proposal id')
-      assert.equal(event3.args.voter, voter1, 'invalid voter')
-      assert.equal(event3.args.supports, false, 'invalid vote support')
+      it('should record the user\'s vote as Nay', async () => {
+        assert.equal((await app.getUserVote(0, voter1)).toString(), VOTE.NAY)
+      })
 
-      const event4 = getEventAt(voteReceipt4, 'VoteCasted')
-      assert.equal(event4.args.proposalId.toNumber(), 1, 'invalid proposal id')
-      assert.equal(event4.args.voter, voter2, 'invalid voter')
-      assert.equal(event4.args.supports, true, 'invalid vote support')
-    })
+      it('should not allow redundant votes', async () => {
+        await assertRevert(
+          app.vote(0, false, { from: voter1 }),
+          'HCVOTING_REDUNDANT_VOTE'
+        )
+      })
 
-    it('should register the correct number of yeas and nays on each proposal', async () => {
-      assert.equal((await app.getProposalYeas(0)).toNumber(), VOTER_BALANCE, 'invalid yeas')
-      assert.equal((await app.getProposalNays(0)).toNumber(), VOTER_BALANCE, 'invalid nays')
+      it('calculates the correct absolute support', async () => {
+        assert.equal((await app.getProposalSupport(0, true, false)).toNumber(), calculateSupport(0, 2), 'incorrect absolute positive support')
+        assert.equal((await app.getProposalSupport(0, false, false)).toNumber(), calculateSupport(1, 2), 'incorrect absolute negative support')
+      })
 
-      assert.equal((await app.getProposalYeas(1)).toNumber(), VOTER_BALANCE, 'invalid yeas')
-      assert.equal((await app.getProposalNays(1)).toNumber(), VOTER_BALANCE, 'invalid nays')
-    })
+      it('calculates the correct absolute consensus', async () => {
+        assert.equal((await app.getProposalConsensus(0, false)).toNumber(), VOTE.ABSENT, 'incorrect absolute consensus')
+      })
 
-    it('should keep track of each vote, per user', async () => {
-      assert.equal((await app.getVote(0, voter1)).toString(), VOTE.YEA)
-      assert.equal((await app.getVote(0, voter2)).toString(), VOTE.NAY)
-      assert.equal((await app.getVote(0, voter3)).toString(), VOTE.ABSENT)
+      describe('when voter1 changes the Nay vote to Yea', () => {
+        before('change vote', async () => {
+          await app.vote(0, true, { from: voter1 })
+        })
 
-      assert.equal((await app.getVote(1, voter1)).toString(), VOTE.NAY)
-      assert.equal((await app.getVote(1, voter2)).toString(), VOTE.YEA)
-      assert.equal((await app.getVote(1, voter3)).toString(), VOTE.ABSENT)
-    })
+        it('should record the user\'s vote as Yea', async () => {
+          assert.equal((await app.getUserVote(0, voter1)).toString(), VOTE.YEA)
+        })
 
-    it('should not allow redundant votes', async () => {
-      await assertRevert(
-        app.vote(0, true, { from: voter1 }),
-        'HCVOTING_VOTE_ALREADY_CASTED'
-      )
-    })
+        it('registers the correct totalYeas/totalNays', async () => {
+          assert.equal((await app.getProposalYeas(0)).toNumber(), VOTER_BALANCE, 'invalid yeas')
+          assert.equal((await app.getProposalNays(0)).toNumber(), 0, 'invalid nays')
+        })
 
-    it('should allow a vote to be changed from yea to nay and viceversa', async () => {
-      await app.vote(0, false, { from: voter1 })
+        it('calculates the correct absolute support', async () => {
+          assert.equal((await app.getProposalSupport(0, true, false)).toNumber(), calculateSupport(1, 2), 'incorrect absolute positive support')
+          assert.equal((await app.getProposalSupport(0, false, false)).toNumber(), calculateSupport(0, 2), 'incorrect absolute negative support')
+        })
 
-      assert.equal((await app.getProposalYeas(0)).toNumber(), 0, 'invalid yeas')
-      assert.equal((await app.getVote(0, voter1)).toString(), VOTE.NAY)
-    })
+        describe('when voter2 casts a Yea vote on the proposal', () => {
+          before('cast vote', async () => {
+            await app.vote(0, true, { from: voter2 })
+          })
 
-    it('should properly calculate support', async () => {
-      assert.equal(await app.getProposalSupport(0, false), VOTE.NAY)
+          it('should record the user\'s vote as Yea', async () => {
+            assert.equal((await app.getUserVote(0, voter2)).toString(), VOTE.YEA)
+          })
 
-      await app.vote(1, true, { from: voter1 })
-      assert.equal(await app.getProposalSupport(1, false), VOTE.YEA)
-    })
+          it('registers the correct totalYeas/totalNays', async () => {
+            assert.equal((await app.getProposalYeas(0)).toNumber(), 2 * VOTER_BALANCE, 'invalid yeas')
+            assert.equal((await app.getProposalNays(0)).toNumber(), 0, 'invalid nays')
+          })
 
-    it('should not allow a voter to double vote by transferring tokens', async () => {
-      await voteToken.transfer(voter3, VOTER_BALANCE, { from: voter1 })
-      await assertRevert(
-        app.vote(0, true, { from: voter3 }),
-        'HCVOTING_NO_VOTING_POWER'
-      )
-      await voteToken.transfer(voter1, VOTER_BALANCE, { from: voter3 })
-    })
+          it('calculates the correct absolute support', async () => {
+            assert.equal((await app.getProposalSupport(0, true, false)).toNumber(), calculateSupport(2, 2), 'incorrect absolute positive support')
+            assert.equal((await app.getProposalSupport(0, false, false)).toNumber(), calculateSupport(0, 2), 'incorrect absolute negative support')
+          })
 
-    it('should not change calculated support if vote token supply changes', async () => {
-      await app.createProposal(EMPTY_SCRIPT, 'Proposal metadata', { from: creator })
+          it('calculates the correct absolute consensus', async () => {
+            assert.equal((await app.getProposalConsensus(0, false)).toNumber(), VOTE.YEA, 'incorrect absolute consensus')
+          })
 
-      const proposalId = (await app.numProposals()).toNumber() - 1
-      await app.vote(proposalId, true, { from: voter1 })
-      await app.vote(proposalId, true, { from: voter2 })
-      assert.equal(await app.getProposalSupport(proposalId, false), VOTE.YEA)
+          describe('when voter1 transfers its tokens to voter3', () => {
+            before('transfer tokens', async () => {
+              await voteToken.transfer(voter3, VOTER_BALANCE, { from: voter1 })
+            })
 
-      await voteToken.generateTokens(voter3, VOTER_BALANCE)
-      assert.equal(await app.getProposalSupport(proposalId, false), VOTE.YEA)
-    })
+            after('return tokens', async () => {
+              await voteToken.transfer(voter1, VOTER_BALANCE, { from: voter3 })
+            })
 
-    it('should not allow voting on a proposal that has been resolved', async () => {
-      await app.createProposal(EMPTY_SCRIPT, 'Proposal metadata', { from: creator })
-      const proposalId = (await app.numProposals()).toNumber() - 1
+            it('reverts when voter3 attempts to vote on the proposal', async () => {
+              await assertRevert(
+                app.vote(0, true, { from: voter3 }),
+                'HCVOTING_NO_VOTING_POWER'
+              )
+            })
+          })
 
-      await app.vote(proposalId, true, { from: voter1 })
-      await app.vote(proposalId, true, { from: voter2 })
-      assert.equal(await app.getProposalSupport(proposalId, false), VOTE.YEA)
+          describe('when the vote token supply increases after the proposal was created', () => {
+            before('mint tokens', async () => {
+              await voteToken.generateTokens(voter3, VOTER_BALANCE)
+              await voteToken.generateTokens(voter4, VOTER_BALANCE)
+            })
 
-      await app.resolveProposal(proposalId)
-      await assertRevert(
-        app.vote(proposalId, false, { from: voter2 }),
-        'HCVOTING_PROPOSAL_IS_RESOLVED'
-      )
-    })
+            it('calculated absolute support does not change', async () => {
+              assert.equal((await app.getProposalSupport(0, true, false)).toNumber(), calculateSupport(2, 2), 'incorrect absolute positive support')
+              assert.equal((await app.getProposalSupport(0, false, false)).toNumber(), calculateSupport(0, 2), 'incorrect absolute negative support')
+            })
 
-    it('should not allow voting on a proposal that has expired', async () => {
-      await app.createProposal(EMPTY_SCRIPT, 'Proposal metadata', { from: creator })
-      const proposalId = (await app.numProposals()).toNumber() - 1
+            it('calculates absolute consensus does not change', async () => {
+              assert.equal((await app.getProposalConsensus(0, false)).toNumber(), VOTE.YEA, 'incorrect absolute consensus')
+            })
 
-      const now = Math.floor(new Date().getTime() / 1000)
-      await app.mockSetTimestamp(now + PROPOSAL_DURATION + 1)
+            describe('when another proposal is created and multiple votes are casted on it', () => {
+              before('create another proposal', async () => {
+                await app.createProposal(EMPTY_SCRIPT, 'Proposal metadata 1')
+              })
 
-      await assertRevert(
-        app.vote(proposalId, true, { from: voter1 }),
-        'HCVOTING_PROPOSAL_IS_CLOSED'
-      )
+              before('cast multiple votes', async () => {
+                await app.vote(1, true, { from: voter1 })
+                await app.vote(1, false, { from: voter2 })
+                await app.vote(1, false, { from: voter3 })
+                await app.vote(1, false, { from: voter4 })
+              })
 
-      await app.mockSetTimestamp(now)
+              it('registers the correct totalYeas/totalNays', async () => {
+                assert.equal((await app.getProposalYeas(1)).toNumber(), 1 * VOTER_BALANCE, 'invalid yeas')
+                assert.equal((await app.getProposalNays(1)).toNumber(), 3 * VOTER_BALANCE, 'invalid nays')
+              })
+
+              it('registers each user\'s vote', async () => {
+                assert.equal((await app.getUserVote(1, voter1)).toString(), VOTE.YEA)
+                assert.equal((await app.getUserVote(1, voter2)).toString(), VOTE.NAY)
+                assert.equal((await app.getUserVote(1, voter3)).toString(), VOTE.NAY)
+                assert.equal((await app.getUserVote(1, voter4)).toString(), VOTE.NAY)
+              })
+
+              it('calculates the correct absolute support', async () => {
+                assert.equal((await app.getProposalSupport(1, true, false)).toNumber(), calculateSupport(1, 4), 'incorrect absolute positive support')
+                assert.equal((await app.getProposalSupport(1, false, false)).toNumber(), calculateSupport(3, 4), 'incorrect absolute negative support')
+              })
+
+              it('calculates the correct absolute consensus', async () => {
+                assert.equal((await app.getProposalConsensus(1, false)).toNumber(), VOTE.NAY, 'incorrect absolute consensus')
+              })
+            })
+          })
+
+          describe('when the proposal is closed', () => {
+            before('shift time to after queuePeriod', async () => {
+              await app.mockSetTimestamp(creationDate + defaultParams.queuePeriod)
+            })
+
+            after('shift time back to when the proposal was created', async () => {
+              await app.mockSetTimestamp(creationDate)
+            })
+
+            it('reverts when voter2 attempts to change its vote', async () => {
+              await assertRevert(
+                app.vote(0, false, { from: voter2 }),
+                'HCVOTING_PROPOSAL_IS_CLOSED'
+              )
+            })
+          })
+
+          describe('when the proposal is resolved', () => {
+            before('resolve proposal', async () => {
+              await app.resolveProposal(0)
+            })
+
+            it('reverts when voter2 attempts to change its vote', async () => {
+              await assertRevert(
+                app.vote(0, false, { from: voter2 }),
+                'HCVOTING_PROPOSAL_IS_RESOLVED'
+              )
+            })
+          })
+        })
+      })
     })
   })
 })

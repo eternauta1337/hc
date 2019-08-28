@@ -202,7 +202,7 @@ contract HCVoting is ProposalBase, IForwarder, AragonApp {
         require(proposalHasMaintainedConfidence(_proposalId), ERROR_HASNT_MAINTAINED_CONF);
 
         proposal_.boosted = true;
-        proposal_.closeDate = getTimestamp64().add(boostPeriod);
+        proposal_.closeDate = proposal_.pendedDate.add(boostPeriod);
 
         emit ProposalBoosted(_proposalId);
     }

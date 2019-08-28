@@ -17,7 +17,7 @@ contract ProposalBase {
     struct Proposal {
         uint64 creationDate;
         uint64 closeDate;
-        uint64 boostingDate;
+        uint64 pendedDate;
         uint64 creationBlock;
         bytes executionScript;
         bool boosted;
@@ -88,9 +88,9 @@ contract ProposalBase {
         return proposal_.closeDate;
     }
 
-    function getProposalBoostingDate(uint256 _proposalId) public view returns (uint256) {
+    function getProposalPendedDate(uint256 _proposalId) public view returns (uint256) {
         Proposal storage proposal_ = _getProposal(_proposalId);
-        return proposal_.boostingDate;
+        return proposal_.pendedDate;
     }
 
     function getProposalUpstake(uint256 _proposalId) public view returns (uint256) {

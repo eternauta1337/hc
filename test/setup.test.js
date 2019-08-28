@@ -1,5 +1,6 @@
 /* global contract beforeEach it assert */
 
+const { EMPTY_SCRIPT } = require('@aragon/test-helpers/evmScript')
 const { assertRevert } = require('@aragon/test-helpers/assertThrow')
 const { defaultParams, deployAll, initializeAppWithParams, deployAllAndInitializeApp } = require('./helpers/deployApp')
 
@@ -23,16 +24,23 @@ contract('HCVoting (setup)', ([appManager]) => {
       assert.equal((await app.requiredSupport()).toNumber(), defaultParams.requiredSupport)
     })
 
-    it('has proposalDuration set', async () => {
-      assert.equal((await app.proposalDuration()).toNumber(), defaultParams.proposalDuration)
+    it('has queuePeriod set', async () => {
+      assert.equal((await app.queuePeriod()).toNumber(), defaultParams.queuePeriod)
     })
 
-    it('has boostingDuration set', async () => {
-      assert.equal((await app.boostingDuration()).toNumber(), defaultParams.boostingDuration)
+    it('has pendedPeriod set', async () => {
+      assert.equal((await app.pendedPeriod()).toNumber(), defaultParams.pendedPeriod)
     })
 
-    it('has boostedDuration set', async () => {
-      assert.equal((await app.boostedDuration()).toNumber(), defaultParams.boostedDuration)
+    it('has boostPeriod set', async () => {
+      assert.equal((await app.boostPeriod()).toNumber(), defaultParams.boostPeriod)
+    })
+
+    it('reverts when attempting to re-initialize the app', async () => {
+      await assertRevert(
+        initializeAppWithParams(app, defaultParams),
+        'INIT_ALREADY_INITIALIZED'
+      )
     })
   })
 
@@ -50,30 +58,43 @@ contract('HCVoting (setup)', ([appManager]) => {
       )
     })
 
-    it('reverts when using an invalid proposal duration', async () => {
+    it('reverts when using an invalid queuePeriod', async () => {
       await assertRevert(
         initializeAppWithParams(app, { voteToken, stakeToken, ...defaultParams,
-          proposalDuration: 0
+          queuePeriod: 0
         }),
-        'HCVOTING_BAD_PROPOSAL_DURATION'
+        'HCVOTING_BAD_QUEUE_PERIOD'
       )
     })
 
-    it('reverts when using an invalid boosting duration', async () => {
+    it('reverts when using an invalid pendedPeriod', async () => {
       await assertRevert(
         initializeAppWithParams(app, { voteToken, stakeToken, ...defaultParams,
-          boostingDuration: 0
+          pendedPeriod: 0
         }),
-        'HCVOTING_BAD_BOOSTING_DURATION'
+        'HCVOTING_BAD_PENDED_PERIOD'
       )
     })
 
     it('reverts when using an invalid boosted duration', async () => {
       await assertRevert(
         initializeAppWithParams(app, { voteToken, stakeToken, ...defaultParams,
-          boostedDuration: 0
+          boostPeriod: 0
         }),
-        'HCVOTING_BAD_BOOSTED_DURATION'
+        'HCVOTING_BAD_BOOST_PERIOD'
+      )
+    })
+  })
+
+  describe('when attempting to interact with an uninitialized app', () => {
+    before('deploy', async () => {
+      ({ app } = await deployAll(appManager))
+    })
+
+    it('reverts when trying to create a proposal', async () => {
+      await assertRevert(
+        app.createProposal(EMPTY_SCRIPT, 'Proposal metadata'),
+        'APP_AUTH_FAILED'
       )
     })
   })

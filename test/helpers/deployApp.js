@@ -12,9 +12,9 @@ const HOURS = 60 * 60
 
 const defaultParams = {
   requiredSupport: 510000,
-  proposalDuration: 24 * HOURS,
-  boostingDuration: 1 * HOURS,
-  boostedDuration: 6 * HOURS
+  queuePeriod: 24 * HOURS,
+  pendedPeriod: 1 * HOURS,
+  boostPeriod: 6 * HOURS
 }
 
 const paramsObjToArr = (paramsObj) => {
@@ -22,9 +22,9 @@ const paramsObjToArr = (paramsObj) => {
     paramsObj.voteToken.address,
     paramsObj.stakeToken.address,
     paramsObj.requiredSupport,
-    paramsObj.proposalDuration,
-    paramsObj.boostingDuration,
-    paramsObj.boostedDuration
+    paramsObj.queuePeriod,
+    paramsObj.pendedPeriod,
+    paramsObj.boostPeriod
   ]
 }
 

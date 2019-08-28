@@ -8,9 +8,9 @@ const { defaultParams, deployAllAndInitializeApp } = require('./helpers/deployAp
 const VOTER_BALANCE = 100
 const MILLION = 1000000
 const VOTE = {
-  ABSENT: '0',
-  YEA: '1',
-  NAY: '2'
+  ABSENT: 0,
+  YEA: 1,
+  NAY: 2
 }
 
 contract('HCVoting (vote)', ([appManager, voter1, voter2, voter3, voter4]) => {
@@ -71,7 +71,7 @@ contract('HCVoting (vote)', ([appManager, voter1, voter2, voter3, voter4]) => {
       })
 
       it('should record the user\'s vote as Nay', async () => {
-        assert.equal((await app.getUserVote(0, voter1)).toString(), VOTE.NAY)
+        assert.equal((await app.getUserVote(0, voter1)).toNumber(), VOTE.NAY)
       })
 
       it('should not allow redundant votes', async () => {
@@ -96,7 +96,7 @@ contract('HCVoting (vote)', ([appManager, voter1, voter2, voter3, voter4]) => {
         })
 
         it('should record the user\'s vote as Yea', async () => {
-          assert.equal((await app.getUserVote(0, voter1)).toString(), VOTE.YEA)
+          assert.equal((await app.getUserVote(0, voter1)).toNumber(), VOTE.YEA)
         })
 
         it('registers the correct totalYeas/totalNays', async () => {
@@ -115,7 +115,7 @@ contract('HCVoting (vote)', ([appManager, voter1, voter2, voter3, voter4]) => {
           })
 
           it('should record the user\'s vote as Yea', async () => {
-            assert.equal((await app.getUserVote(0, voter2)).toString(), VOTE.YEA)
+            assert.equal((await app.getUserVote(0, voter2)).toNumber(), VOTE.YEA)
           })
 
           it('registers the correct totalYeas/totalNays', async () => {
@@ -182,10 +182,10 @@ contract('HCVoting (vote)', ([appManager, voter1, voter2, voter3, voter4]) => {
               })
 
               it('registers each user\'s vote', async () => {
-                assert.equal((await app.getUserVote(1, voter1)).toString(), VOTE.YEA)
-                assert.equal((await app.getUserVote(1, voter2)).toString(), VOTE.NAY)
-                assert.equal((await app.getUserVote(1, voter3)).toString(), VOTE.NAY)
-                assert.equal((await app.getUserVote(1, voter4)).toString(), VOTE.NAY)
+                assert.equal((await app.getUserVote(1, voter1)).toNumber(), VOTE.YEA)
+                assert.equal((await app.getUserVote(1, voter2)).toNumber(), VOTE.NAY)
+                assert.equal((await app.getUserVote(1, voter3)).toNumber(), VOTE.NAY)
+                assert.equal((await app.getUserVote(1, voter4)).toNumber(), VOTE.NAY)
               })
 
               it('calculates the correct absolute support', async () => {

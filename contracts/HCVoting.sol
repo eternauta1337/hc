@@ -33,14 +33,14 @@ contract HCVoting is ProposalBase, IForwarder, AragonApp {
     string internal constant ERROR_PROPOSAL_IS_BOOSTED   = "HCVOTING_PROPOSAL_IS_BOOSTED";
     string internal constant ERROR_REDUNDANT_VOTE        = "HCVOTING_REDUNDANT_VOTE";
     string internal constant ERROR_NO_VOTING_POWER       = "HCVOTING_NO_VOTING_POWER";
-    string internal constant ERROR_CANNOT_RESOLVE        = "HCVOTING_CANNOT_RESOLVE";
+    string internal constant ERROR_NO_CONSENSUS          = "HCVOTING_NO_CONSENSUS";
     string internal constant ERROR_TOKEN_TRANSFER_FAILED = "HCVOTING_TOKEN_TRANSFER_FAILED";
     string internal constant ERROR_INSUFFICIENT_STAKE    = "HCVOTING_INSUFFICIENT_STAKE";
-    string internal constant ERROR_ON_BOOSTING_PERIOD    = "HCVOTING_ON_BOOSTING_PERIOD";
+    string internal constant ERROR_HASNT_MAINTAINED_CONF = "HCVOTING_HASNT_MAINTAINED_CONF";
     string internal constant ERROR_ON_BOOST_PERIOD       = "HCVOTING_ON_BOOST_PERIOD";
-    string internal constant ERROR_PROPOSAL_NOT_BOOSTING = "HCVOTING_PROPOSAL_NOT_BOOSTING";
     string internal constant ERROR_NOT_ENOUGH_CONFIDENCE = "HCVOTING_NOT_ENOUGH_CONFIDENCE";
     string internal constant ERROR_CAN_NOT_FORWARD       = "HCVOTING_CAN_NOT_FORWARD";
+    string internal constant ERROR_ALREADY_EXECUTED      = "HCVOTING_ALREADY_EXECUTED";
 
     /*
      * Events
@@ -199,10 +199,10 @@ contract HCVoting is ProposalBase, IForwarder, AragonApp {
         require(state != ProposalState.Boosted, ERROR_PROPOSAL_IS_BOOSTED);
 
         require(proposalHasConfidence(_proposalId), ERROR_NOT_ENOUGH_CONFIDENCE);
-        require(proposalHasMaintainedConfidence(_proposalId), ERROR_ON_BOOSTING_PERIOD);
+        require(proposalHasMaintainedConfidence(_proposalId), ERROR_HASNT_MAINTAINED_CONF);
 
         proposal_.boosted = true;
-        proposal_.closeDate = proposal_.creationDate.add(boostPeriod);
+        proposal_.closeDate = getTimestamp64().add(boostPeriod);
 
         emit ProposalBoosted(_proposalId);
     }
@@ -218,7 +218,7 @@ contract HCVoting is ProposalBase, IForwarder, AragonApp {
             require(getTimestamp64() >= proposal_.closeDate, ERROR_ON_BOOST_PERIOD);
             support = getProposalConsensus(_proposalId, true);
         }
-        require(support != Vote.Absent, ERROR_CANNOT_RESOLVE);
+        require(support != Vote.Absent, ERROR_NO_CONSENSUS);
 
         proposal_.resolved = true;
 
@@ -304,7 +304,7 @@ contract HCVoting is ProposalBase, IForwarder, AragonApp {
             return false;
         }
 
-        return getTimestamp64() > proposal_.pendedDate.add(pendedPeriod);
+        return getTimestamp64() >= proposal_.pendedDate.add(pendedPeriod);
     }
 
     /*
@@ -386,10 +386,13 @@ contract HCVoting is ProposalBase, IForwarder, AragonApp {
 
     function _executeProposal(uint256 _proposalId) internal {
         Proposal storage proposal_ = _getProposal(_proposalId);
+        require(!proposal_.executed, ERROR_ALREADY_EXECUTED);
 
         address[] memory blacklist = new address[](0);
         bytes memory input = new bytes(0);
         runScript(proposal_.executionScript, input, blacklist);
+
+        proposal_.executed = true;
 
         emit ProposalExecuted(_proposalId);
     }

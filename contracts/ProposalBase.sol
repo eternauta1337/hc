@@ -73,6 +73,11 @@ contract ProposalBase {
         return proposal_.resolved;
     }
 
+    function getProposalExecuted(uint256 _proposalId) public view returns (bool) {
+        Proposal storage proposal_ = _getProposal(_proposalId);
+        return proposal_.executed;
+    }
+
     function getProposalCreationBlock(uint256 _proposalId) public view returns (uint256) {
         Proposal storage proposal_ = _getProposal(_proposalId);
         return proposal_.creationBlock;

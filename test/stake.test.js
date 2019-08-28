@@ -1,255 +1,269 @@
 /* global contract beforeEach it assert */
 
 const { assertRevert } = require('@aragon/test-helpers/assertThrow')
-const { EMPTY_SCRIPT } = require('@aragon/test-helpers/evmScript')
 const { getEventAt } = require('@aragon/test-helpers/events')
-const { deployAllAndInitializeApp } = require('./helpers/deployApp')
+const { defaultParams, deployAllAndInitializeApp } = require('./helpers/deployApp')
+const Tracker = require('./helpers/stakeTracker')
 
-const STAKER_BALANCE = 100
-const REQUIRED_SUPPORT_PPM = 510000
-const PROPOSAL_DURATION = 24 * 60 * 60
-const BOOSTING_DURATION = 1 * 60 * 60
-const BOOSTED_DURATION = 6 * 60 * 60
-
-const VOTE = {
-  ABSENT: '0',
-  YEA: '1',
-  NAY: '2'
-}
-
-contract.skip('HCVoting (stake)', ([appManager, creator, voter, staker1, staker2, staker3]) => {
+contract('HCVoting (stake)', ([appManager, voter, staker1, staker2]) => {
   let app, voteToken, stakeToken
+  let tracker
 
-  const mintStakeTokens = async (staker) => {
-    await stakeToken.generateTokens(staker, STAKER_BALANCE)
-    await stakeToken.approve(app.address, 10000000, { from: staker })
+  async function itRegistersTheCorrectBalances(proposalId, staker) {
+    it('transfers tokens from the user to the app', async () => {
+      assert.equal((await stakeToken.balanceOf(staker)).toNumber(), tracker.balanceOf[staker], 'invalid user balance')
+      assert.equal((await stakeToken.balanceOf(app.address)).toNumber(), tracker.balanceOf[app.address], 'invalid app balance')
+    })
+
+    it('registers the total stakes in the proposal', async () => {
+      assert.equal((await app.getProposalUpstake(proposalId)).toNumber(), tracker.proposals[proposalId].upstake, 'invalid upstake')
+      assert.equal((await app.getProposalDownstake(proposalId)).toNumber(), tracker.proposals[proposalId].downstake, 'invalid downstake')
+    })
+
+    it('registers the user\'s stake in the proposal', async () => {
+      assert.equal((await app.getUserUpstake(proposalId, staker)).toNumber(), tracker.proposals[proposalId].upstakes[staker], 'invalid user upstake')
+      assert.equal((await app.getUserDownstake(proposalId, staker)).toNumber(), tracker.proposals[proposalId].downstakes[staker], 'invalid user downstake')
+    })
   }
 
-  beforeEach('deploy app', async () => {
-    ({ app, voteToken, stakeToken } = await deployAllAndInitializeApp(
-      appManager,
-      REQUIRED_SUPPORT_PPM,
-      PROPOSAL_DURATION,
-      BOOSTING_DURATION,
-      BOOSTED_DURATION
-    ))
+  before('deploy app', async () => {
+    ({ app, voteToken, stakeToken } = await deployAllAndInitializeApp(appManager))
   })
 
-  it('should reject staking on proposals that do not exist', async () => {
+  before('initialize tracker', async () => {
+    tracker = Tracker.initialize(app, voteToken, stakeToken)
+  })
+
+  it('reverts when attempting to stake on a proposal that does not exist', async () => {
     await assertRevert(
-      app.upstake(0, 10, { from: staker1 }),
+      app.upstake(0, 100, { from: staker1 }),
       `HCVOTING_PROPOSAL_DOES_NOT_EXIST`
     )
     await assertRevert(
-      app.downstake(0, 10, { from: staker1 }),
+      app.downstake(0, 100, { from: staker1 }),
       `HCVOTING_PROPOSAL_DOES_NOT_EXIST`
     )
   })
 
-  describe('when staking on proposals', () => {
-    beforeEach('mint vote tokens', async () => {
-      await voteToken.generateTokens(voter, 100)
+    describe('when a proposal exists', () => {
+      before('create a proposal', async () => {
+        await tracker.createProposal(0, voter)
+      })
+
+      it('reverts when a user with no tokens attempts to stake', async () => {
+        await assertRevert(
+          app.upstake(0, 100, { from: staker1 }),
+          `HCVOTING_TOKEN_TRANSFER_FAILED`
+        )
+        await assertRevert(
+          app.downstake(0, 100, { from: staker1 }),
+          `HCVOTING_TOKEN_TRANSFER_FAILED`
+        )
+      })
+
+      describe('when staker1 has tokens but hasn\'t provided allowance yet', () => {
+        before('mint stake tokens', async () => {
+          await tracker.mintStakeTokens(staker1, 10000)
+        })
+
+        it('reverts when a user with tokens but no allowance attempts to stake', async () => {
+          await assertRevert(
+            app.upstake(0, 100, { from: staker1 }),
+            `HCVOTING_TOKEN_TRANSFER_FAILED`
+          )
+          await assertRevert(
+            app.downstake(0, 100, { from: staker1 }),
+            `HCVOTING_TOKEN_TRANSFER_FAILED`
+          )
+        })
+
+        describe('when staker1 provides allowance to the app', () => {
+          before('provide allowance', async () => {
+            await stakeToken.approve(app.address, 10000000, { from: staker1 })
+          })
+
+          it('reverts when staker1 attempts to stake more tokens than it owns', async () => {
+            await assertRevert(
+              app.upstake(0, 100000000, { from: staker1 }),
+              'HCVOTING_TOKEN_TRANSFER_FAILED'
+            )
+            await assertRevert(
+              app.downstake(0, 100000000, { from: staker1 }),
+              'HCVOTING_TOKEN_TRANSFER_FAILED'
+            )
+          })
+
+          describe('when staker1 upstakes on the proposal', () => {
+            let upstakeReceipt
+
+            before('upstake', async () => {
+              upstakeReceipt = await tracker.upstake(0, staker1, 1000)
+            })
+
+            it('emits a ProposalUpstaked event', async () => {
+              const event = getEventAt(upstakeReceipt, 'ProposalUpstaked')
+              assert.equal(event.args.proposalId.toNumber(), 0, 'invalid proposal id')
+              assert.equal(event.args.staker, staker1, 'invalid staker')
+              assert.equal(event.args.amount.toNumber(), 1000, 'invalid stake amount')
+            })
+
+            itRegistersTheCorrectBalances(0, staker1)
+          })
+
+          describe('when staker1 downstakes on the proposal', () => {
+            let downstakeReceipt
+
+            before('downstake', async () => {
+              downstakeReceipt = await tracker.downstake(0, staker1, 100)
+            })
+
+            it('emits a ProposalDownstaked event', async () => {
+              const event = getEventAt(downstakeReceipt, 'ProposalDownstaked')
+              assert.equal(event.args.proposalId.toNumber(), 0, 'invalid proposal id')
+              assert.equal(event.args.staker, staker1, 'invalid staker')
+              assert.equal(event.args.amount.toNumber(), 100, 'invalid stake amount')
+            })
+
+            it('reverts when staker1 attempts to withdraw an invalid amount of stake', async () => {
+              await assertRevert(
+                app.withdrawUpstake(0, tracker.proposals[0].upstakes[staker1] + 1, { from: staker1 }),
+                'HCVOTING_INSUFFICIENT_STAKE'
+              )
+              await assertRevert(
+                app.withdrawDownstake(0, tracker.proposals[0].downstakes[staker1] + 1, { from: staker1 }),
+                'HCVOTING_INSUFFICIENT_STAKE'
+              )
+            })
+
+            itRegistersTheCorrectBalances(0, staker1)
+          })
+
+          describe('when staker1 withdraws upstake from the proposal', () => {
+            let withdrawUpstakeReceipt
+
+            before('withdraw upstake', async () => {
+              withdrawUpstakeReceipt = await tracker.withdrawUpstake(0, staker1, 100)
+            })
+
+            it('emits an UpstakeWithdrawn event', async () => {
+              const event = getEventAt(withdrawUpstakeReceipt, 'UpstakeWithdrawn')
+              assert.equal(event.args.proposalId.toNumber(), 0, 'invalid proposal id')
+              assert.equal(event.args.staker, staker1, 'invalid staker')
+              assert.equal(event.args.amount.toNumber(), 100, 'invalid stake amount')
+            })
+
+            itRegistersTheCorrectBalances(0, staker1)
+          })
+
+          describe('when staker1 withdraws downstake from the proposal', () => {
+            let withdrawDownstakeReceipt
+
+            before('withdraw downstake', async () => {
+              withdrawDownstakeReceipt = await tracker.withdrawDownstake(0, staker1, 100)
+            })
+
+            it('emits a DownstakeWithdrawn event', async () => {
+              const event = getEventAt(withdrawDownstakeReceipt, 'DownstakeWithdrawn')
+              assert.equal(event.args.proposalId.toNumber(), 0, 'invalid proposal id')
+              assert.equal(event.args.staker, staker1, 'invalid staker')
+              assert.equal(event.args.amount.toNumber(), 100, 'invalid stake amount')
+            })
+
+            itRegistersTheCorrectBalances(0, staker1)
+          })
+      })
+
+      describe('when staker2 has tokens and provides allowance to the app', () => {
+        before('mint stake tokens', async () => {
+          await tracker.mintStakeTokens(staker2, 10000)
+          await stakeToken.approve(app.address, 10000000, { from: staker2 })
+        })
+
+        it('reverts when a user that hasn\'t staked attempts to withdraw stake', async () => {
+          await assertRevert(
+            app.withdrawUpstake(0, 100, { from: staker2 }),
+            `HCVOTING_INSUFFICIENT_STAKE`
+          )
+          await assertRevert(
+            app.withdrawDownstake(0, 100, { from: staker2 }),
+            `HCVOTING_INSUFFICIENT_STAKE`
+          )
+        })
+
+        describe('when staker2 upstakes on the proposal', () => {
+          before('upstake', async () => {
+            await tracker.upstake(0, staker2, 1000)
+          })
+
+          itRegistersTheCorrectBalances(0, staker2)
+        })
+
+        describe('when staker2 downstakes on the proposal', () => {
+          before('downstake', async () => {
+            await tracker.downstake(0, staker2, 100)
+          })
+
+          itRegistersTheCorrectBalances(0, staker2)
+        })
+
+        describe('when staker2 withdraws upstake from the proposal', () => {
+          before('withdraw upstake', async () => {
+            await tracker.withdrawUpstake(0, staker2, 100)
+          })
+
+          itRegistersTheCorrectBalances(0, staker2)
+        })
+
+        describe('when staker2 withdraws downstake from the proposal', () => {
+          before('withdraw downstake', async () => {
+            await tracker.withdrawDownstake(0, staker2, 100)
+          })
+
+          itRegistersTheCorrectBalances(0, staker2)
+        })
+      })
     })
 
-    beforeEach('create a proposal', async () => {
-      await app.createProposal(EMPTY_SCRIPT, 'Proposal metadata')
+    describe('when the proposal is closed', () => {
+      let creationDate
+
+      before('shift time to after queuePeriod', async () => {
+        creationDate = (await app.getProposalCreationDate(0)).toNumber()
+        await app.mockSetTimestamp(creationDate + defaultParams.queuePeriod)
+      })
+
+      after('shift time back to when the proposal was created', async () => {
+        await app.mockSetTimestamp(creationDate)
+      })
+
+      it('reverts when staker1 attempts to stake', async () => {
+        await assertRevert(
+          app.upstake(0, 1, { from: staker1 }),
+          'HCVOTING_PROPOSAL_IS_CLOSED'
+        )
+        await assertRevert(
+          app.downstake(0, 1, { from: staker1 }),
+          'HCVOTING_PROPOSAL_IS_CLOSED'
+        )
+      })
     })
 
-    it('should not allow an account to stake more tokens that it holds', async () => {
-      await mintStakeTokens(staker1)
+    describe('when the proposal is resolved', () => {
+      before('resolve proposal', async () => {
+        await app.vote(0, true, { from: voter })
+        await app.resolveProposal(0)
+      })
 
-      await assertRevert(
-        app.upstake(0, 10000, { from: staker1 }),
-        `HCVOTING_TOKEN_TRANSFER_FAILED`
-      )
-      await assertRevert(
-        app.downstake(0, 10000, { from: staker1 }),
-        `HCVOTING_TOKEN_TRANSFER_FAILED`
-      )
-    })
-
-    it('should not allow an account to withdraw tokens that it didn\'t stake', async () => {
-      await assertRevert(
-        app.withdrawUpstake(0, 100, { from: staker1 }),
-        `HCVOTING_INSUFFICIENT_STAKE`
-      )
-      await assertRevert(
-        app.withdrawDownstake(0, 100, { from: staker1 }),
-        `HCVOTING_INSUFFICIENT_STAKE`
-      )
-    })
-
-    it('emits events when staking on proposals', async () => {
-      await mintStakeTokens(staker1)
-
-      const upstakeReceipt = await app.upstake(0, STAKER_BALANCE / 2, { from: staker1 })
-      const upstakeEvent = getEventAt(upstakeReceipt, 'ProposalUpstaked')
-      assert.equal(upstakeEvent.args.proposalId.toNumber(), 0, 'invalid proposal id')
-      assert.equal(upstakeEvent.args.staker, staker1, 'invalid staker')
-      assert.equal(upstakeEvent.args.amount, STAKER_BALANCE / 2, 'invalid stake amount')
-
-      const downstakeReceipt = await app.downstake(0, STAKER_BALANCE / 2, { from: staker1 })
-      const downstakeEvent = getEventAt(downstakeReceipt, 'ProposalDownstaked')
-      assert.equal(downstakeEvent.args.proposalId.toNumber(), 0, 'invalid proposal id')
-      assert.equal(downstakeEvent.args.staker, staker1, 'invalid staker')
-      assert.equal(downstakeEvent.args.amount, STAKER_BALANCE / 2, 'invalid stake amount')
-    })
-
-    it('emits events when retrieving stake', async () => {
-      await mintStakeTokens(staker1)
-      await app.upstake(0, STAKER_BALANCE / 2, { from: staker1 })
-      await app.downstake(0, STAKER_BALANCE / 2, { from: staker1 })
-
-      const upstakeReceipt = await app.withdrawUpstake(0, STAKER_BALANCE / 2, { from: staker1 })
-      const upstakeEvent = getEventAt(upstakeReceipt, 'UpstakeWithdrawn')
-      assert.equal(upstakeEvent.args.proposalId.toNumber(), 0, 'invalid proposal id')
-      assert.equal(upstakeEvent.args.staker, staker1, 'invalid staker')
-      assert.equal(upstakeEvent.args.amount, STAKER_BALANCE / 2, 'invalid stake amount')
-
-      const downstakeReceipt = await app.withdrawDownstake(0, STAKER_BALANCE / 2, { from: staker1 })
-      const downstakeEvent = getEventAt(downstakeReceipt, 'DownstakeWithdrawn')
-      assert.equal(downstakeEvent.args.proposalId.toNumber(), 0, 'invalid proposal id')
-      assert.equal(downstakeEvent.args.staker, staker1, 'invalid staker')
-      assert.equal(downstakeEvent.args.amount, STAKER_BALANCE / 2, 'invalid stake amount')
-    })
-
-    it('should properly transfer tokens when staking', async () => {
-      await mintStakeTokens(staker1)
-
-      await app.upstake(0, STAKER_BALANCE / 2, { from: staker1 })
-      assert.equal((await stakeToken.balanceOf(staker1)).toNumber(), STAKER_BALANCE / 2)
-      assert.equal((await stakeToken.balanceOf(app.address)).toNumber(), STAKER_BALANCE / 2)
-
-      await app.downstake(0, STAKER_BALANCE / 2, { from: staker1 })
-      assert.equal((await stakeToken.balanceOf(staker1)).toNumber(), 0)
-      assert.equal((await stakeToken.balanceOf(app.address)).toNumber(), STAKER_BALANCE)
-    })
-
-    it('should properly transfer tokens when withdrawing stake', async () => {
-      await mintStakeTokens(staker1)
-
-      await app.upstake(0, STAKER_BALANCE / 2, { from: staker1 })
-      await app.downstake(0, STAKER_BALANCE / 2, { from: staker1 })
-
-      await app.withdrawUpstake(0, STAKER_BALANCE / 2, { from: staker1 })
-      assert.equal((await stakeToken.balanceOf(staker1)).toNumber(), STAKER_BALANCE / 2)
-      assert.equal((await stakeToken.balanceOf(app.address)).toNumber(), STAKER_BALANCE / 2)
-
-      await app.withdrawDownstake(0, STAKER_BALANCE / 2, { from: staker1 })
-      assert.equal((await stakeToken.balanceOf(staker1)).toNumber(), STAKER_BALANCE)
-      assert.equal((await stakeToken.balanceOf(app.address)).toNumber(), 0)
-    })
-
-    it('should keep track of a proposal\'s total upstake/downstake', async () => {
-      await mintStakeTokens(staker1)
-      await mintStakeTokens(staker2)
-      await mintStakeTokens(staker3)
-
-      let totalUpstake = 0
-      let totalDownstake = 0
-
-      const upstake = async (amount, staker) => {
-        await app.upstake(0, amount, { from: staker })
-        totalUpstake += amount
-      }
-
-      const downstake = async (amount, staker) => {
-        await app.downstake(0, amount, { from: staker })
-        totalDownstake += amount
-      }
-
-      const withdrawUpstake = async (amount, staker) => {
-        await app.withdrawUpstake(0, amount, { from: staker })
-        totalUpstake -= amount
-      }
-
-      const withdrawDownstake = async (amount, staker) => {
-        await app.withdrawDownstake(0, amount, { from: staker })
-        totalDownstake -= amount
-      }
-
-      await upstake(10, staker1)
-      await downstake(2, staker1)
-      await withdrawUpstake(4, staker1)
-      await upstake(80, staker2)
-      await downstake(10, staker3)
-      await withdrawDownstake(5, staker3)
-
-      const recordedUpstake = await app.getProposalUpstake(0)
-      const recordedDownstake = await app.getProposalDownstake(0)
-
-      assert.equal(recordedUpstake.toNumber(), totalUpstake)
-      assert.equal(recordedDownstake.toNumber(), totalDownstake)
-    })
-
-    it('should keep track of a staker\'s stakes on a proposal', async () => {
-      await mintStakeTokens(staker1)
-
-      let totalUpstake = 0
-      let totalDownstake = 0
-
-      const upstake = async (amount, staker) => {
-        await app.upstake(0, amount, { from: staker })
-        totalUpstake += amount
-      }
-
-      const downstake = async (amount, staker) => {
-        await app.downstake(0, amount, { from: staker })
-        totalDownstake += amount
-      }
-
-      const withdrawUpstake = async (amount, staker) => {
-        await app.withdrawUpstake(0, amount, { from: staker })
-        totalUpstake -= amount
-      }
-
-      const withdrawDownstake = async (amount, staker) => {
-        await app.withdrawDownstake(0, amount, { from: staker })
-        totalDownstake -= amount
-      }
-
-      await upstake(10, staker1)
-      await downstake(2, staker1)
-      await withdrawUpstake(4, staker1)
-      await upstake(80, staker1)
-      await downstake(10, staker1)
-      await withdrawDownstake(5, staker1)
-
-      const recordedUpstake = await app.getUpstake(0, staker1)
-      const recordedDownstake = await app.getDownstake(0, staker1)
-
-      assert.equal(recordedUpstake.toNumber(), totalUpstake)
-      assert.equal(recordedDownstake.toNumber(), totalDownstake)
-    })
-
-    it('should not allow staking on a proposal that has been resolved', async () => {
-      const proposalId = (await app.numProposals()).toNumber() - 1
-      await app.vote(proposalId, true, { from: voter })
-      assert.equal(await app.getProposalSupport(proposalId, false), VOTE.YEA)
-
-      await app.resolveProposal(proposalId)
-
-      await mintStakeTokens(staker1)
-      await assertRevert(
-        app.upstake(proposalId, STAKER_BALANCE, { from: staker1 }),
-        'HCVOTING_PROPOSAL_IS_RESOLVED'
-      )
-    })
-
-    it('should not allow staking on a proposal that has expired', async () => {
-      const now = Math.floor(new Date().getTime() / 1000)
-      await app.mockSetTimestamp(now + PROPOSAL_DURATION + 1)
-
-      await assertRevert(
-        app.upstake(0, STAKER_BALANCE, { from: staker1 }),
-        'HCVOTING_PROPOSAL_IS_CLOSED'
-      )
-      await assertRevert(
-        app.downstake(0, STAKER_BALANCE, { from: staker1 }),
-        'HCVOTING_PROPOSAL_IS_CLOSED'
-      )
-
-      await app.mockSetTimestamp(now)
+      it('reverts when staker1 attempts to stake', async () => {
+        await assertRevert(
+          app.upstake(0, 1, { from: staker1 }),
+          'HCVOTING_PROPOSAL_IS_RESOLVED'
+        )
+        await assertRevert(
+          app.downstake(0, 1, { from: staker1 }),
+          'HCVOTING_PROPOSAL_IS_RESOLVED'
+        )
+      })
     })
   })
 })

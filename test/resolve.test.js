@@ -26,7 +26,7 @@ contract('HCVoting (resolve)', ([appManager, creator, voter1, voter2, voter3, vo
 
   const newRequiredSupport = 400000;
 
-  async function createProposalWithNonEmptyScript() {
+  async function createProposalWithScript() {
     const action = { to: app.address, calldata: app.contract.changeRequiredSupport.getData(newRequiredSupport) }
     const script = encodeCallScript([action])
     await app.createProposal(script, 'Modify support')
@@ -94,7 +94,7 @@ contract('HCVoting (resolve)', ([appManager, creator, voter1, voter2, voter3, vo
 
   describe('when trying to resolve a proposal with no consensus', () => {
     before('create proposal', async () => {
-      await createProposalWithNonEmptyScript()
+      await createProposalWithScript()
     })
 
     it('evaluates the proposal\'s consensus to be ABSENT', async () => {
@@ -112,7 +112,7 @@ contract('HCVoting (resolve)', ([appManager, creator, voter1, voter2, voter3, vo
   describe('when resolving proposals with absolute consensus', () => {
     describe('when a proposal has absolute negative consensus', () => {
       before('create proposal', async () => {
-        await createProposalWithNonEmptyScript()
+        await createProposalWithScript()
       })
 
       before('cast votes', async () => {
@@ -126,7 +126,7 @@ contract('HCVoting (resolve)', ([appManager, creator, voter1, voter2, voter3, vo
 
     describe('when a proposal has absolute positive consensus', () => {
       before('create proposal', async () => {
-        await createProposalWithNonEmptyScript()
+        await createProposalWithScript()
       })
 
       before('cast votes', async () => {
@@ -155,7 +155,7 @@ contract('HCVoting (resolve)', ([appManager, creator, voter1, voter2, voter3, vo
 
     describe('when a proposal has relative negative consensus', () => {
       before('create and boost a proposal', async () => {
-        await createProposalWithNonEmptyScript()
+        await createProposalWithScript()
         await quickBoostProposal()
       })
 
@@ -184,7 +184,7 @@ contract('HCVoting (resolve)', ([appManager, creator, voter1, voter2, voter3, vo
 
     describe('when a proposal has relative positive consensus', () => {
       before('create and boost a proposal', async () => {
-        await createProposalWithNonEmptyScript()
+        await createProposalWithScript()
         await quickBoostProposal()
       })
 

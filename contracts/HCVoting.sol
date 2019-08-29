@@ -13,16 +13,12 @@ contract HCVoting is ProposalBase, IForwarder, AragonApp {
     using SafeMath for uint256;
     using SafeMath64 for uint64;
 
-    /*
-     * Roles
-     */
+    /* Roles */
 
     bytes32 public constant CREATE_PROPOSALS_ROLE = keccak256("CREATE_PROPOSALS_ROLE");
     bytes32 public constant CHANGE_SUPPORT_ROLE   = keccak256("CHANGE_SUPPORT_ROLE");
 
-    /*
-     * Errors
-     */
+    /* Errors */
 
     string internal constant ERROR_BAD_REQUIRED_SUPPORT  = "HCVOTING_BAD_REQUIRED_SUPPORT";
     string internal constant ERROR_BAD_QUEUE_PERIOD      = "HCVOTING_BAD_QUEUE_PERIOD";
@@ -42,9 +38,7 @@ contract HCVoting is ProposalBase, IForwarder, AragonApp {
     string internal constant ERROR_CAN_NOT_FORWARD       = "HCVOTING_CAN_NOT_FORWARD";
     string internal constant ERROR_ALREADY_EXECUTED      = "HCVOTING_ALREADY_EXECUTED";
 
-    /*
-     * Events
-     */
+    /* Events */
 
     event ProposalCreated(uint256 proposalId, address creator, string metadata);
     event VoteCasted(uint256 proposalId, address voter, bool supports);
@@ -56,15 +50,11 @@ contract HCVoting is ProposalBase, IForwarder, AragonApp {
     event ProposalBoosted(uint256 proposalId);
     event ProposalResolved(uint256 proposalId);
 
-    /*
-     * Constants
-     */
+    /* Constants */
 
     uint256 internal constant MILLION = 1000000;
 
-    /*
-     * Data strucures
-     */
+    /* Data strucures */
 
     enum ProposalState {
         Queued,
@@ -74,9 +64,7 @@ contract HCVoting is ProposalBase, IForwarder, AragonApp {
         Closed
     }
 
-    /*
-     * Properties
-     */
+    /* Properties */
 
     MiniMeToken public voteToken;
     MiniMeToken public stakeToken;
@@ -86,9 +74,7 @@ contract HCVoting is ProposalBase, IForwarder, AragonApp {
     uint64 public pendedPeriod;
     uint64 public boostPeriod;
 
-    /*
-     * Init
-     */
+    /* Init */
 
     function initialize(
         MiniMeToken _voteToken,
@@ -115,9 +101,7 @@ contract HCVoting is ProposalBase, IForwarder, AragonApp {
         initialized();
     }
 
-    /*
-     * Public
-     */
+    /* Public */
 
     function createProposal(bytes _executionScript, string _metadata) public auth(CREATE_PROPOSALS_ROLE) {
         uint64 creationBlock = getBlockNumber64() - 1;
@@ -229,9 +213,7 @@ contract HCVoting is ProposalBase, IForwarder, AragonApp {
         emit ProposalResolved(_proposalId);
     }
 
-    /*
-     * Calculated properties
-     */
+    /* Calculated properties */
 
     function getProposalState(uint256 _proposalId) public view returns (ProposalState) {
         Proposal storage proposal_ = _getProposal(_proposalId);
@@ -307,9 +289,7 @@ contract HCVoting is ProposalBase, IForwarder, AragonApp {
         return getTimestamp64() >= proposal_.pendedDate.add(pendedPeriod);
     }
 
-    /*
-     * Internal
-     */
+    /* Internal */
 
     function _stake(uint256 _proposalId, uint256 _amount, bool _upstake) internal {
         Proposal storage proposal_ = _getProposal(_proposalId);
@@ -401,9 +381,7 @@ contract HCVoting is ProposalBase, IForwarder, AragonApp {
         emit ProposalExecuted(_proposalId);
     }
 
-    /*
-     * Forwarding
-     */
+    /* Forwarding */
 
     function isForwarder() external pure returns (bool) {
         return true;
@@ -418,9 +396,7 @@ contract HCVoting is ProposalBase, IForwarder, AragonApp {
         return canPerform(_sender, CREATE_PROPOSALS_ROLE, arr());
     }
 
-    /*
-     * Setters
-     */
+    /* Setters */
 
     function changeRequiredSupport(uint256 _newRequiredSupport) public auth(CHANGE_SUPPORT_ROLE) {
         require(_newRequiredSupport > 0, ERROR_BAD_REQUIRED_SUPPORT);

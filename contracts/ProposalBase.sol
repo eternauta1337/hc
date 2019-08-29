@@ -2,15 +2,11 @@ pragma solidity ^0.4.24;
 
 contract ProposalBase {
 
-    /*
-     * Errors
-     */
+    /* Errors */
 
     string internal constant ERROR_PROPOSAL_DOES_NOT_EXIST = "HCVOTING_PROPOSAL_DOES_NOT_EXIST";
 
-    /*
-     * Data structures
-     */
+    /* Data structures */
 
     enum Vote { Absent, Yea, Nay }
 
@@ -32,16 +28,12 @@ contract ProposalBase {
         mapping (address => uint256) downstakes;
     }
 
-    /*
-     * Properties
-     */
+    /* Properties */
 
     mapping (uint256 => Proposal) proposals;
     uint256 public numProposals;
 
-    /*
-     * Getters
-     */
+    /* Getters */
 
     function getUserVote(uint256 _proposalId, address _user) public view returns (Vote) {
         Proposal storage proposal_ = _getProposal(_proposalId);
@@ -118,9 +110,7 @@ contract ProposalBase {
         return proposal_.executionScript;
     }
 
-    /*
-     * Internal
-     */
+    /* Internal */
 
     function _getProposal(uint256 _proposalId) internal view returns (Proposal storage) {
         require(_proposalId < numProposals, ERROR_PROPOSAL_DOES_NOT_EXIST);

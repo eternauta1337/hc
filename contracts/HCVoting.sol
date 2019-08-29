@@ -69,7 +69,7 @@ contract HCVoting is ProposalBase, IForwarder, AragonApp {
     MiniMeToken public voteToken;
     MiniMeToken public stakeToken;
 
-    uint256 public requiredSupport; // Expressed in parts per million, 51% = 510000
+    uint256 public requiredSupport; // Expressed as parts per million, 51% = 510000
     uint64 public queuePeriod;
     uint64 public pendedPeriod;
     uint64 public boostPeriod;
@@ -87,6 +87,7 @@ contract HCVoting is ProposalBase, IForwarder, AragonApp {
         public onlyInit
     {
         require(_requiredSupport > 0, ERROR_BAD_REQUIRED_SUPPORT);
+        require(_requiredSupport <= MILLION, ERROR_BAD_REQUIRED_SUPPORT);
         require(_queuePeriod > 0, ERROR_BAD_QUEUE_PERIOD);
         require(_pendedPeriod > 0, ERROR_BAD_PENDED_PERIOD);
         require(_boostPeriod > 0, ERROR_BAD_BOOST_PERIOD);

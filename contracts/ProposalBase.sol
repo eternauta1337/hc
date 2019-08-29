@@ -11,19 +11,19 @@ contract ProposalBase {
     enum Vote { Absent, Yea, Nay }
 
     struct Proposal {
+        bool boosted;
+        bool executed;
+        bool resolved;
         uint64 creationDate;
         uint64 closeDate;
         uint64 pendedDate;
         uint64 creationBlock;
-        bytes executionScript;
-        bool boosted;
-        bool executed;
-        bool resolved;
         uint256 totalYeas;
         uint256 totalNays;
-        mapping (address => Vote) votes;
         uint256 totalUpstake;
         uint256 totalDownstake;
+        bytes executionScript;
+        mapping (address => Vote) votes;
         mapping (address => uint256) upstakes;
         mapping (address => uint256) downstakes;
     }

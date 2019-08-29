@@ -56,6 +56,12 @@ contract('HCVoting (setup)', ([appManager]) => {
         }),
         'HCVOTING_BAD_REQUIRED_SUPPORT'
       )
+      await assertRevert(
+        initializeAppWithParams(app, { voteToken, stakeToken, ...defaultParams,
+          requiredSupport: 1000001
+        }),
+        'HCVOTING_BAD_REQUIRED_SUPPORT'
+      )
     })
 
     it('reverts when using an invalid queuePeriod', async () => {

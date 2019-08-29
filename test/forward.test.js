@@ -1,17 +1,7 @@
 /* global contract beforeEach it assert */
 
-const { assertRevert } = require('@aragon/test-helpers/assertThrow')
 const { EMPTY_SCRIPT } = require('@aragon/test-helpers/evmScript')
-const { getEventAt } = require('@aragon/test-helpers/events')
-const { defaultParams, deployAllAndInitializeApp } = require('./helpers/deployApp')
-
-const PROPOSAL_STATE = {
-  QUEUED: 0,
-  PENDED: 1,
-  BOOSTED: 2,
-  RESOLVED: 3,
-  CLOSED: 4
-}
+const { deployAllAndInitializeApp } = require('./helpers/deployApp')
 
 contract('HCVoting (forward)', ([appManager, voter]) => {
   let app, voteToken

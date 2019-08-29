@@ -317,6 +317,7 @@ contract HCVoting is ProposalBase, IForwarder, AragonApp {
         ProposalState state = getProposalState(_proposalId);
         require(state != ProposalState.Resolved, ERROR_PROPOSAL_IS_RESOLVED);
         require(state != ProposalState.Closed, ERROR_PROPOSAL_IS_CLOSED);
+        require(state != ProposalState.Boosted, ERROR_PROPOSAL_IS_BOOSTED);
 
         if (_upstake) {
             proposal_.totalUpstake = proposal_.totalUpstake.add(_amount);
@@ -340,6 +341,9 @@ contract HCVoting is ProposalBase, IForwarder, AragonApp {
 
     function _withdrawStake(uint256 _proposalId, uint256 _amount, bool _upstake) internal {
         Proposal storage proposal_ = _getProposal(_proposalId);
+
+        ProposalState state = getProposalState(_proposalId);
+        require(state != ProposalState.Boosted, ERROR_PROPOSAL_IS_BOOSTED);
 
         if (_upstake) {
             require(getUserUpstake(_proposalId, msg.sender) >= _amount, ERROR_INSUFFICIENT_STAKE);

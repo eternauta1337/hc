@@ -22,7 +22,7 @@ contract('HCVoting (vote)', ([appManager, voter1, voter2, voter3, voter4]) => {
 
   it('should revert when voting on a proposal that doesn\'t exist', async () => {
     await assertRevert(
-      app.vote(0, true, { from: voter1 }),
+      app.vote(0, true, { fom: voter1 }),
       'HCVOTING_PROPOSAL_DOES_NOT_EXIST'
     )
   })

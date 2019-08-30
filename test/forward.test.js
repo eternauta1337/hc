@@ -19,13 +19,11 @@ contract('HCVoting (forward)', ([appManager, voter]) => {
     assert.isTrue(await app.canForward(voter, EMPTY_SCRIPT))
   })
 
-  describe('when there is no vote token supply', () => {
-    it('reverts when forwarding to the app', async () => {
-      await assertRevert(
-        app.forward(EMPTY_SCRIPT),
-        'HCVOTING_NO_VOTING_POWER'
-      )
-    })
+  it('reverts when forwarding to the app when no vote tokens exist', async () => {
+    await assertRevert(
+      app.forward(EMPTY_SCRIPT),
+      'HCVOTING_NO_VOTING_POWER'
+    )
   })
 
   describe('when vote tokens exist', () => {
@@ -42,7 +40,7 @@ contract('HCVoting (forward)', ([appManager, voter]) => {
         assert.equal((await app.numProposals()).toNumber(), 1)
       })
 
-      it('created a proposal with the appropriate script', async () => {
+      it('creates a proposal with the appropriate script', async () => {
         assert.equal(await app.getProposalScript(0), EMPTY_SCRIPT)
       })
     })

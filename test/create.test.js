@@ -12,18 +12,22 @@ contract('HCVoting (create)', ([appManager, user1, user2]) => {
     ({ app, voteToken } = await deployAllAndInitializeApp(appManager))
   })
 
-  it('should revert when attempting to retrieve a proposal that does not exist', async () => {
-    await assertRevert(
-      app.getProposalCreationDate(0),
-      'HCVOTING_PROPOSAL_DOES_NOT_EXIST'
-    )
+  describe('when no proposals exist', () => {
+    it('should revert when attempting to retrieve a proposal that does not exist', async () => {
+      await assertRevert(
+        app.getProposalCreationDate(0),
+        'HCVOTING_PROPOSAL_DOES_NOT_EXIST'
+      )
+    })
   })
 
-  it('should revert when attempting to create a proposal when no vote tokens exist', async () => {
-    await assertRevert(
-      app.createProposal(EMPTY_SCRIPT, 'Proposal metadata'),
-      'HCVOTING_NO_VOTING_POWER'
-    )
+  describe('when no vote tokens exist', () => {
+    it('should revert when attempting to create a proposal when no vote tokens exist', async () => {
+      await assertRevert(
+        app.createProposal(EMPTY_SCRIPT, 'Proposal metadata'),
+        'HCVOTING_NO_VOTING_POWER'
+      )
+    })
   })
 
   describe('when vote tokens exist', () => {
@@ -31,7 +35,7 @@ contract('HCVoting (create)', ([appManager, user1, user2]) => {
       await voteToken.generateTokens(user1, 1)
     })
 
-    describe('when creating a proposal', () => {
+    describe('when a proposal is created', () => {
       let creationReceipt
 
       before('create a proposal', async () => {

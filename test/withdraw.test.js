@@ -2,8 +2,7 @@
 
 const { assertRevert } = require('@aragon/test-helpers/assertThrow')
 const { EMPTY_SCRIPT } = require('@aragon/test-helpers/evmScript')
-const { getEventAt } = require('@aragon/test-helpers/events')
-const { defaultParams, deployAllAndInitializeApp } = require('./helpers/deployApp')
+const { deployAllAndInitializeApp } = require('./helpers/deployApp')
 
 contract('HCVoting (withdraw)', ([appManager, voter, winner1, winner2, looser]) => {
   let app, voteToken, stakeToken

@@ -1,8 +1,6 @@
 /* global contract beforeEach it assert */
 
-const { assertRevert } = require('@aragon/test-helpers/assertThrow')
 const { EMPTY_SCRIPT } = require('@aragon/test-helpers/evmScript')
-const { getEventAt } = require('@aragon/test-helpers/events')
 const { defaultParams, deployAllAndInitializeApp } = require('./helpers/deployApp')
 
 const PROPOSAL_STATE = {

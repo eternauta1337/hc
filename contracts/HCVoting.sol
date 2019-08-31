@@ -142,15 +142,15 @@ contract HCVoting is ProposalBase, IForwarder, AragonApp {
         uint256 userVotingPower = voteToken.balanceOfAt(msg.sender, proposal_.creationBlock);
         require(userVotingPower > 0, ERROR_NO_VOTING_POWER);
 
-        bool needsQuietEndingEvaluation;
-        Vote relativeConsensusBeforeVote;
+        // See "Quiet endings" below.
+        Vote relativeConsensusBeforeVote = Vote.Absent;
         if (state == ProposalState.Boosted) {
             if (getTimestamp64() >= proposal_.closeDate.sub(endingPeriod)) {
                 relativeConsensusBeforeVote = getConsensus(_proposalId, true);
-                needsQuietEndingEvaluation = relativeConsensusBeforeVote != Vote.Absent;
             }
         }
 
+        // Reject redundant votes.
         Vote previousVote = proposal_.votes[msg.sender];
         require(
             previousVote == Vote.Absent || !(previousVote == Vote.Yea && _supports || previousVote == Vote.Nay && !_supports),
@@ -175,7 +175,8 @@ contract HCVoting is ProposalBase, IForwarder, AragonApp {
 
         proposal_.votes[msg.sender] = _supports ? Vote.Yea : Vote.Nay;
 
-        if (needsQuietEndingEvaluation) {
+        // Quite endings - Consensus flips in the ending period cause closeDate extensions.
+        if (relativeConsensusBeforeVote != Vote.Absent) {
             Vote relativeConsensusAfterVote = getConsensus(_proposalId, true);
             if (relativeConsensusAfterVote != relativeConsensusBeforeVote) {
                 proposal_.closeDate = proposal_.closeDate.add(endingPeriod);
@@ -210,7 +211,7 @@ contract HCVoting is ProposalBase, IForwarder, AragonApp {
             ERROR_TOKEN_TRANSFER_FAILED
         );
 
-        _updatePendedDate(_proposalId);
+        _evaluatePended(_proposalId);
     }
 
     function unstake(uint256 _proposalId, uint256 _amount, bool _upstake) public {
@@ -241,7 +242,7 @@ contract HCVoting is ProposalBase, IForwarder, AragonApp {
             ERROR_TOKEN_TRANSFER_FAILED
         );
 
-        _updatePendedDate(_proposalId);
+        _evaluatePended(_proposalId);
     }
 
     function boost(uint256 _proposalId) public {
@@ -269,6 +270,7 @@ contract HCVoting is ProposalBase, IForwarder, AragonApp {
         ProposalState state = getState(_proposalId);
         require(state != ProposalState.Resolved, ERROR_PROPOSAL_IS_RESOLVED);
 
+        // Resolve with absolute consensus, otherwise try relative consensus if boosted.
         Vote support = getConsensus(_proposalId, false);
         if (support == Vote.Absent && state == ProposalState.Boosted) {
             require(getTimestamp64() >= proposal_.closeDate, ERROR_ON_BOOST_PERIOD);
@@ -392,7 +394,7 @@ contract HCVoting is ProposalBase, IForwarder, AragonApp {
 
     /* Internal */
 
-    function _updatePendedDate(uint256 _proposalId) internal {
+    function _evaluatePended(uint256 _proposalId) internal {
         Proposal storage proposal_ = _getProposal(_proposalId);
 
         ProposalState state = getState(_proposalId);

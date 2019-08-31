@@ -38,6 +38,8 @@ contract HCVoting is ProposalBase, IForwarder, AragonApp {
     string internal constant ERROR_NOT_ENOUGH_CONFIDENCE = "HCVOTING_NOT_ENOUGH_CONFIDENCE";
     string internal constant ERROR_CAN_NOT_FORWARD       = "HCVOTING_CAN_NOT_FORWARD";
     string internal constant ERROR_ALREADY_EXECUTED      = "HCVOTING_ALREADY_EXECUTED";
+    string internal constant ERROR_NOT_RESOLVED          = "HCVOTING_NOT_RESOLVED";
+    string internal constant ERROR_NO_WINNING_STAKE      = "HCVOTING_NO_WINNING_STAKE";
 
     /* Events */
 
@@ -244,6 +246,29 @@ contract HCVoting is ProposalBase, IForwarder, AragonApp {
         emit ProposalResolved(_proposalId);
     }
 
+    function withdrawRewards(uint256 _proposalId) public {
+        Proposal storage proposal_ = proposals[_proposalId];
+
+        ProposalState state = getProposalState(_proposalId);
+        require(state == ProposalState.Resolved, ERROR_NOT_RESOLVED);
+
+        bool supported = proposal_.totalYeas > proposal_.totalNays;
+
+        uint256 winningStake = supported ? proposal_.upstakes[msg.sender] : proposal_.downstakes[msg.sender];
+        require(winningStake > 0, ERROR_NO_WINNING_STAKE);
+
+        uint256 totalWinningStake = supported ? proposal_.totalUpstake : proposal_.totalDownstake;
+        uint256 totalLosingStake = supported ? proposal_.totalDownstake : proposal_.totalUpstake;
+        uint256 sendersWinningRatio = winningStake.mul(MILLION).div(totalWinningStake);
+        uint256 reward = sendersWinningRatio.mul(totalLosingStake).div(MILLION);
+        uint256 total = winningStake.add(reward);
+
+        require(
+            stakeToken.transfer(msg.sender, total),
+            ERROR_TOKEN_TRANSFER_FAILED
+        );
+    }
+
     /* Calculated properties */
 
     function getProposalState(uint256 _proposalId) public view returns (ProposalState) {
@@ -356,6 +381,7 @@ contract HCVoting is ProposalBase, IForwarder, AragonApp {
         Proposal storage proposal_ = _getProposal(_proposalId);
 
         ProposalState state = getProposalState(_proposalId);
+        require(state != ProposalState.Resolved, ERROR_PROPOSAL_IS_RESOLVED);
         require(state != ProposalState.Boosted, ERROR_PROPOSAL_IS_BOOSTED);
 
         if (_upstake) {

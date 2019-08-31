@@ -264,6 +264,17 @@ contract('HCVoting (stake)', ([appManager, voter, staker1, staker2]) => {
           'HCVOTING_PROPOSAL_IS_RESOLVED'
         )
       })
+
+      it('reverts when staker1 attempts to withdraw stake', async () => {
+        await assertRevert(
+          app.withdrawUpstake(0, 1, { from: staker1 }),
+          'HCVOTING_PROPOSAL_IS_RESOLVED'
+        )
+        await assertRevert(
+          app.withdrawDownstake(0, 1, { from: staker1 }),
+          'HCVOTING_PROPOSAL_IS_RESOLVED'
+        )
+      })
     })
   })
 })

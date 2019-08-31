@@ -16,8 +16,8 @@ contract('HCVoting (stake)', ([appManager, voter, staker1, staker2]) => {
     })
 
     it('registers the total stakes in the proposal', async () => {
-      assert.equal((await app.getProposalUpstake(proposalId)).toNumber(), tracker.proposals[proposalId].upstake, 'invalid upstake')
-      assert.equal((await app.getProposalDownstake(proposalId)).toNumber(), tracker.proposals[proposalId].downstake, 'invalid downstake')
+      assert.equal((await app.getProposalUpstake(proposalId)).toNumber(), tracker.proposals[proposalId].totalUpstake, 'invalid upstake')
+      assert.equal((await app.getProposalDownstake(proposalId)).toNumber(), tracker.proposals[proposalId].totalDownstake, 'invalid downstake')
     })
 
     it('registers the user\'s stake in the proposal', async () => {
@@ -36,11 +36,11 @@ contract('HCVoting (stake)', ([appManager, voter, staker1, staker2]) => {
 
   it('reverts when attempting to stake on a proposal that does not exist', async () => {
     await assertRevert(
-      app.upstake(0, 100, { from: staker1 }),
+      app.stake(0, 100, true, { from: staker1 }),
       `HCVOTING_PROPOSAL_DOES_NOT_EXIST`
     )
     await assertRevert(
-      app.downstake(0, 100, { from: staker1 }),
+      app.stake(0, 100, false, { from: staker1 }),
       `HCVOTING_PROPOSAL_DOES_NOT_EXIST`
     )
   })
@@ -52,11 +52,11 @@ contract('HCVoting (stake)', ([appManager, voter, staker1, staker2]) => {
 
       it('reverts when a user with no tokens attempts to stake', async () => {
         await assertRevert(
-          app.upstake(0, 100, { from: staker1 }),
+          app.stake(0, 100, true, { from: staker1 }),
           `HCVOTING_TOKEN_TRANSFER_FAILED`
         )
         await assertRevert(
-          app.downstake(0, 100, { from: staker1 }),
+          app.stake(0, 100, false, { from: staker1 }),
           `HCVOTING_TOKEN_TRANSFER_FAILED`
         )
       })
@@ -68,11 +68,11 @@ contract('HCVoting (stake)', ([appManager, voter, staker1, staker2]) => {
 
         it('reverts when a user with tokens but no allowance attempts to stake', async () => {
           await assertRevert(
-            app.upstake(0, 100, { from: staker1 }),
+            app.stake(0, 100, true, { from: staker1 }),
             `HCVOTING_TOKEN_TRANSFER_FAILED`
           )
           await assertRevert(
-            app.downstake(0, 100, { from: staker1 }),
+            app.stake(0, 100, false, { from: staker1 }),
             `HCVOTING_TOKEN_TRANSFER_FAILED`
           )
         })
@@ -84,11 +84,11 @@ contract('HCVoting (stake)', ([appManager, voter, staker1, staker2]) => {
 
           it('reverts when staker1 attempts to stake more tokens than it owns', async () => {
             await assertRevert(
-              app.upstake(0, 100000000, { from: staker1 }),
+              app.stake(0, 100000000, true, { from: staker1 }),
               'HCVOTING_TOKEN_TRANSFER_FAILED'
             )
             await assertRevert(
-              app.downstake(0, 100000000, { from: staker1 }),
+              app.stake(0, 100000000, false, { from: staker1 }),
               'HCVOTING_TOKEN_TRANSFER_FAILED'
             )
           })
@@ -97,7 +97,7 @@ contract('HCVoting (stake)', ([appManager, voter, staker1, staker2]) => {
             let upstakeReceipt
 
             before('upstake', async () => {
-              upstakeReceipt = await tracker.upstake(0, staker1, 1000)
+              upstakeReceipt = await tracker.stake(0, staker1, true, 1000)
             })
 
             it('emits a ProposalUpstaked event', async () => {
@@ -114,7 +114,7 @@ contract('HCVoting (stake)', ([appManager, voter, staker1, staker2]) => {
             let downstakeReceipt
 
             before('downstake', async () => {
-              downstakeReceipt = await tracker.downstake(0, staker1, 100)
+              downstakeReceipt = await tracker.stake(0, staker1, false, 100)
             })
 
             it('emits a ProposalDownstaked event', async () => {
@@ -126,11 +126,11 @@ contract('HCVoting (stake)', ([appManager, voter, staker1, staker2]) => {
 
             it('reverts when staker1 attempts to withdraw an invalid amount of stake', async () => {
               await assertRevert(
-                app.withdrawUpstake(0, tracker.proposals[0].upstakes[staker1] + 1, { from: staker1 }),
+                app.unstake(0, tracker.proposals[0].upstakes[staker1] + 1, true, { from: staker1 }),
                 'HCVOTING_INSUFFICIENT_STAKE'
               )
               await assertRevert(
-                app.withdrawDownstake(0, tracker.proposals[0].downstakes[staker1] + 1, { from: staker1 }),
+                app.unstake(0, tracker.proposals[0].downstakes[staker1] + 1, false, { from: staker1 }),
                 'HCVOTING_INSUFFICIENT_STAKE'
               )
             })
@@ -142,7 +142,7 @@ contract('HCVoting (stake)', ([appManager, voter, staker1, staker2]) => {
             let withdrawUpstakeReceipt
 
             before('withdraw upstake', async () => {
-              withdrawUpstakeReceipt = await tracker.withdrawUpstake(0, staker1, 100)
+              withdrawUpstakeReceipt = await tracker.unstake(0, staker1, true, 100)
             })
 
             it('emits an UpstakeWithdrawn event', async () => {
@@ -159,7 +159,7 @@ contract('HCVoting (stake)', ([appManager, voter, staker1, staker2]) => {
             let withdrawDownstakeReceipt
 
             before('withdraw downstake', async () => {
-              withdrawDownstakeReceipt = await tracker.withdrawDownstake(0, staker1, 100)
+              withdrawDownstakeReceipt = await tracker.unstake(0, staker1, false, 100)
             })
 
             it('emits a DownstakeWithdrawn event', async () => {
@@ -181,18 +181,18 @@ contract('HCVoting (stake)', ([appManager, voter, staker1, staker2]) => {
 
         it('reverts when a user that hasn\'t staked attempts to withdraw stake', async () => {
           await assertRevert(
-            app.withdrawUpstake(0, 100, { from: staker2 }),
+            app.unstake(0, 100, true, { from: staker2 }),
             `HCVOTING_INSUFFICIENT_STAKE`
           )
           await assertRevert(
-            app.withdrawDownstake(0, 100, { from: staker2 }),
+            app.unstake(0, 100, false, { from: staker2 }),
             `HCVOTING_INSUFFICIENT_STAKE`
           )
         })
 
         describe('when staker2 upstakes on the proposal', () => {
           before('upstake', async () => {
-            await tracker.upstake(0, staker2, 1000)
+            await tracker.stake(0, staker2, true, 1000)
           })
 
           itRegistersTheCorrectBalances(0, staker2)
@@ -200,7 +200,7 @@ contract('HCVoting (stake)', ([appManager, voter, staker1, staker2]) => {
 
         describe('when staker2 downstakes on the proposal', () => {
           before('downstake', async () => {
-            await tracker.downstake(0, staker2, 100)
+            await tracker.stake(0, staker2, false, 100)
           })
 
           itRegistersTheCorrectBalances(0, staker2)
@@ -208,7 +208,7 @@ contract('HCVoting (stake)', ([appManager, voter, staker1, staker2]) => {
 
         describe('when staker2 withdraws upstake from the proposal', () => {
           before('withdraw upstake', async () => {
-            await tracker.withdrawUpstake(0, staker2, 100)
+            await tracker.unstake(0, staker2, true, 100)
           })
 
           itRegistersTheCorrectBalances(0, staker2)
@@ -216,7 +216,7 @@ contract('HCVoting (stake)', ([appManager, voter, staker1, staker2]) => {
 
         describe('when staker2 withdraws downstake from the proposal', () => {
           before('withdraw downstake', async () => {
-            await tracker.withdrawDownstake(0, staker2, 100)
+            await tracker.unstake(0, staker2, false, 100)
           })
 
           itRegistersTheCorrectBalances(0, staker2)
@@ -238,11 +238,11 @@ contract('HCVoting (stake)', ([appManager, voter, staker1, staker2]) => {
 
       it('reverts when staker1 attempts to stake', async () => {
         await assertRevert(
-          app.upstake(0, 1, { from: staker1 }),
+          app.stake(0, 1, true, { from: staker1 }),
           'HCVOTING_PROPOSAL_IS_CLOSED'
         )
         await assertRevert(
-          app.downstake(0, 1, { from: staker1 }),
+          app.stake(0, 1, false, { from: staker1 }),
           'HCVOTING_PROPOSAL_IS_CLOSED'
         )
       })
@@ -256,22 +256,22 @@ contract('HCVoting (stake)', ([appManager, voter, staker1, staker2]) => {
 
       it('reverts when staker1 attempts to stake', async () => {
         await assertRevert(
-          app.upstake(0, 1, { from: staker1 }),
+          app.stake(0, 1, true, { from: staker1 }),
           'HCVOTING_PROPOSAL_IS_RESOLVED'
         )
         await assertRevert(
-          app.downstake(0, 1, { from: staker1 }),
+          app.stake(0, 1, false, { from: staker1 }),
           'HCVOTING_PROPOSAL_IS_RESOLVED'
         )
       })
 
       it('reverts when staker1 attempts to withdraw stake', async () => {
         await assertRevert(
-          app.withdrawUpstake(0, 1, { from: staker1 }),
+          app.unstake(0, 1, true, { from: staker1 }),
           'HCVOTING_PROPOSAL_IS_RESOLVED'
         )
         await assertRevert(
-          app.withdrawDownstake(0, 1, { from: staker1 }),
+          app.unstake(0, 1, false, { from: staker1 }),
           'HCVOTING_PROPOSAL_IS_RESOLVED'
         )
       })

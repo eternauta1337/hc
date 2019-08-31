@@ -25,11 +25,11 @@ contract('HCVoting (rewards)', ([appManager, voter, winner1, winner2, looser]) =
   async function itHandlesRewardsProperly(proposalId, bet) {
     it('reverts when stakers try to withdraw stake', async () => {
       await assertRevert(
-        app.withdrawUpstake(proposalId, 1, { from: winner1 }),
+        app.unstake(proposalId, 1, true, { from: winner1 }),
         'HCVOTING_PROPOSAL_IS_RESOLVED'
       )
       await assertRevert(
-        app.withdrawDownstake(proposalId, 1, { from: winner1 }),
+        app.unstake(proposalId, 1, true, { from: winner1 }),
         'HCVOTING_PROPOSAL_IS_RESOLVED'
       )
     })
@@ -62,11 +62,10 @@ contract('HCVoting (rewards)', ([appManager, voter, winner1, winner2, looser]) =
     })
 
     describe('when the proposal is staked on', () => {
-
       before('stake on proposal', async () => {
-        await app.upstake(0, BET, { from: winner1 })
-        await app.upstake(0, BET, { from: winner2 })
-        await app.downstake(0, BET, { from: winner1 })
+        await app.stake(0, BET, true, { from: winner1 })
+        await app.stake(0, BET, true, { from: winner2 })
+        await app.stake(0, BET, false, { from: winner1 })
       })
 
       describe('when the proposal is resolved', () => {
@@ -84,9 +83,9 @@ contract('HCVoting (rewards)', ([appManager, voter, winner1, winner2, looser]) =
 
           describe('when the proposal is staked on', () => {
             before('stake on proposal', async () => {
-              await app.upstake(1, BET, { from: looser })
-              await app.downstake(1, BET, { from: winner1 })
-              await app.downstake(1, BET, { from: winner2 })
+              await app.stake(1, BET, true, { from: looser })
+              await app.stake(1, BET, false, { from: winner1 })
+              await app.stake(1, BET, false, { from: winner2 })
             })
 
             describe('when the proposal is resolved', () => {

@@ -60,8 +60,8 @@ contract('HCVoting (boost)', ([appManager, voter1, voter2, voter3, staker]) => {
         await stakeToken.generateTokens(staker, 100000)
         await stakeToken.approve(app.address, 10000000, { from: staker })
 
-        await app.upstake(0, 3000, { from: staker })
-        await app.downstake(0, 1000, { from: staker })
+        await app.stake(0, 3000, true, { from: staker })
+        await app.stake(0, 1000, false, { from: staker })
       })
 
       it('correctly calculates the proposal\'s current confidence', async () => {
@@ -74,7 +74,7 @@ contract('HCVoting (boost)', ([appManager, voter1, voter2, voter3, staker]) => {
 
       describe('when a proposal reaches enough confidence', () => {
         before('stake on proposal so that confidence is reached', async () => {
-          await app.upstake(0, 1000, { from: staker })
+          await app.stake(0, 1000, true, { from: staker })
         })
 
         it('has confidence', async () => {
@@ -91,7 +91,7 @@ contract('HCVoting (boost)', ([appManager, voter1, voter2, voter3, staker]) => {
 
         describe('when a proposal looses confidence', () => {
           before('withdraw stake', async () => {
-            await app.withdrawUpstake(0, 1000, { from: staker })
+            await app.unstake(0, 1000, true, { from: staker })
           })
 
           it('sets the proposal\'s state back to Queued', async () => {
@@ -103,7 +103,7 @@ contract('HCVoting (boost)', ([appManager, voter1, voter2, voter3, staker]) => {
           })
 
           after('restore stake', async () => {
-            await app.upstake(0, 1000, { from: staker })
+            await app.stake(0, 1000, true, { from: staker })
           })
         })
 
@@ -172,22 +172,22 @@ contract('HCVoting (boost)', ([appManager, voter1, voter2, voter3, staker]) => {
 
                 it('rejects stake', async () => {
                   await assertRevert(
-                    app.upstake(0, 1, { from: staker }),
+                    app.stake(0, 1, true, { from: staker }),
                     'HCVOTING_PROPOSAL_IS_BOOSTED'
                   )
                   await assertRevert(
-                    app.downstake(0, 1, { from: staker }),
+                    app.stake(0, 1, false, { from: staker }),
                     'HCVOTING_PROPOSAL_IS_BOOSTED'
                   )
                 })
 
                 it('rejects stake withdrawals', async () => {
                   await assertRevert(
-                    app.withdrawUpstake(0, 1, { from: staker }),
+                    app.unstake(0, 1, true, { from: staker }),
                     'HCVOTING_PROPOSAL_IS_BOOSTED'
                   )
                   await assertRevert(
-                    app.withdrawDownstake(0, 1, { from: staker }),
+                    app.unstake(0, 1, false, { from: staker }),
                     'HCVOTING_PROPOSAL_IS_BOOSTED'
                   )
                 })

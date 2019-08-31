@@ -185,20 +185,63 @@ contract HCVoting is ProposalBase, IForwarder, AragonApp {
         emit VoteCasted(_proposalId, msg.sender, _supports);
     }
 
-    function upstake(uint256 _proposalId, uint256 _amount) public {
-        _stake(_proposalId, _amount, true);
+    function stake(uint256 _proposalId, uint256 _amount, bool _upstake) public {
+        Proposal storage proposal_ = _getProposal(_proposalId);
+
+        ProposalState state = getProposalState(_proposalId);
+        require(state != ProposalState.Resolved, ERROR_PROPOSAL_IS_RESOLVED);
+        require(state != ProposalState.Closed, ERROR_PROPOSAL_IS_CLOSED);
+        require(state != ProposalState.Boosted, ERROR_PROPOSAL_IS_BOOSTED);
+
+        if (_upstake) {
+            proposal_.totalUpstake = proposal_.totalUpstake.add(_amount);
+            proposal_.upstakes[msg.sender] = proposal_.upstakes[msg.sender].add(_amount);
+
+            emit ProposalUpstaked(_proposalId, msg.sender, _amount);
+        } else {
+            proposal_.totalDownstake = proposal_.totalDownstake.add(_amount);
+            proposal_.downstakes[msg.sender] = proposal_.downstakes[msg.sender].add(_amount);
+
+            emit ProposalDownstaked(_proposalId, msg.sender, _amount);
+        }
+
+        require(
+            stakeToken.transferFrom(msg.sender, address(this), _amount),
+            ERROR_TOKEN_TRANSFER_FAILED
+        );
+
+        _updatePendedDate(_proposalId);
     }
 
-    function downstake(uint256 _proposalId, uint256 _amount) public {
-        _stake(_proposalId, _amount, false);
-    }
+    function unstake(uint256 _proposalId, uint256 _amount, bool _upstake) public {
+        Proposal storage proposal_ = _getProposal(_proposalId);
 
-    function withdrawUpstake(uint256 _proposalId, uint256 _amount) public {
-        _withdrawStake(_proposalId, _amount, true);
-    }
+        ProposalState state = getProposalState(_proposalId);
+        require(state != ProposalState.Resolved, ERROR_PROPOSAL_IS_RESOLVED);
+        require(state != ProposalState.Boosted, ERROR_PROPOSAL_IS_BOOSTED);
 
-    function withdrawDownstake(uint256 _proposalId, uint256 _amount) public {
-        _withdrawStake(_proposalId, _amount, false);
+        if (_upstake) {
+            require(getUserUpstake(_proposalId, msg.sender) >= _amount, ERROR_INSUFFICIENT_STAKE);
+
+            proposal_.totalUpstake = proposal_.totalUpstake.sub(_amount);
+            proposal_.upstakes[msg.sender] = proposal_.upstakes[msg.sender].sub(_amount);
+
+            emit UpstakeWithdrawn(_proposalId, msg.sender, _amount);
+        } else {
+            require(getUserDownstake(_proposalId, msg.sender) >= _amount, ERROR_INSUFFICIENT_STAKE);
+
+            proposal_.totalDownstake = proposal_.totalDownstake.sub(_amount);
+            proposal_.downstakes[msg.sender] = proposal_.downstakes[msg.sender].sub(_amount);
+
+            emit DownstakeWithdrawn(_proposalId, msg.sender, _amount);
+        }
+
+        require(
+            stakeToken.transfer(msg.sender, _amount),
+            ERROR_TOKEN_TRANSFER_FAILED
+        );
+
+        _updatePendedDate(_proposalId);
     }
 
     function boostProposal(uint256 _proposalId) public {
@@ -348,65 +391,6 @@ contract HCVoting is ProposalBase, IForwarder, AragonApp {
     }
 
     /* Internal */
-
-    function _stake(uint256 _proposalId, uint256 _amount, bool _upstake) internal {
-        Proposal storage proposal_ = _getProposal(_proposalId);
-
-        ProposalState state = getProposalState(_proposalId);
-        require(state != ProposalState.Resolved, ERROR_PROPOSAL_IS_RESOLVED);
-        require(state != ProposalState.Closed, ERROR_PROPOSAL_IS_CLOSED);
-        require(state != ProposalState.Boosted, ERROR_PROPOSAL_IS_BOOSTED);
-
-        if (_upstake) {
-            proposal_.totalUpstake = proposal_.totalUpstake.add(_amount);
-            proposal_.upstakes[msg.sender] = proposal_.upstakes[msg.sender].add(_amount);
-
-            emit ProposalUpstaked(_proposalId, msg.sender, _amount);
-        } else {
-            proposal_.totalDownstake = proposal_.totalDownstake.add(_amount);
-            proposal_.downstakes[msg.sender] = proposal_.downstakes[msg.sender].add(_amount);
-
-            emit ProposalDownstaked(_proposalId, msg.sender, _amount);
-        }
-
-        require(
-            stakeToken.transferFrom(msg.sender, address(this), _amount),
-            ERROR_TOKEN_TRANSFER_FAILED
-        );
-
-        _updatePendedDate(_proposalId);
-    }
-
-    function _withdrawStake(uint256 _proposalId, uint256 _amount, bool _upstake) internal {
-        Proposal storage proposal_ = _getProposal(_proposalId);
-
-        ProposalState state = getProposalState(_proposalId);
-        require(state != ProposalState.Resolved, ERROR_PROPOSAL_IS_RESOLVED);
-        require(state != ProposalState.Boosted, ERROR_PROPOSAL_IS_BOOSTED);
-
-        if (_upstake) {
-            require(getUserUpstake(_proposalId, msg.sender) >= _amount, ERROR_INSUFFICIENT_STAKE);
-
-            proposal_.totalUpstake = proposal_.totalUpstake.sub(_amount);
-            proposal_.upstakes[msg.sender] = proposal_.upstakes[msg.sender].sub(_amount);
-
-            emit UpstakeWithdrawn(_proposalId, msg.sender, _amount);
-        } else {
-            require(getUserDownstake(_proposalId, msg.sender) >= _amount, ERROR_INSUFFICIENT_STAKE);
-
-            proposal_.totalDownstake = proposal_.totalDownstake.sub(_amount);
-            proposal_.downstakes[msg.sender] = proposal_.downstakes[msg.sender].sub(_amount);
-
-            emit DownstakeWithdrawn(_proposalId, msg.sender, _amount);
-        }
-
-        require(
-            stakeToken.transfer(msg.sender, _amount),
-            ERROR_TOKEN_TRANSFER_FAILED
-        );
-
-        _updatePendedDate(_proposalId);
-    }
 
     function _updatePendedDate(uint256 _proposalId) internal {
         Proposal storage proposal_ = _getProposal(_proposalId);

@@ -141,7 +141,7 @@ contract('HCVoting (resolve)', ([appManager, creator, voter1, voter2, voter3, vo
 
   describe('when resolving proposals with relative consensus', () => {
     async function quickBoostProposal() {
-      await app.upstake(proposalId, 4000, { from: staker })
+      await app.stake(proposalId, 4000, true, { from: staker })
 
       const pendedDate = (await app.getProposalPendedDate(proposalId)).toNumber()
       await app.mockSetTimestamp(pendedDate + defaultParams.pendedPeriod)

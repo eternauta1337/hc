@@ -29,12 +29,12 @@ contract('HCVoting (multiboost)', ([appManager, voter, staker]) => {
 
   function itPendsTheProposalWithAMinimumStakeOf(minimumStake) {
     it('does not pend the proposal with less than the minimumStake', async () => {
-      await app.upstake(proposalId, minimumStake - 1, { from: staker })
+      await app.stake(proposalId, minimumStake - 1, true, { from: staker })
       assert.equal((await app.getProposalState(proposalId)).toNumber(), PROPOSAL_STATE.QUEUED)
     })
 
     it('pends the proposal when the minimumStake is reached', async () => {
-      await app.upstake(proposalId, 1, { from: staker })
+      await app.stake(proposalId, 1, true, { from: staker })
       assert.equal((await app.getProposalState(proposalId)).toNumber(), PROPOSAL_STATE.PENDED)
     })
   }

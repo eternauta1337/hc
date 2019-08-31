@@ -12,8 +12,8 @@ module.exports = {
       await app.createProposal(EMPTY_SCRIPT, `Proposal metadata proposalId`)
 
       proposals[proposalId] = {
-        upstake: 0,
-        downstake: 0,
+        totalUpstake: 0,
+        totalDownstake: 0,
         upstakes: {},
         downstakes: {}
       }
@@ -32,46 +32,34 @@ module.exports = {
       balanceOf[staker] = balanceOf[staker] ? balanceOf[staker] + amount : amount
     }
 
-    async function upstake(proposalId, staker, amount) {
+    async function stake(proposalId, staker, upstake, amount) {
       initializeUserOnProposal(proposalId, staker)
 
-      const receipt = await app.upstake(proposalId, amount, { from: staker })
+      const receipt = await app.stake(proposalId, amount, upstake, { from: staker })
       balanceOf[staker] -= amount
       balanceOf[app.address] += amount
-      proposals[proposalId].upstake += amount
-      proposals[proposalId].upstakes[staker] += amount
+      if (upstake) {
+        proposals[proposalId].totalUpstake += amount
+        proposals[proposalId].upstakes[staker] += amount
+      } else {
+        proposals[proposalId].totalDownstake += amount
+        proposals[proposalId].downstakes[staker] += amount
+      }
 
       return receipt
     }
 
-    async function downstake(proposalId, staker, amount) {
-      initializeUserOnProposal(proposalId, staker)
-
-      const receipt = await app.downstake(proposalId, amount, { from: staker })
-      balanceOf[staker] -= amount
-      balanceOf[app.address] += amount
-      proposals[proposalId].downstake += amount
-      proposals[proposalId].downstakes[staker] += amount
-
-      return receipt
-    }
-
-    async function withdrawUpstake(proposalId, staker, amount) {
-      const receipt = await app.withdrawUpstake(proposalId, amount, { from: staker })
+    async function unstake(proposalId, staker, upstake, amount) {
+      const receipt = await app.unstake(proposalId, amount, upstake, { from: staker })
       balanceOf[staker] += amount
       balanceOf[app.address] -= amount
-      proposals[proposalId].upstake -= amount
-      proposals[proposalId].upstakes[staker] -= amount
-
-      return receipt
-    }
-
-    async function withdrawDownstake(proposalId, staker, amount) {
-      const receipt = await app.withdrawDownstake(proposalId, amount, { from: staker })
-      balanceOf[staker] += amount
-      balanceOf[app.address] -= amount
-      proposals[proposalId].downstake -= amount
-      proposals[proposalId].downstakes[staker] -= amount
+      if (upstake) {
+        proposals[proposalId].totalUpstake -= amount
+        proposals[proposalId].upstakes[staker] -= amount
+      } else {
+        proposals[proposalId].totalDownstake -= amount
+        proposals[proposalId].downstakes[staker] -= amount
+      }
 
       return receipt
     }
@@ -81,10 +69,8 @@ module.exports = {
       proposals,
       createProposal,
       mintStakeTokens,
-      upstake,
-      downstake,
-      withdrawUpstake,
-      withdrawDownstake
+      stake,
+      unstake
     }
   }
 }

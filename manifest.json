@@ -1,6 +1,6 @@
 {
   "name": "HCVoting",
-  "author": "Some random hacker",
+  "author": "Aragon Association",
   "description": "Create and participate in proposals by voting. Uses Holographic Consensus, which reduces the tension between scalability and resilience of voting in an organization.",
   "details_url": "/meta/details.md",
   "source_url": "https://<placeholder-repository-url>",

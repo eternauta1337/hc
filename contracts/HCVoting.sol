@@ -114,7 +114,7 @@ contract HCVoting is ProposalBase, IForwarder, AragonApp {
 
     /* Public */
 
-    function createProposal(bytes _executionScript, string _metadata) public auth(CREATE_PROPOSALS_ROLE) {
+    function create(bytes _executionScript, string _metadata) public auth(CREATE_PROPOSALS_ROLE) {
         uint64 creationBlock = getBlockNumber64() - 1;
         require(voteToken.totalSupplyAt(creationBlock) > 0, ERROR_NO_VOTING_POWER);
 
@@ -135,7 +135,7 @@ contract HCVoting is ProposalBase, IForwarder, AragonApp {
     function vote(uint256 _proposalId, bool _supports) public {
         Proposal storage proposal_ = _getProposal(_proposalId);
 
-        ProposalState state = getProposalState(_proposalId);
+        ProposalState state = getState(_proposalId);
         require(state != ProposalState.Resolved, ERROR_PROPOSAL_IS_RESOLVED);
         require(state != ProposalState.Closed, ERROR_PROPOSAL_IS_CLOSED);
 
@@ -146,7 +146,7 @@ contract HCVoting is ProposalBase, IForwarder, AragonApp {
         Vote relativeConsensusBeforeVote;
         if (state == ProposalState.Boosted) {
             if (getTimestamp64() >= proposal_.closeDate.sub(endingPeriod)) {
-                relativeConsensusBeforeVote = getProposalConsensus(_proposalId, true);
+                relativeConsensusBeforeVote = getConsensus(_proposalId, true);
                 needsQuietEndingEvaluation = relativeConsensusBeforeVote != Vote.Absent;
             }
         }
@@ -176,7 +176,7 @@ contract HCVoting is ProposalBase, IForwarder, AragonApp {
         proposal_.votes[msg.sender] = _supports ? Vote.Yea : Vote.Nay;
 
         if (needsQuietEndingEvaluation) {
-            Vote relativeConsensusAfterVote = getProposalConsensus(_proposalId, true);
+            Vote relativeConsensusAfterVote = getConsensus(_proposalId, true);
             if (relativeConsensusAfterVote != relativeConsensusBeforeVote) {
                 proposal_.closeDate = proposal_.closeDate.add(endingPeriod);
             }
@@ -188,7 +188,7 @@ contract HCVoting is ProposalBase, IForwarder, AragonApp {
     function stake(uint256 _proposalId, uint256 _amount, bool _upstake) public {
         Proposal storage proposal_ = _getProposal(_proposalId);
 
-        ProposalState state = getProposalState(_proposalId);
+        ProposalState state = getState(_proposalId);
         require(state != ProposalState.Resolved, ERROR_PROPOSAL_IS_RESOLVED);
         require(state != ProposalState.Closed, ERROR_PROPOSAL_IS_CLOSED);
         require(state != ProposalState.Boosted, ERROR_PROPOSAL_IS_BOOSTED);
@@ -216,19 +216,19 @@ contract HCVoting is ProposalBase, IForwarder, AragonApp {
     function unstake(uint256 _proposalId, uint256 _amount, bool _upstake) public {
         Proposal storage proposal_ = _getProposal(_proposalId);
 
-        ProposalState state = getProposalState(_proposalId);
+        ProposalState state = getState(_proposalId);
         require(state != ProposalState.Resolved, ERROR_PROPOSAL_IS_RESOLVED);
         require(state != ProposalState.Boosted, ERROR_PROPOSAL_IS_BOOSTED);
 
         if (_upstake) {
-            require(getUserUpstake(_proposalId, msg.sender) >= _amount, ERROR_INSUFFICIENT_STAKE);
+            require(getUpstake(_proposalId, msg.sender) >= _amount, ERROR_INSUFFICIENT_STAKE);
 
             proposal_.totalUpstake = proposal_.totalUpstake.sub(_amount);
             proposal_.upstakes[msg.sender] = proposal_.upstakes[msg.sender].sub(_amount);
 
             emit UpstakeWithdrawn(_proposalId, msg.sender, _amount);
         } else {
-            require(getUserDownstake(_proposalId, msg.sender) >= _amount, ERROR_INSUFFICIENT_STAKE);
+            require(getDownstake(_proposalId, msg.sender) >= _amount, ERROR_INSUFFICIENT_STAKE);
 
             proposal_.totalDownstake = proposal_.totalDownstake.sub(_amount);
             proposal_.downstakes[msg.sender] = proposal_.downstakes[msg.sender].sub(_amount);
@@ -244,16 +244,16 @@ contract HCVoting is ProposalBase, IForwarder, AragonApp {
         _updatePendedDate(_proposalId);
     }
 
-    function boostProposal(uint256 _proposalId) public {
+    function boost(uint256 _proposalId) public {
         Proposal storage proposal_ = _getProposal(_proposalId);
 
-        ProposalState state = getProposalState(_proposalId);
+        ProposalState state = getState(_proposalId);
         require(state != ProposalState.Resolved, ERROR_PROPOSAL_IS_RESOLVED);
         require(state != ProposalState.Closed, ERROR_PROPOSAL_IS_CLOSED);
         require(state != ProposalState.Boosted, ERROR_PROPOSAL_IS_BOOSTED);
 
-        require(proposalHasConfidence(_proposalId), ERROR_NOT_ENOUGH_CONFIDENCE);
-        require(proposalHasMaintainedConfidence(_proposalId), ERROR_HASNT_MAINTAINED_CONF);
+        require(hasConfidence(_proposalId), ERROR_NOT_ENOUGH_CONFIDENCE);
+        require(hasMaintainedConfidence(_proposalId), ERROR_HASNT_MAINTAINED_CONF);
 
         proposal_.boosted = true;
         proposal_.closeDate = proposal_.pendedDate.add(boostPeriod);
@@ -263,16 +263,16 @@ contract HCVoting is ProposalBase, IForwarder, AragonApp {
         emit ProposalBoosted(_proposalId);
     }
 
-    function resolveProposal(uint256 _proposalId) public {
+    function resolve(uint256 _proposalId) public {
         Proposal storage proposal_ = _getProposal(_proposalId);
 
-        ProposalState state = getProposalState(_proposalId);
+        ProposalState state = getState(_proposalId);
         require(state != ProposalState.Resolved, ERROR_PROPOSAL_IS_RESOLVED);
 
-        Vote support = getProposalConsensus(_proposalId, false);
+        Vote support = getConsensus(_proposalId, false);
         if (support == Vote.Absent && state == ProposalState.Boosted) {
             require(getTimestamp64() >= proposal_.closeDate, ERROR_ON_BOOST_PERIOD);
-            support = getProposalConsensus(_proposalId, true);
+            support = getConsensus(_proposalId, true);
         }
         require(support != Vote.Absent, ERROR_NO_CONSENSUS);
 
@@ -289,10 +289,10 @@ contract HCVoting is ProposalBase, IForwarder, AragonApp {
         emit ProposalResolved(_proposalId);
     }
 
-    function withdrawRewards(uint256 _proposalId) public {
+    function withdraw(uint256 _proposalId) public {
         Proposal storage proposal_ = proposals[_proposalId];
 
-        ProposalState state = getProposalState(_proposalId);
+        ProposalState state = getState(_proposalId);
         require(state == ProposalState.Resolved, ERROR_NOT_RESOLVED);
 
         bool supported = proposal_.totalYeas > proposal_.totalNays;
@@ -314,7 +314,7 @@ contract HCVoting is ProposalBase, IForwarder, AragonApp {
 
     /* Calculated properties */
 
-    function getProposalState(uint256 _proposalId) public view returns (ProposalState) {
+    function getState(uint256 _proposalId) public view returns (ProposalState) {
         Proposal storage proposal_ = _getProposal(_proposalId);
 
         if (proposal_.resolved) {
@@ -336,9 +336,9 @@ contract HCVoting is ProposalBase, IForwarder, AragonApp {
         return ProposalState.Queued;
     }
 
-    function getProposalConsensus(uint256 _proposalId, bool _relative) public view returns (Vote) {
-        uint256 yeaPPM = getProposalSupport(_proposalId, true, _relative);
-        uint256 nayPPM = getProposalSupport(_proposalId, false, _relative);
+    function getConsensus(uint256 _proposalId, bool _relative) public view returns (Vote) {
+        uint256 yeaPPM = getSupport(_proposalId, true, _relative);
+        uint256 nayPPM = getSupport(_proposalId, false, _relative);
 
         if (yeaPPM > requiredSupport) {
             return Vote.Yea;
@@ -351,7 +351,7 @@ contract HCVoting is ProposalBase, IForwarder, AragonApp {
         return Vote.Absent;
     }
 
-    function getProposalSupport(uint _proposalId, bool _supports, bool _relative) public view returns (uint256) {
+    function getSupport(uint _proposalId, bool _supports, bool _relative) public view returns (uint256) {
         Proposal storage proposal_ = _getProposal(_proposalId);
 
         uint256 votingPower = _relative ? proposal_.totalYeas.add(proposal_.totalNays) : voteToken.totalSupplyAt(proposal_.creationBlock);
@@ -360,7 +360,7 @@ contract HCVoting is ProposalBase, IForwarder, AragonApp {
         return votes.mul(MILLION).div(votingPower);
     }
 
-    function getProposalConfidence(uint256 _proposalId) public view returns (uint256) {
+    function getConfidence(uint256 _proposalId) public view returns (uint256) {
         Proposal storage proposal_ = _getProposal(_proposalId);
 
         if (proposal_.totalDownstake == 0) {
@@ -370,20 +370,20 @@ contract HCVoting is ProposalBase, IForwarder, AragonApp {
         return proposal_.totalUpstake.mul(MILLION).div(proposal_.totalDownstake);
     }
 
-    function proposalHasConfidence(uint256 _proposalId) public view returns (bool) {
+    function hasConfidence(uint256 _proposalId) public view returns (bool) {
         uint256 exponent = numBoostedProposals + 1;
         uint256 confidenceThreshold = (uint256(4) ** exponent).mul(MILLION);
-        return getProposalConfidence(_proposalId) >= confidenceThreshold;
+        return getConfidence(_proposalId) >= confidenceThreshold;
     }
 
-    function proposalHasMaintainedConfidence(uint256 _proposalId) public view returns (bool) {
+    function hasMaintainedConfidence(uint256 _proposalId) public view returns (bool) {
         Proposal storage proposal_ = _getProposal(_proposalId);
 
         if (proposal_.pendedDate == 0) {
             return false;
         }
 
-        if (!proposalHasConfidence(_proposalId)) {
+        if (!hasConfidence(_proposalId)) {
             return false;
         }
 
@@ -395,12 +395,12 @@ contract HCVoting is ProposalBase, IForwarder, AragonApp {
     function _updatePendedDate(uint256 _proposalId) internal {
         Proposal storage proposal_ = _getProposal(_proposalId);
 
-        ProposalState state = getProposalState(_proposalId);
+        ProposalState state = getState(_proposalId);
         if (state == ProposalState.Resolved || state == ProposalState.Boosted) {
             return;
         }
 
-        if (proposalHasConfidence(_proposalId)) {
+        if (hasConfidence(_proposalId)) {
             if (state == ProposalState.Queued) {
                 proposal_.pendedDate = getTimestamp64();
             }
@@ -432,7 +432,7 @@ contract HCVoting is ProposalBase, IForwarder, AragonApp {
 
     function forward(bytes _evmScript) public {
         require(canForward(msg.sender, _evmScript), ERROR_CAN_NOT_FORWARD);
-        createProposal(_evmScript, "");
+        create(_evmScript, "");
     }
 
     function canForward(address _sender, bytes) public view returns (bool) {

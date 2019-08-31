@@ -41,7 +41,7 @@ contract('HCVoting (forward)', ([appManager, voter]) => {
       })
 
       it('creates a proposal with the appropriate script', async () => {
-        assert.equal(await app.getProposalScript(0), EMPTY_SCRIPT)
+        assert.equal(await app.getScript(0), EMPTY_SCRIPT)
       })
     })
   })

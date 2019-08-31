@@ -35,77 +35,77 @@ contract ProposalBase {
 
     /* Getters */
 
-    function getUserVote(uint256 _proposalId, address _user) public view returns (Vote) {
+    function getVote(uint256 _proposalId, address _user) public view returns (Vote) {
         Proposal storage proposal_ = _getProposal(_proposalId);
         return proposal_.votes[_user];
     }
 
-    function getUserUpstake(uint256 _proposalId, address _user) public view returns (uint256) {
+    function getUpstake(uint256 _proposalId, address _user) public view returns (uint256) {
         Proposal storage proposal_ = _getProposal(_proposalId);
         return proposal_.upstakes[_user];
     }
 
-    function getUserDownstake(uint256 _proposalId, address _user) public view returns (uint256) {
+    function getDownstake(uint256 _proposalId, address _user) public view returns (uint256) {
         Proposal storage proposal_ = _getProposal(_proposalId);
         return proposal_.downstakes[_user];
     }
 
-    function getProposalYeas(uint256 _proposalId) public view returns (uint256) {
-        Proposal storage proposal_ = _getProposal(_proposalId);
-        return proposal_.totalYeas;
-    }
-
-    function getProposalNays(uint256 _proposalId) public view returns (uint256) {
-        Proposal storage proposal_ = _getProposal(_proposalId);
-        return proposal_.totalNays;
-    }
-
-    function getProposalResolved(uint256 _proposalId) public view returns (bool) {
-        Proposal storage proposal_ = _getProposal(_proposalId);
-        return proposal_.resolved;
-    }
-
-    function getProposalExecuted(uint256 _proposalId) public view returns (bool) {
-        Proposal storage proposal_ = _getProposal(_proposalId);
-        return proposal_.executed;
-    }
-
-    function getProposalBoosted(uint256 _proposalId) public view returns (bool) {
-        Proposal storage proposal_ = _getProposal(_proposalId);
-        return proposal_.boosted;
-    }
-
-    function getProposalCreationBlock(uint256 _proposalId) public view returns (uint256) {
-        Proposal storage proposal_ = _getProposal(_proposalId);
-        return proposal_.creationBlock;
-    }
-
-    function getProposalCreationDate(uint256 _proposalId) public view returns (uint256) {
-        Proposal storage proposal_ = _getProposal(_proposalId);
-        return proposal_.creationDate;
-    }
-
-    function getProposalCloseDate(uint256 _proposalId) public view returns (uint256) {
-        Proposal storage proposal_ = _getProposal(_proposalId);
-        return proposal_.closeDate;
-    }
-
-    function getProposalPendedDate(uint256 _proposalId) public view returns (uint256) {
-        Proposal storage proposal_ = _getProposal(_proposalId);
-        return proposal_.pendedDate;
-    }
-
-    function getProposalUpstake(uint256 _proposalId) public view returns (uint256) {
+    function getTotalUpstake(uint256 _proposalId) public view returns (uint256) {
         Proposal storage proposal_ = _getProposal(_proposalId);
         return proposal_.totalUpstake;
     }
 
-    function getProposalDownstake(uint256 _proposalId) public view returns (uint256) {
+    function getTotalDownstake(uint256 _proposalId) public view returns (uint256) {
         Proposal storage proposal_ = _getProposal(_proposalId);
         return proposal_.totalDownstake;
     }
 
-    function getProposalScript(uint256 _proposalId) public view returns (bytes) {
+    function getTotalYeas(uint256 _proposalId) public view returns (uint256) {
+        Proposal storage proposal_ = _getProposal(_proposalId);
+        return proposal_.totalYeas;
+    }
+
+    function getTotalNays(uint256 _proposalId) public view returns (uint256) {
+        Proposal storage proposal_ = _getProposal(_proposalId);
+        return proposal_.totalNays;
+    }
+
+    function getResolved(uint256 _proposalId) public view returns (bool) {
+        Proposal storage proposal_ = _getProposal(_proposalId);
+        return proposal_.resolved;
+    }
+
+    function getExecuted(uint256 _proposalId) public view returns (bool) {
+        Proposal storage proposal_ = _getProposal(_proposalId);
+        return proposal_.executed;
+    }
+
+    function getBoosted(uint256 _proposalId) public view returns (bool) {
+        Proposal storage proposal_ = _getProposal(_proposalId);
+        return proposal_.boosted;
+    }
+
+    function getCreationBlock(uint256 _proposalId) public view returns (uint256) {
+        Proposal storage proposal_ = _getProposal(_proposalId);
+        return proposal_.creationBlock;
+    }
+
+    function getCreationDate(uint256 _proposalId) public view returns (uint256) {
+        Proposal storage proposal_ = _getProposal(_proposalId);
+        return proposal_.creationDate;
+    }
+
+    function getCloseDate(uint256 _proposalId) public view returns (uint256) {
+        Proposal storage proposal_ = _getProposal(_proposalId);
+        return proposal_.closeDate;
+    }
+
+    function getPendedDate(uint256 _proposalId) public view returns (uint256) {
+        Proposal storage proposal_ = _getProposal(_proposalId);
+        return proposal_.pendedDate;
+    }
+
+    function getScript(uint256 _proposalId) public view returns (bytes) {
         Proposal storage proposal_ = _getProposal(_proposalId);
         return proposal_.executionScript;
     }

@@ -15,7 +15,7 @@ contract('HCVoting (create)', ([appManager, user1, user2]) => {
   describe('when no proposals exist', () => {
     it('should revert when attempting to retrieve a proposal that does not exist', async () => {
       await assertRevert(
-        app.getProposalCreationDate(0),
+        app.getCreationDate(0),
         'HCVOTING_PROPOSAL_DOES_NOT_EXIST'
       )
     })
@@ -24,7 +24,7 @@ contract('HCVoting (create)', ([appManager, user1, user2]) => {
   describe('when no vote tokens exist', () => {
     it('should revert when attempting to create a proposal when no vote tokens exist', async () => {
       await assertRevert(
-        app.createProposal(EMPTY_SCRIPT, 'Proposal metadata'),
+        app.create(EMPTY_SCRIPT, 'Proposal metadata'),
         'HCVOTING_NO_VOTING_POWER'
       )
     })
@@ -39,25 +39,25 @@ contract('HCVoting (create)', ([appManager, user1, user2]) => {
       let creationReceipt
 
       before('create a proposal', async () => {
-        creationReceipt = await app.createProposal(EMPTY_SCRIPT, 'Proposal metadata 0', { from: user2 })
+        creationReceipt = await app.create(EMPTY_SCRIPT, 'Proposal metadata 0', { from: user2 })
       })
 
       it('should store creationBlock', async () => {
-        assert.equal((await app.getProposalCreationBlock(0)).toNumber(), creationReceipt.receipt.blockNumber - 1)
+        assert.equal((await app.getCreationBlock(0)).toNumber(), creationReceipt.receipt.blockNumber - 1)
       })
 
       it('should store creationDate', async () => {
-        assert.notEqual((await app.getProposalCreationDate(0)).toNumber(), 0)
+        assert.notEqual((await app.getCreationDate(0)).toNumber(), 0)
       })
 
       it('should store closeDate', async () => {
-        const creationDate = (await app.getProposalCreationDate(0)).toNumber()
-        const closeDate = (await app.getProposalCloseDate(0)).toNumber()
+        const creationDate = (await app.getCreationDate(0)).toNumber()
+        const closeDate = (await app.getCloseDate(0)).toNumber()
         assert.equal(closeDate, creationDate + defaultParams.queuePeriod)
       })
 
       it('should store execution script', async () => {
-        assert.equal(await app.getProposalScript(0), EMPTY_SCRIPT)
+        assert.equal(await app.getScript(0), EMPTY_SCRIPT)
       })
 
       it('should emit a ProposalCreated event with the appropriate data', async () => {
@@ -73,7 +73,7 @@ contract('HCVoting (create)', ([appManager, user1, user2]) => {
 
       describe('when creating another proposal', () => {
         before('create another proposal', async () => {
-          creationReceipt = await app.createProposal(EMPTY_SCRIPT, 'Proposal metadata 1', { from: user1 })
+          creationReceipt = await app.create(EMPTY_SCRIPT, 'Proposal metadata 1', { from: user1 })
         })
 
         it('should emit a ProposalCreated event with the appropriate data', async () => {

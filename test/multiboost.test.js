@@ -30,12 +30,12 @@ contract('HCVoting (multiboost)', ([appManager, voter, staker]) => {
   function itPendsTheProposalWithAMinimumStakeOf(minimumStake) {
     it('does not pend the proposal with less than the minimumStake', async () => {
       await app.stake(proposalId, minimumStake - 1, true, { from: staker })
-      assert.equal((await app.getProposalState(proposalId)).toNumber(), PROPOSAL_STATE.QUEUED)
+      assert.equal((await app.getState(proposalId)).toNumber(), PROPOSAL_STATE.QUEUED)
     })
 
     it('pends the proposal when the minimumStake is reached', async () => {
       await app.stake(proposalId, 1, true, { from: staker })
-      assert.equal((await app.getProposalState(proposalId)).toNumber(), PROPOSAL_STATE.PENDED)
+      assert.equal((await app.getState(proposalId)).toNumber(), PROPOSAL_STATE.PENDED)
     })
   }
 
@@ -50,7 +50,7 @@ contract('HCVoting (multiboost)', ([appManager, voter, staker]) => {
 
   describe('when proposal 1 is created', () => {
     before('create proposal', async () => {
-      await app.createProposal(EMPTY_SCRIPT, 'Proposal metadata')
+      await app.create(EMPTY_SCRIPT, 'Proposal metadata')
       proposalId = (await app.numProposals()).toNumber() - 1
     })
 
@@ -58,16 +58,16 @@ contract('HCVoting (multiboost)', ([appManager, voter, staker]) => {
 
     describe('when proposal 1 is boosted', () => {
       before('boost proposal', async () => {
-        const pendedDate = (await app.getProposalPendedDate(proposalId)).toNumber()
+        const pendedDate = (await app.getPendedDate(proposalId)).toNumber()
         await app.mockSetTimestamp(pendedDate + defaultParams.pendedPeriod + 1)
-        await app.boostProposal(proposalId)
+        await app.boost(proposalId)
       })
 
       itCountsTheCorrectNumberOfBoostedProposals(1, 1)
 
       describe('when proposal 2 is created', () => {
         before('create proposal', async () => {
-          await app.createProposal(EMPTY_SCRIPT, 'Proposal metadata')
+          await app.create(EMPTY_SCRIPT, 'Proposal metadata')
           proposalId = (await app.numProposals()).toNumber() - 1
         })
 
@@ -75,16 +75,16 @@ contract('HCVoting (multiboost)', ([appManager, voter, staker]) => {
 
         describe('when proposal 2 is boosted', () => {
           before('boost proposal', async () => {
-            const pendedDate = (await app.getProposalPendedDate(proposalId)).toNumber()
+            const pendedDate = (await app.getPendedDate(proposalId)).toNumber()
             await app.mockSetTimestamp(pendedDate + defaultParams.pendedPeriod + 1)
-            await app.boostProposal(proposalId)
+            await app.boost(proposalId)
           })
 
           itCountsTheCorrectNumberOfBoostedProposals(2, 2)
 
           describe('when proposal 3 is created', () => {
             before('create proposal', async () => {
-              await app.createProposal(EMPTY_SCRIPT, 'Proposal metadata')
+              await app.create(EMPTY_SCRIPT, 'Proposal metadata')
               proposalId = (await app.numProposals()).toNumber() - 1
             })
 
@@ -92,16 +92,16 @@ contract('HCVoting (multiboost)', ([appManager, voter, staker]) => {
 
             describe('when proposal 3 is boosted', () => {
               before('boost proposal', async () => {
-                const pendedDate = (await app.getProposalPendedDate(proposalId)).toNumber()
+                const pendedDate = (await app.getPendedDate(proposalId)).toNumber()
                 await app.mockSetTimestamp(pendedDate + defaultParams.pendedPeriod + 1)
-                await app.boostProposal(proposalId)
+                await app.boost(proposalId)
               })
 
               itCountsTheCorrectNumberOfBoostedProposals(3, 3)
 
               describe('when proposal 4 is created', () => {
                 before('create proposal', async () => {
-                  await app.createProposal(EMPTY_SCRIPT, 'Proposal metadata')
+                  await app.create(EMPTY_SCRIPT, 'Proposal metadata')
                   proposalId = (await app.numProposals()).toNumber() - 1
                 })
 
@@ -109,9 +109,9 @@ contract('HCVoting (multiboost)', ([appManager, voter, staker]) => {
 
                 describe('when proposal 4 is boosted', () => {
                   before('boost proposal', async () => {
-                    const pendedDate = (await app.getProposalPendedDate(proposalId)).toNumber()
+                    const pendedDate = (await app.getPendedDate(proposalId)).toNumber()
                     await app.mockSetTimestamp(pendedDate + defaultParams.pendedPeriod + 1)
-                    await app.boostProposal(proposalId)
+                    await app.boost(proposalId)
                   })
 
                   itCountsTheCorrectNumberOfBoostedProposals(4, 4)
@@ -119,11 +119,11 @@ contract('HCVoting (multiboost)', ([appManager, voter, staker]) => {
                   describe('when proposal 4 is resolved', () => {
                     before('resolve proposal', async () => {
                       await app.vote(proposalId, true, { from: voter })
-                      await app.resolveProposal(proposalId)
+                      await app.resolve(proposalId)
                     })
 
                     it('sets the proposal state to Resolved', async () => {
-                      assert.equal((await app.getProposalState(proposalId)).toNumber(), PROPOSAL_STATE.RESOLVED)
+                      assert.equal((await app.getState(proposalId)).toNumber(), PROPOSAL_STATE.RESOLVED)
                     })
 
                     itCountsTheCorrectNumberOfBoostedProposals(4, 3)

@@ -118,7 +118,7 @@ contract('HCVoting (setup)', ([appManager]) => {
 
     it('reverts when trying to create a proposal', async () => {
       await assertRevert(
-        app.createProposal(EMPTY_SCRIPT, 'Proposal metadata'),
+        app.create(EMPTY_SCRIPT, 'Proposal metadata'),
         'APP_AUTH_FAILED'
       )
     })

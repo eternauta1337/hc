@@ -16,13 +16,13 @@ contract('HCVoting (stake)', ([appManager, voter, staker1, staker2]) => {
     })
 
     it('registers the total stakes in the proposal', async () => {
-      assert.equal((await app.getProposalUpstake(proposalId)).toNumber(), tracker.proposals[proposalId].totalUpstake, 'invalid upstake')
-      assert.equal((await app.getProposalDownstake(proposalId)).toNumber(), tracker.proposals[proposalId].totalDownstake, 'invalid downstake')
+      assert.equal((await app.getTotalUpstake(proposalId)).toNumber(), tracker.proposals[proposalId].totalUpstake, 'invalid upstake')
+      assert.equal((await app.getTotalDownstake(proposalId)).toNumber(), tracker.proposals[proposalId].totalDownstake, 'invalid downstake')
     })
 
     it('registers the user\'s stake in the proposal', async () => {
-      assert.equal((await app.getUserUpstake(proposalId, staker)).toNumber(), tracker.proposals[proposalId].upstakes[staker], 'invalid user upstake')
-      assert.equal((await app.getUserDownstake(proposalId, staker)).toNumber(), tracker.proposals[proposalId].downstakes[staker], 'invalid user downstake')
+      assert.equal((await app.getUpstake(proposalId, staker)).toNumber(), tracker.proposals[proposalId].upstakes[staker], 'invalid user upstake')
+      assert.equal((await app.getDownstake(proposalId, staker)).toNumber(), tracker.proposals[proposalId].downstakes[staker], 'invalid user downstake')
     })
   }
 
@@ -47,7 +47,7 @@ contract('HCVoting (stake)', ([appManager, voter, staker1, staker2]) => {
 
     describe('when a proposal exists', () => {
       before('create a proposal', async () => {
-        await tracker.createProposal(0, voter)
+        await tracker.create(0, voter)
       })
 
       it('reverts when a user with no tokens attempts to stake', async () => {
@@ -228,7 +228,7 @@ contract('HCVoting (stake)', ([appManager, voter, staker1, staker2]) => {
       let creationDate
 
       before('shift time to after queuePeriod', async () => {
-        creationDate = (await app.getProposalCreationDate(0)).toNumber()
+        creationDate = (await app.getCreationDate(0)).toNumber()
         await app.mockSetTimestamp(creationDate + defaultParams.queuePeriod)
       })
 
@@ -251,7 +251,7 @@ contract('HCVoting (stake)', ([appManager, voter, staker1, staker2]) => {
     describe('when the proposal is resolved', () => {
       before('resolve proposal', async () => {
         await app.vote(0, true, { from: voter })
-        await app.resolveProposal(0)
+        await app.resolve(0)
       })
 
       it('reverts when staker1 attempts to stake', async () => {

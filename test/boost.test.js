@@ -27,7 +27,7 @@ contract('HCVoting (boost)', ([appManager, voter1, voter2, voter3, staker]) => {
   describe('when no proposals exist', () => {
     it('reverts when attempting to boost a proposal that doesn\'t exist', async () => {
       await assertRevert(
-        app.boostProposal(0),
+        app.boost(0),
         'HCVOTING_PROPOSAL_DOES_NOT_EXIST'
       )
     })
@@ -37,21 +37,21 @@ contract('HCVoting (boost)', ([appManager, voter1, voter2, voter3, staker]) => {
     let creationDate
 
     before('create a proposal', async () => {
-      await app.createProposal(EMPTY_SCRIPT, 'Proposal metadata')
-      creationDate = (await app.getProposalCreationDate(0)).toNumber()
+      await app.create(EMPTY_SCRIPT, 'Proposal metadata')
+      creationDate = (await app.getCreationDate(0)).toNumber()
     })
 
     it('reports the proposal\'s state as Queued', async () => {
-      assert.equal((await app.getProposalState(0)).toNumber(), PROPOSAL_STATE.QUEUED)
+      assert.equal((await app.getState(0)).toNumber(), PROPOSAL_STATE.QUEUED)
     })
 
     describe('when the proposal has not yet received stake', () => {
       it('confidence is 0', async () => {
-        assert.equal((await app.getProposalConfidence(0)).toNumber(), 0);
+        assert.equal((await app.getConfidence(0)).toNumber(), 0);
       })
 
       it('hasConfidence is false', async () => {
-        assert.equal(await app.proposalHasConfidence(0), false)
+        assert.equal(await app.hasConfidence(0), false)
       })
     })
 
@@ -65,11 +65,11 @@ contract('HCVoting (boost)', ([appManager, voter1, voter2, voter3, staker]) => {
       })
 
       it('correctly calculates the proposal\'s current confidence', async () => {
-        assert.equal((await app.getProposalConfidence(0)).toNumber(), 3000000);
+        assert.equal((await app.getConfidence(0)).toNumber(), 3000000);
       })
 
       it('correctly reports that the proposal doesn\'t have enough confidence', async () => {
-        assert.equal(await app.proposalHasConfidence(0), false)
+        assert.equal(await app.hasConfidence(0), false)
       })
 
       describe('when a proposal reaches enough confidence', () => {
@@ -78,15 +78,15 @@ contract('HCVoting (boost)', ([appManager, voter1, voter2, voter3, staker]) => {
         })
 
         it('has confidence', async () => {
-          assert.equal(await app.proposalHasConfidence(0), true)
+          assert.equal(await app.hasConfidence(0), true)
         })
 
         it('sets the proposal\'s state to Pended', async () => {
-          assert.equal((await app.getProposalState(0)).toNumber(), PROPOSAL_STATE.PENDED)
+          assert.equal((await app.getState(0)).toNumber(), PROPOSAL_STATE.PENDED)
         })
 
         it('sets the proposal\'s pendedDate', async () => {
-          assert.notEqual((await app.getProposalPendedDate(0)).toNumber(), 0)
+          assert.notEqual((await app.getPendedDate(0)).toNumber(), 0)
         })
 
         describe('when a proposal looses confidence', () => {
@@ -95,11 +95,11 @@ contract('HCVoting (boost)', ([appManager, voter1, voter2, voter3, staker]) => {
           })
 
           it('sets the proposal\'s state back to Queued', async () => {
-            assert.equal((await app.getProposalState(0)).toNumber(), PROPOSAL_STATE.QUEUED)
+            assert.equal((await app.getState(0)).toNumber(), PROPOSAL_STATE.QUEUED)
           })
 
           it('sets the proposal\'s pendedDate back to zero', async () => {
-            assert.equal((await app.getProposalPendedDate(0)).toNumber(), 0)
+            assert.equal((await app.getPendedDate(0)).toNumber(), 0)
           })
 
           after('restore stake', async () => {
@@ -113,12 +113,12 @@ contract('HCVoting (boost)', ([appManager, voter1, voter2, voter3, staker]) => {
           })
 
           it('reports the proposal\'s state as Closed', async () => {
-            assert.equal((await app.getProposalState(0)).toNumber(), PROPOSAL_STATE.CLOSED)
+            assert.equal((await app.getState(0)).toNumber(), PROPOSAL_STATE.CLOSED)
           })
 
           it('reverts when trying to boost the proposal', async () => {
             await assertRevert(
-              app.boostProposal(0),
+              app.boost(0),
               'HCVOTING_PROPOSAL_IS_CLOSED'
             )
           })
@@ -128,7 +128,7 @@ contract('HCVoting (boost)', ([appManager, voter1, voter2, voter3, staker]) => {
           let pendedDate
 
           before('record pended date', async () => {
-            pendedDate = (await app.getProposalPendedDate(0)).toNumber()
+            pendedDate = (await app.getPendedDate(0)).toNumber()
           })
 
           describe('when half of the pended period has elapsed', () => {
@@ -137,12 +137,12 @@ contract('HCVoting (boost)', ([appManager, voter1, voter2, voter3, staker]) => {
             })
 
             it('reports that the proposal has not yet maintained confidence', async () => {
-              assert.equal(await app.proposalHasMaintainedConfidence(0), false)
+              assert.equal(await app.hasMaintainedConfidence(0), false)
             })
 
             it('reverts when trying to boost the proposal', async () => {
               await assertRevert(
-                app.boostProposal(0),
+                app.boost(0),
                 'HCVOTING_HASNT_MAINTAINED_CONF'
               )
             })
@@ -153,19 +153,19 @@ contract('HCVoting (boost)', ([appManager, voter1, voter2, voter3, staker]) => {
               })
 
               it('reports that the proposal has maintained confidence', async () => {
-                assert.equal(await app.proposalHasMaintainedConfidence(0), true)
+                assert.equal(await app.hasMaintainedConfidence(0), true)
               })
 
               describe('when boosting the proposal', () => {
                 let boostReceipt
 
                 before('boost the proposal', async () => {
-                  boostReceipt = await app.boostProposal(0)
+                  boostReceipt = await app.boost(0)
                 })
 
                 it('reverts when trying to boost the proposal again', async () => {
                   await assertRevert(
-                    app.boostProposal(0),
+                    app.boost(0),
                     'HCVOTING_PROPOSAL_IS_BOOSTED'
                   )
                 })
@@ -193,11 +193,11 @@ contract('HCVoting (boost)', ([appManager, voter1, voter2, voter3, staker]) => {
                 })
 
                 it('sets boosted to true', async () => {
-                  assert.equal(await app.getProposalBoosted(0), true)
+                  assert.equal(await app.getBoosted(0), true)
                 })
 
                 it('reports the proposal\'s state as Boosted', async () => {
-                  assert.equal((await app.getProposalState(0)).toNumber(), PROPOSAL_STATE.BOOSTED)
+                  assert.equal((await app.getState(0)).toNumber(), PROPOSAL_STATE.BOOSTED)
                 })
 
                 it('emits a ProposalBoosted event', async () => {
@@ -206,7 +206,7 @@ contract('HCVoting (boost)', ([appManager, voter1, voter2, voter3, staker]) => {
                 })
 
                 it('modifies the proposal\'s closeDate', async () => {
-                  assert.equal((await app.getProposalCloseDate(0)).toNumber(), pendedDate + defaultParams.boostPeriod)
+                  assert.equal((await app.getCloseDate(0)).toNumber(), pendedDate + defaultParams.boostPeriod)
                 })
 
                 describe('when half the boost period has elapsed', () => {
@@ -220,7 +220,7 @@ contract('HCVoting (boost)', ([appManager, voter1, voter2, voter3, staker]) => {
 
                   it('reverts when trying to resolve the proposal with relative support before the boost period elapses', async () => {
                     await assertRevert(
-                      app.resolveProposal(0),
+                      app.resolve(0),
                       'HCVOTING_ON_BOOST_PERIOD'
                     )
                   })
@@ -229,7 +229,7 @@ contract('HCVoting (boost)', ([appManager, voter1, voter2, voter3, staker]) => {
                     let closeDate
 
                     before('shift time to the ending period', async () => {
-                      closeDate = (await app.getProposalCloseDate(0)).toNumber()
+                      closeDate = (await app.getCloseDate(0)).toNumber()
                       await app.mockSetTimestamp(closeDate - defaultParams.endingPeriod + 1)
                     })
 
@@ -239,7 +239,7 @@ contract('HCVoting (boost)', ([appManager, voter1, voter2, voter3, staker]) => {
                       })
 
                       it('does not extend the proposal\'s lifetime', async () => {
-                        const newCloseDate = (await app.getProposalCloseDate(0)).toNumber()
+                        const newCloseDate = (await app.getCloseDate(0)).toNumber()
                         assert.equal(newCloseDate, closeDate)
                       })
                     })
@@ -250,13 +250,13 @@ contract('HCVoting (boost)', ([appManager, voter1, voter2, voter3, staker]) => {
                       })
 
                       it('extends the proposal\'s lifetime', async () => {
-                        const newCloseDate = (await app.getProposalCloseDate(0)).toNumber()
+                        const newCloseDate = (await app.getCloseDate(0)).toNumber()
                         assert.equal(newCloseDate, closeDate + defaultParams.endingPeriod)
                       })
 
                       describe('when a new vote flips consensus', () => {
                         before('shift time to the ending period', async () => {
-                          closeDate = (await app.getProposalCloseDate(0)).toNumber()
+                          closeDate = (await app.getCloseDate(0)).toNumber()
                           await app.mockSetTimestamp(closeDate - defaultParams.endingPeriod + 1)
                         })
 
@@ -265,7 +265,7 @@ contract('HCVoting (boost)', ([appManager, voter1, voter2, voter3, staker]) => {
                         })
 
                         it('extends the proposal\'s lifetime', async () => {
-                          const newCloseDate = (await app.getProposalCloseDate(0)).toNumber()
+                          const newCloseDate = (await app.getCloseDate(0)).toNumber()
                           assert.equal(newCloseDate, closeDate + defaultParams.endingPeriod)
                         })
                       })
@@ -274,22 +274,22 @@ contract('HCVoting (boost)', ([appManager, voter1, voter2, voter3, staker]) => {
 
                   describe('when the proposal\'s close date passes', () => {
                     before('shift time to past the close date', async () => {
-                      const closeDate = (await app.getProposalCloseDate(0)).toNumber()
+                      const closeDate = (await app.getCloseDate(0)).toNumber()
                       await app.mockSetTimestamp(closeDate + 1)
                     })
 
                     describe('when resolving the proposal', () => {
                       before('resolve proposal', async () => {
-                        await app.resolveProposal(0)
+                        await app.resolve(0)
                       })
 
                       it('proposal state is Resolved', async () => {
-                        assert.equal((await app.getProposalState(0)).toNumber(), PROPOSAL_STATE.RESOLVED)
+                        assert.equal((await app.getState(0)).toNumber(), PROPOSAL_STATE.RESOLVED)
                       })
 
                       it('reverts when trying to boost the proposal', async () => {
                         await assertRevert(
-                          app.boostProposal(0),
+                          app.boost(0),
                           'HCVOTING_PROPOSAL_IS_RESOLVED'
                         )
                       })

@@ -3,15 +3,10 @@
 const { assertRevert } = require('@aragon/test-helpers/assertThrow')
 const { EMPTY_SCRIPT } = require('@aragon/test-helpers/evmScript')
 const { getEventAt } = require('@aragon/test-helpers/events')
-const { defaultParams, deployAllAndInitializeApp } = require('./helpers/deployApp')
+const { defaultParams, deployAllAndInitializeApp, VOTE } = require('./helpers/deployApp')
 
 const VOTER_BALANCE = 100
 const MILLION = 1000000
-const VOTE = {
-  ABSENT: 0,
-  YEA: 1,
-  NAY: 2
-}
 
 contract('HCVoting (vote)', ([appManager, voter1, voter2, voter3, voter4]) => {
   let app, voteToken

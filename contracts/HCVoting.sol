@@ -211,7 +211,7 @@ contract HCVoting is ProposalBase, IForwarder, AragonApp {
     * @notice Stake `_amount` tokens on proposal #`_proposalId`
     * @param _proposalId uint256 Id of proposal to stake on
     * @param _amount uint256 Amount of tokens to stake on proposal #`_proposalId`
-    * @param _supports bool Signal 'upstake' or 'downstake' on proposal #`_proposalId`
+    * @param _upstake bool Signal 'upstake' or 'downstake' on proposal #`_proposalId`
     */
     function stake(uint256 _proposalId, uint256 _amount, bool _upstake) public {
         Proposal storage proposal_ = _getProposal(_proposalId);
@@ -245,7 +245,7 @@ contract HCVoting is ProposalBase, IForwarder, AragonApp {
     * @notice Withdraw stake `_amount` tokens from proposal #`_proposalId`
     * @param _proposalId uint256 Id of proposal to remove stake from
     * @param _amount uint256 Amount of tokens to remove stake from proposal #`_proposalId`
-    * @param _supports bool Indicate the removal from 'upstake' or 'downstake' on proposal #`_proposalId`
+    * @param _upstake bool Indicate the removal from 'upstake' or 'downstake' on proposal #`_proposalId`
     */
     function unstake(uint256 _proposalId, uint256 _amount, bool _upstake) public {
         Proposal storage proposal_ = _getProposal(_proposalId);

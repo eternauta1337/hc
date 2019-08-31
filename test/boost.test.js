@@ -3,15 +3,7 @@
 const { assertRevert } = require('@aragon/test-helpers/assertThrow')
 const { EMPTY_SCRIPT } = require('@aragon/test-helpers/evmScript')
 const { getEventAt } = require('@aragon/test-helpers/events')
-const { defaultParams, deployAllAndInitializeApp } = require('./helpers/deployApp')
-
-const PROPOSAL_STATE = {
-  QUEUED: 0,
-  PENDED: 1,
-  BOOSTED: 2,
-  RESOLVED: 3,
-  CLOSED: 4
-}
+const { defaultParams, deployAllAndInitializeApp, PROPOSAL_STATE } = require('./helpers/deployApp')
 
 contract('HCVoting (boost)', ([appManager, voter1, voter2, voter3, staker]) => {
   let app, voteToken, stakeToken

@@ -1,15 +1,7 @@
 /* global contract beforeEach it assert */
 
 const { EMPTY_SCRIPT } = require('@aragon/test-helpers/evmScript')
-const { defaultParams, deployAllAndInitializeApp } = require('./helpers/deployApp')
-
-const PROPOSAL_STATE = {
-  QUEUED: 0,
-  PENDED: 1,
-  BOOSTED: 2,
-  RESOLVED: 3,
-  CLOSED: 4
-}
+const { defaultParams, deployAllAndInitializeApp, PROPOSAL_STATE } = require('./helpers/deployApp')
 
 contract('HCVoting (multiboost)', ([appManager, voter, staker]) => {
   let app, voteToken, stakeToken

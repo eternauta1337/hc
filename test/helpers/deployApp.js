@@ -10,6 +10,20 @@ const HCVoting = artifacts.require('HCVotingTimeMock.sol')
 const ANY_ADDRESS = '0xffffffffffffffffffffffffffffffffffffffff'
 const HOURS = 60 * 60
 
+const VOTE = {
+  ABSENT: 0,
+  YEA: 1,
+  NAY: 2
+}
+
+const PROPOSAL_STATE = {
+  QUEUED: 0,
+  PENDED: 1,
+  BOOSTED: 2,
+  RESOLVED: 3,
+  CLOSED: 4
+}
+
 const defaultParams = {
   requiredSupport: 510000,
   queuePeriod: 24 * HOURS,
@@ -102,5 +116,7 @@ module.exports = {
   initializeAppWithParams,
   deployApp,
   deployAll,
-  deployAllAndInitializeApp
+  deployAllAndInitializeApp,
+  VOTE,
+  PROPOSAL_STATE
 }

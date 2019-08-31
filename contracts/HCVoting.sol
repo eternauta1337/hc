@@ -24,6 +24,7 @@ contract HCVoting is ProposalBase, IForwarder, AragonApp {
     string internal constant ERROR_BAD_QUEUE_PERIOD      = "HCVOTING_BAD_QUEUE_PERIOD";
     string internal constant ERROR_BAD_PENDED_PERIOD     = "HCVOTING_BAD_PENDED_PERIOD";
     string internal constant ERROR_BAD_BOOST_PERIOD      = "HCVOTING_BAD_BOOST_PERIOD";
+    string internal constant ERROR_BAD_ENDING_PERIOD     = "HCVOTING_BAD_ENDING_PERIOD";
     string internal constant ERROR_PROPOSAL_IS_RESOLVED  = "HCVOTING_PROPOSAL_IS_RESOLVED";
     string internal constant ERROR_PROPOSAL_IS_CLOSED    = "HCVOTING_PROPOSAL_IS_CLOSED";
     string internal constant ERROR_PROPOSAL_IS_BOOSTED   = "HCVOTING_PROPOSAL_IS_BOOSTED";
@@ -73,6 +74,9 @@ contract HCVoting is ProposalBase, IForwarder, AragonApp {
     uint64 public queuePeriod;
     uint64 public pendedPeriod;
     uint64 public boostPeriod;
+    uint64 public endingPeriod;
+
+    uint256 public numBoostedProposals;
 
     /* Init */
 
@@ -82,7 +86,8 @@ contract HCVoting is ProposalBase, IForwarder, AragonApp {
         uint256 _requiredSupport,
         uint64 _queuePeriod,
         uint64 _pendedPeriod,
-        uint64 _boostPeriod
+        uint64 _boostPeriod,
+        uint64 _endingPeriod
     )
         public onlyInit
     {
@@ -91,6 +96,8 @@ contract HCVoting is ProposalBase, IForwarder, AragonApp {
         require(_queuePeriod > 0, ERROR_BAD_QUEUE_PERIOD);
         require(_pendedPeriod > 0, ERROR_BAD_PENDED_PERIOD);
         require(_boostPeriod > 0, ERROR_BAD_BOOST_PERIOD);
+        require(_endingPeriod > 0, ERROR_BAD_ENDING_PERIOD);
+        require(_endingPeriod < _boostPeriod, ERROR_BAD_ENDING_PERIOD);
 
         voteToken = _voteToken;
         stakeToken = _stakeToken;
@@ -98,6 +105,7 @@ contract HCVoting is ProposalBase, IForwarder, AragonApp {
         queuePeriod = _queuePeriod;
         pendedPeriod = _pendedPeriod;
         boostPeriod = _boostPeriod;
+        endingPeriod = _endingPeriod;
 
         initialized();
     }
@@ -132,6 +140,15 @@ contract HCVoting is ProposalBase, IForwarder, AragonApp {
         uint256 userVotingPower = voteToken.balanceOfAt(msg.sender, proposal_.creationBlock);
         require(userVotingPower > 0, ERROR_NO_VOTING_POWER);
 
+        bool needsQuietEndingEvaluation;
+        Vote relativeConsensusBeforeVote;
+        if (state == ProposalState.Boosted) {
+            if (getTimestamp64() >= proposal_.closeDate.sub(endingPeriod)) {
+                relativeConsensusBeforeVote = getProposalConsensus(_proposalId, true);
+                needsQuietEndingEvaluation = relativeConsensusBeforeVote != Vote.Absent;
+            }
+        }
+
         Vote previousVote = proposal_.votes[msg.sender];
         require(
             previousVote == Vote.Absent || !(previousVote == Vote.Yea && _supports || previousVote == Vote.Nay && !_supports),
@@ -155,6 +172,13 @@ contract HCVoting is ProposalBase, IForwarder, AragonApp {
         }
 
         proposal_.votes[msg.sender] = _supports ? Vote.Yea : Vote.Nay;
+
+        if (needsQuietEndingEvaluation) {
+            Vote relativeConsensusAfterVote = getProposalConsensus(_proposalId, true);
+            if (relativeConsensusAfterVote != relativeConsensusBeforeVote) {
+                proposal_.closeDate = proposal_.closeDate.add(endingPeriod);
+            }
+        }
 
         emit VoteCasted(_proposalId, msg.sender, _supports);
     }
@@ -189,6 +213,8 @@ contract HCVoting is ProposalBase, IForwarder, AragonApp {
         proposal_.boosted = true;
         proposal_.closeDate = proposal_.pendedDate.add(boostPeriod);
 
+        numBoostedProposals = numBoostedProposals.add(1);
+
         emit ProposalBoosted(_proposalId);
     }
 
@@ -204,6 +230,10 @@ contract HCVoting is ProposalBase, IForwarder, AragonApp {
             support = getProposalConsensus(_proposalId, true);
         }
         require(support != Vote.Absent, ERROR_NO_CONSENSUS);
+
+        if (state == ProposalState.Boosted) {
+            numBoostedProposals = numBoostedProposals.sub(1);
+        }
 
         proposal_.resolved = true;
 
@@ -273,7 +303,9 @@ contract HCVoting is ProposalBase, IForwarder, AragonApp {
     }
 
     function proposalHasConfidence(uint256 _proposalId) public view returns (bool) {
-        return getProposalConfidence(_proposalId) >= uint256(4).mul(MILLION);
+        uint256 exponent = numBoostedProposals + 1;
+        uint256 confidenceThreshold = (uint256(4) ** exponent).mul(MILLION);
+        return getProposalConfidence(_proposalId) >= confidenceThreshold;
     }
 
     function proposalHasMaintainedConfidence(uint256 _proposalId) public view returns (bool) {

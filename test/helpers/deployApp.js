@@ -14,7 +14,8 @@ const defaultParams = {
   requiredSupport: 510000,
   queuePeriod: 24 * HOURS,
   pendedPeriod: 1 * HOURS,
-  boostPeriod: 6 * HOURS
+  boostPeriod: 6 * HOURS,
+  endingPeriod: 0.5 * HOURS
 }
 
 const paramsObjToArr = (paramsObj) => {
@@ -24,7 +25,8 @@ const paramsObjToArr = (paramsObj) => {
     paramsObj.requiredSupport,
     paramsObj.queuePeriod,
     paramsObj.pendedPeriod,
-    paramsObj.boostPeriod
+    paramsObj.boostPeriod,
+    paramsObj.endingPeriod
   ]
 }
 

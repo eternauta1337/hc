@@ -36,6 +36,10 @@ contract('HCVoting (setup)', ([appManager]) => {
       assert.equal((await app.boostPeriod()).toNumber(), defaultParams.boostPeriod)
     })
 
+    it('has endingPeriod set', async () => {
+      assert.equal((await app.endingPeriod()).toNumber(), defaultParams.endingPeriod)
+    })
+
     it('reverts when attempting to re-initialize the app', async () => {
       await assertRevert(
         initializeAppWithParams(app, defaultParams),
@@ -82,12 +86,27 @@ contract('HCVoting (setup)', ([appManager]) => {
       )
     })
 
-    it('reverts when using an invalid boosted duration', async () => {
+    it('reverts when using an invalid boostPeriod', async () => {
       await assertRevert(
         initializeAppWithParams(app, { voteToken, stakeToken, ...defaultParams,
           boostPeriod: 0
         }),
         'HCVOTING_BAD_BOOST_PERIOD'
+      )
+    })
+
+    it('reverts when using an invalid endingPeriod', async () => {
+      await assertRevert(
+        initializeAppWithParams(app, { voteToken, stakeToken, ...defaultParams,
+          endingPeriod: 0
+        }),
+        'HCVOTING_BAD_ENDING_PERIOD'
+      )
+      await assertRevert(
+        initializeAppWithParams(app, { voteToken, stakeToken, ...defaultParams,
+          endingPeriod: defaultParams.boostPeriod + 1
+        }),
+        'HCVOTING_BAD_ENDING_PERIOD'
       )
     })
   })

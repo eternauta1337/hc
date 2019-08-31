@@ -55,16 +55,17 @@ contract HCVoting is ProposalBase, IForwarder, AragonApp {
 
     /* Constants */
 
+    // Used to avoid integer precision loss in divisions.
     uint256 internal constant MILLION = 1000000;
 
     /* Data strucures */
 
     enum ProposalState {
-        Queued,
-        Pended,
-        Boosted,
-        Resolved,
-        Closed
+        Queued,   // Proposal receiving votes and stake. Can be resolved with absolute consensus.
+        Pended,   // Proposal received stake and has confidence. Is maintaining confidence for boosting.
+        Boosted,  // Proposal is boosted and can be resolved with relative consensus.
+        Resolved, // Proposal has been resolved and executed if it had positive consensus.
+        Closed    // If boosted, proposal can be resolved. If not boosted, proposal expired and cannot receive votes or stake.
     }
 
     /* Properties */
@@ -82,6 +83,16 @@ contract HCVoting is ProposalBase, IForwarder, AragonApp {
 
     /* Init */
 
+    /**
+    * @notice Initialize HCVoting app
+    * @param _voteToken MiniMeToken Governance token used for voting
+    * @param _stakeToken MiniMeToken Token used for staking
+    * @param _requiredSupport uint256 Minimal percentage (expressed in parts per million) of yeas in casted votes for a proposal to succeed
+    * @param _queuePeriod uint256 Seconds that a proposal will be open for votes and staking while not being boosted
+    * @param _pendedPeriod uint256 Seconds for which a proposal needs to maintain confidence for it to become boosted
+    * @param _boostPeriod uint256 Seconds that a proposal will be open for votes but not staking while being boosted. Boosted proposals can only be resolved when this period elapses
+    * @param _endingPeriod uint256 Seconds at the ending of _boostPeriod in which a support flip will cause _boostPeriod to be extended by another _endingPeriod
+    */
     function initialize(
         MiniMeToken _voteToken,
         MiniMeToken _stakeToken,
@@ -114,6 +125,11 @@ contract HCVoting is ProposalBase, IForwarder, AragonApp {
 
     /* Public */
 
+    /**
+    * @notice Create a new proposal about "`_metadata`" with the specified execution script
+    * @param _executionScript EVM script to be executed on approval
+    * @param _metadata string metadata
+    */
     function create(bytes _executionScript, string _metadata) public auth(CREATE_PROPOSALS_ROLE) {
         uint64 creationBlock = getBlockNumber64() - 1;
         require(voteToken.totalSupplyAt(creationBlock) > 0, ERROR_NO_VOTING_POWER);
@@ -132,6 +148,11 @@ contract HCVoting is ProposalBase, IForwarder, AragonApp {
         emit ProposalCreated(proposalId, msg.sender, _metadata);
     }
 
+    /**
+    * @notice Vote `_supports ? 'yes' : 'no'` in proposal #`_proposalId`
+    * @param _proposalId Id for vote
+    * @param _supports Whether voter supports the vote
+    */
     function vote(uint256 _proposalId, bool _supports) public {
         Proposal storage proposal_ = _getProposal(_proposalId);
 
@@ -186,6 +207,12 @@ contract HCVoting is ProposalBase, IForwarder, AragonApp {
         emit VoteCasted(_proposalId, msg.sender, _supports);
     }
 
+    /**
+    * @notice Stake `_amount` tokens on proposal #`_proposalId`
+    * @param _proposalId uint256 Id of proposal to stake on
+    * @param _amount uint256 Amount of tokens to stake on proposal #`_proposalId`
+    * @param _supports bool Signal 'upstake' or 'downstake' on proposal #`_proposalId`
+    */
     function stake(uint256 _proposalId, uint256 _amount, bool _upstake) public {
         Proposal storage proposal_ = _getProposal(_proposalId);
 
@@ -214,6 +241,12 @@ contract HCVoting is ProposalBase, IForwarder, AragonApp {
         _evaluatePended(_proposalId);
     }
 
+    /**
+    * @notice Withdraw stake `_amount` tokens from proposal #`_proposalId`
+    * @param _proposalId uint256 Id of proposal to remove stake from
+    * @param _amount uint256 Amount of tokens to remove stake from proposal #`_proposalId`
+    * @param _supports bool Indicate the removal from 'upstake' or 'downstake' on proposal #`_proposalId`
+    */
     function unstake(uint256 _proposalId, uint256 _amount, bool _upstake) public {
         Proposal storage proposal_ = _getProposal(_proposalId);
 
@@ -245,6 +278,10 @@ contract HCVoting is ProposalBase, IForwarder, AragonApp {
         _evaluatePended(_proposalId);
     }
 
+    /**
+    * @notice Boost proposal #`_proposalId`
+    * @param _proposalId uint256 Id of proposal to boost
+    */
     function boost(uint256 _proposalId) public {
         Proposal storage proposal_ = _getProposal(_proposalId);
 
@@ -264,6 +301,10 @@ contract HCVoting is ProposalBase, IForwarder, AragonApp {
         emit ProposalBoosted(_proposalId);
     }
 
+    /**
+    * @notice Resolve proposal #`_proposalId`
+    * @param _proposalId uint256 Id of proposal to resolve
+    */
     function resolve(uint256 _proposalId) public {
         Proposal storage proposal_ = _getProposal(_proposalId);
 
@@ -291,6 +332,10 @@ contract HCVoting is ProposalBase, IForwarder, AragonApp {
         emit ProposalResolved(_proposalId);
     }
 
+    /**
+    * @notice Withdraw stake from resolved proposal, including rewards from winning stakes
+    * @param _proposalId uint256 Id of proposal to withdraw stake from
+    */
     function withdraw(uint256 _proposalId) public {
         Proposal storage proposal_ = proposals[_proposalId];
 
@@ -443,6 +488,10 @@ contract HCVoting is ProposalBase, IForwarder, AragonApp {
 
     /* Setters */
 
+    /**
+    * @notice Change required support to approve a proposal. Expressed in parts per million, i.e. 51% = 510000.
+    * @param _newRequiredSupport uint256 New required support
+    */
     function changeRequiredSupport(uint256 _newRequiredSupport) public auth(CHANGE_SUPPORT_ROLE) {
         require(_newRequiredSupport > 0, ERROR_BAD_REQUIRED_SUPPORT);
         requiredSupport = _newRequiredSupport;

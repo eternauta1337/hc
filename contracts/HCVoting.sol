@@ -196,7 +196,7 @@ contract HCVoting is ProposalBase, IForwarder, AragonApp {
 
         proposal_.votes[msg.sender] = _supports ? Vote.Yea : Vote.Nay;
 
-        // Quite endings - Consensus flips in the ending period cause closeDate extensions.
+        // Quite endings - Consensus flips in the ending period will cause closeDate extensions.
         if (relativeConsensusBeforeVote != Vote.Absent) {
             Vote relativeConsensusAfterVote = getConsensus(_proposalId, true);
             if (relativeConsensusAfterVote != relativeConsensusBeforeVote) {
@@ -290,7 +290,6 @@ contract HCVoting is ProposalBase, IForwarder, AragonApp {
         require(state != ProposalState.Closed, ERROR_PROPOSAL_IS_CLOSED);
         require(state != ProposalState.Boosted, ERROR_PROPOSAL_IS_BOOSTED);
 
-        require(hasConfidence(_proposalId), ERROR_NOT_ENOUGH_CONFIDENCE);
         require(hasMaintainedConfidence(_proposalId), ERROR_HASNT_MAINTAINED_CONF);
 
         proposal_.boosted = true;
@@ -311,7 +310,7 @@ contract HCVoting is ProposalBase, IForwarder, AragonApp {
         ProposalState state = getState(_proposalId);
         require(state != ProposalState.Resolved, ERROR_PROPOSAL_IS_RESOLVED);
 
-        // Try to resolve with absolute consensus, otherwise relative consensus if boosted.
+        // Try to resolve with absolute consensus, otherwise try relative consensus if boosted.
         Vote support = getConsensus(_proposalId, false);
         if (support == Vote.Absent && state == ProposalState.Boosted) {
             require(getTimestamp64() >= proposal_.closeDate, ERROR_ON_BOOST_PERIOD);
@@ -347,6 +346,7 @@ contract HCVoting is ProposalBase, IForwarder, AragonApp {
         uint256 winningStake = supported ? proposal_.upstakes[msg.sender] : proposal_.downstakes[msg.sender];
         require(winningStake > 0, ERROR_NO_WINNING_STAKE);
 
+        // Winners split the loosing pot pro-rata.
         uint256 totalWinningStake = supported ? proposal_.totalUpstake : proposal_.totalDownstake;
         uint256 totalLosingStake = supported ? proposal_.totalDownstake : proposal_.totalUpstake;
         uint256 sendersWinningRatio = winningStake.mul(MILLION).div(totalWinningStake);

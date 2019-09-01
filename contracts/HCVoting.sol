@@ -13,12 +13,12 @@ contract HCVoting is ProposalBase, IForwarder, AragonApp {
     using SafeMath for uint256;
     using SafeMath64 for uint64;
 
-    /* Roles */
+    /* ROLES */
 
     bytes32 public constant CREATE_PROPOSALS_ROLE = keccak256("CREATE_PROPOSALS_ROLE");
     bytes32 public constant CHANGE_SUPPORT_ROLE   = keccak256("CHANGE_SUPPORT_ROLE");
 
-    /* Errors */
+    /* ERRORS */
 
     string internal constant ERROR_BAD_REQUIRED_SUPPORT  = "HCVOTING_BAD_REQUIRED_SUPPORT";
     string internal constant ERROR_BAD_QUEUE_PERIOD      = "HCVOTING_BAD_QUEUE_PERIOD";
@@ -41,7 +41,7 @@ contract HCVoting is ProposalBase, IForwarder, AragonApp {
     string internal constant ERROR_NOT_RESOLVED          = "HCVOTING_NOT_RESOLVED";
     string internal constant ERROR_NO_WINNING_STAKE      = "HCVOTING_NO_WINNING_STAKE";
 
-    /* Events */
+    /* EVENTS */
 
     event ProposalCreated(uint256 proposalId, address creator, string metadata);
     event VoteCasted(uint256 proposalId, address voter, bool supports);
@@ -53,7 +53,7 @@ contract HCVoting is ProposalBase, IForwarder, AragonApp {
     event ProposalBoosted(uint256 proposalId);
     event ProposalResolved(uint256 proposalId);
 
-    /* Constants */
+    /* CONSTANTS */
 
     // Used to avoid integer precision loss in divisions.
     uint256 internal constant MILLION = 1000000;
@@ -81,7 +81,7 @@ contract HCVoting is ProposalBase, IForwarder, AragonApp {
 
     uint256 public numBoostedProposals;
 
-    /* Init */
+    /* INIT */
 
     /**
     * @notice Initialize HCVoting app
@@ -123,7 +123,7 @@ contract HCVoting is ProposalBase, IForwarder, AragonApp {
         initialized();
     }
 
-    /* Public */
+    /* PUBLIC */
 
     /**
     * @notice Create a new proposal about "`_metadata`" with the specified execution script
@@ -311,7 +311,7 @@ contract HCVoting is ProposalBase, IForwarder, AragonApp {
         ProposalState state = getState(_proposalId);
         require(state != ProposalState.Resolved, ERROR_PROPOSAL_IS_RESOLVED);
 
-        // Resolve with absolute consensus, otherwise try relative consensus if boosted.
+        // Try to resolve with absolute consensus, otherwise relative consensus if boosted.
         Vote support = getConsensus(_proposalId, false);
         if (support == Vote.Absent && state == ProposalState.Boosted) {
             require(getTimestamp64() >= proposal_.closeDate, ERROR_ON_BOOST_PERIOD);
@@ -359,7 +359,7 @@ contract HCVoting is ProposalBase, IForwarder, AragonApp {
         );
     }
 
-    /* Calculated properties */
+    /* CALCULATED PROPERTIES */
 
     function getState(uint256 _proposalId) public view returns (ProposalState) {
         Proposal storage proposal_ = _getProposal(_proposalId);
@@ -437,7 +437,7 @@ contract HCVoting is ProposalBase, IForwarder, AragonApp {
         return getTimestamp64() >= proposal_.pendedDate.add(pendedPeriod);
     }
 
-    /* Internal */
+    /* INTERNAL */
 
     function _evaluatePended(uint256 _proposalId) internal {
         Proposal storage proposal_ = _getProposal(_proposalId);
@@ -471,7 +471,7 @@ contract HCVoting is ProposalBase, IForwarder, AragonApp {
         emit ProposalExecuted(_proposalId);
     }
 
-    /* Forwarding */
+    /* FORWARDING */
 
     function isForwarder() external pure returns (bool) {
         return true;
@@ -486,7 +486,7 @@ contract HCVoting is ProposalBase, IForwarder, AragonApp {
         return canPerform(_sender, CREATE_PROPOSALS_ROLE, arr());
     }
 
-    /* Setters */
+    /* SETTERS */
 
     /**
     * @notice Change required support to approve a proposal. Expressed in parts per million, i.e. 51% = 510000.

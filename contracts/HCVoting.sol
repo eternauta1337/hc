@@ -58,7 +58,7 @@ contract HCVoting is ProposalBase, IForwarder, AragonApp {
     // Used to avoid integer precision loss in divisions.
     uint256 internal constant MILLION = 1000000;
 
-    /* Data strucures */
+    /* DATA STRUCURES */
 
     enum ProposalState {
         Queued,   // Proposal receiving votes and stake. Can be resolved with absolute consensus.
@@ -68,7 +68,7 @@ contract HCVoting is ProposalBase, IForwarder, AragonApp {
         Closed    // If boosted, proposal can be resolved. If not boosted, proposal expired and cannot receive votes or stake.
     }
 
-    /* Properties */
+    /* PROPERTIES */
 
     MiniMeToken public voteToken;
     MiniMeToken public stakeToken;

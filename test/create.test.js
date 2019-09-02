@@ -22,7 +22,7 @@ contract('HCVoting (create)', ([appManager, user1, user2]) => {
   })
 
   describe('when no vote tokens exist', () => {
-    it('should revert when attempting to create a proposal when no vote tokens exist', async () => {
+    it('should revert when attempting to create a proposal', async () => {
       await assertRevert(
         app.create(EMPTY_SCRIPT, 'Proposal metadata'),
         'HCVOTING_NO_VOTING_POWER'

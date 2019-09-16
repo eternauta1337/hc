@@ -124,3 +124,5 @@ contract('HCVoting (setup)', ([appManager]) => {
     })
   })
 })
+
+// We should add tests for configuration (changing required support)

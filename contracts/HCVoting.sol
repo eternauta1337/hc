@@ -1,3 +1,5 @@
+pragma solidity ^0.4.24;
+
 import "./ProposalBase.sol";
 
 import "@aragon/os/contracts/apps/AragonApp.sol";
@@ -43,6 +45,9 @@ contract HCVoting is ProposalBase, IForwarder, AragonApp {
 
     /* EVENTS */
 
+    // May want to index the proposal id and address
+    // Also not a big deal, but we generally put events at the end (after all constant and storage
+    // variables and before modifiers)
     event ProposalCreated(uint256 proposalId, address creator, string metadata);
     event VoteCasted(uint256 proposalId, address voter, bool supports);
     event ProposalUpstaked(uint256 proposalId, address staker, uint256 amount);
@@ -104,6 +109,8 @@ contract HCVoting is ProposalBase, IForwarder, AragonApp {
     )
         public onlyInit
     {
+    function initialize(MiniMeToken _voteToken, uint256 _requiredSupport) public onlyInit {
+        // May be cheaper to group these requires using the same error string
         require(_requiredSupport > 0, ERROR_BAD_REQUIRED_SUPPORT);
         require(_requiredSupport <= MILLION, ERROR_BAD_REQUIRED_SUPPORT);
         require(_queuePeriod > 0, ERROR_BAD_QUEUE_PERIOD);
@@ -120,23 +127,28 @@ contract HCVoting is ProposalBase, IForwarder, AragonApp {
         boostPeriod = _boostPeriod;
         endingPeriod = _endingPeriod;
 
+        // We normally put this as the first thing in `initialize()` (makes it harder to forget)
         initialized();
     }
 
     /* PUBLIC */
 
+    // Suggestion to rename this to `createProposal()`
     /**
     * @notice Create a new proposal about "`_metadata`" with the specified execution script
     * @param _executionScript EVM script to be executed on approval
     * @param _metadata string metadata
     */
     function create(bytes _executionScript, string _metadata) public auth(CREATE_PROPOSALS_ROLE) {
+        // We should comment about why we do a -1
         uint64 creationBlock = getBlockNumber64() - 1;
         require(voteToken.totalSupplyAt(creationBlock) > 0, ERROR_NO_VOTING_POWER);
 
         uint256 proposalId = numProposals;
         numProposals++;
 
+        // Using _getProposal is both redundant and somewhat confusing here; I'd suggest just using
+        // the mapping directly
         Proposal storage proposal_ = _getProposal(proposalId);
         proposal_.creationBlock = creationBlock;
         proposal_.executionScript = _executionScript;
@@ -171,29 +183,27 @@ contract HCVoting is ProposalBase, IForwarder, AragonApp {
             }
         }
 
+        // Perhaps we can just disallow re-voting? It doesn't really work well with quiet endings anyway
         // Reject redundant votes.
         Vote previousVote = proposal_.votes[msg.sender];
         require(
-            previousVote == Vote.Absent || !(previousVote == Vote.Yea && _supports || previousVote == Vote.Nay && !_supports),
+            previousVote == Vote.Absent || (previousVote == Vote.Yea && !_supports) || (previousVote == Vote.Nay && _supports)),
             ERROR_REDUNDANT_VOTE
         );
 
-        if (previousVote == Vote.Absent) {
-            if (_supports) {
-                proposal_.totalYeas = proposal_.totalYeas.add(userVotingPower);
-            } else {
-                proposal_.totalNays = proposal_.totalNays.add(userVotingPower);
-            }
-        } else {
-            if (previousVote == Vote.Yea && !_supports) {
-                proposal_.totalYeas = proposal_.totalYeas.sub(userVotingPower);
-                proposal_.totalNays = proposal_.totalNays.add(userVotingPower);
-            } else if (previousVote == Vote.Nay && _supports) {
-                proposal_.totalNays = proposal_.totalNays.sub(userVotingPower);
-                proposal_.totalYeas = proposal_.totalYeas.add(userVotingPower);
-            }
+        // Reset previous votes
+        if (previousVote == Vote.Yea) {
+            proposal_.totalYeas = proposal_.totalYeas.sub(userVotingPower);
+        } else if (previousVote == Vote.nay) {
+            proposal_.totalNays = proposal_.totalNays.sub(userVotingPower);
         }
 
+        // Vote
+        if (_supports) {
+            proposal_.totalYeas = proposal_.totalYeas.add(userVotingPower);
+        } else {
+            proposal_.totalNays = proposal_.totalNays.add(userVotingPower);
+        }
         proposal_.votes[msg.sender] = _supports ? Vote.Yea : Vote.Nay;
 
         // Quite endings - Consensus flips in the ending period will cause closeDate extensions.
@@ -300,6 +310,8 @@ contract HCVoting is ProposalBase, IForwarder, AragonApp {
         emit ProposalBoosted(_proposalId);
     }
 
+    // We probably want this action to be protected by a role for now; otherwise anyone could DDOS
+    // this voting app by calling `resolve()` too early / frontrunned
     /**
     * @notice Resolve proposal #`_proposalId`
     * @param _proposalId uint256 Id of proposal to resolve
@@ -385,12 +397,12 @@ contract HCVoting is ProposalBase, IForwarder, AragonApp {
 
     function getConsensus(uint256 _proposalId, bool _relative) public view returns (Vote) {
         uint256 yeaPPM = getSupport(_proposalId, true, _relative);
-        uint256 nayPPM = getSupport(_proposalId, false, _relative);
 
         if (yeaPPM > requiredSupport) {
             return Vote.Yea;
         }
 
+        uint256 nayPPM = getSupport(_proposalId, false, _relative);
         if (nayPPM > requiredSupport) {
             return Vote.Nay;
         }
@@ -438,6 +450,7 @@ contract HCVoting is ProposalBase, IForwarder, AragonApp {
     }
 
     /* INTERNAL */
+    // Generally we move everything internal to the end of the file
 
     function _evaluatePended(uint256 _proposalId) internal {
         Proposal storage proposal_ = _getProposal(_proposalId);
@@ -459,6 +472,9 @@ contract HCVoting is ProposalBase, IForwarder, AragonApp {
     }
 
     function _executeProposal(uint256 _proposalId) internal {
+        // It's a bit redundant to use `getProposal()` here, since this is internal and we've
+        // already checked that the proposal exists beforehand. We could also send down the entire
+        // Proposal struct in storage.
         Proposal storage proposal_ = _getProposal(_proposalId);
         require(!proposal_.executed, ERROR_ALREADY_EXECUTED);
 
@@ -483,6 +499,7 @@ contract HCVoting is ProposalBase, IForwarder, AragonApp {
     }
 
     function canForward(address _sender, bytes) public view returns (bool) {
+        // We should comment that this is essentially `auth()`
         return canPerform(_sender, CREATE_PROPOSALS_ROLE, arr());
     }
 
@@ -493,7 +510,9 @@ contract HCVoting is ProposalBase, IForwarder, AragonApp {
     * @param _newRequiredSupport uint256 New required support
     */
     function changeRequiredSupport(uint256 _newRequiredSupport) public auth(CHANGE_SUPPORT_ROLE) {
+        // This is missing the 1% minimum check that's in initialize() (perhaps we can consolidate the setting logic)
         require(_newRequiredSupport > 0, ERROR_BAD_REQUIRED_SUPPORT);
         requiredSupport = _newRequiredSupport;
+        // We should send an event for this to let frontends know about the config change
     }
 }

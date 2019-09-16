@@ -13,6 +13,8 @@ contract('HCVoting (resolve)', ([appManager, creator, voter1, voter2, voter3, vo
   const newRequiredSupport = 400000;
 
   async function createProposalWithScript() {
+    // Executing a script targetting the app itself may be unintuitive; what do you think about
+    // using a simple mock contract target instead?
     const action = { to: app.address, calldata: app.contract.changeRequiredSupport.getData(newRequiredSupport) }
     const script = encodeCallScript([action])
     await app.create(script, 'Modify support')

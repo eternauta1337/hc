@@ -8,7 +8,11 @@ contract ProposalBase {
 
     /* DATA STRUCTURES */
 
-    enum Vote { Absent, Yea, Nay }
+    enum Vote {
+        Absent, // 0 -- default
+        Yea,
+        Nay
+    }
 
     struct Proposal {
         bool boosted;
@@ -35,11 +39,14 @@ contract ProposalBase {
 
     /* GETTERS */
 
+    // Perhaps `getUserVote()` or `getVoterState()` might be more clear; it's easy to confuse this
+    // with a "vote" data structure (as we have aragon-apps' Voting.sol)
     function getVote(uint256 _proposalId, address _user) public view returns (Vote) {
         Proposal storage proposal_ = _getProposal(_proposalId);
         return proposal_.votes[_user];
     }
 
+    // May be easier to group some of these getters together as `getProposal()`
     function getUpstake(uint256 _proposalId, address _user) public view returns (uint256) {
         Proposal storage proposal_ = _getProposal(_proposalId);
         return proposal_.upstakes[_user];

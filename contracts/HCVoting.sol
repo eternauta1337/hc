@@ -226,7 +226,7 @@ contract HCVoting is ProposalBase, IForwarder, AragonApp {
             ERROR_TOKEN_TRANSFER_FAILED
         );
 
-        _evaluatePended(_proposalId);
+        _evaluatePended(_proposalId, proposal_);
     }
 
     /**
@@ -263,7 +263,7 @@ contract HCVoting is ProposalBase, IForwarder, AragonApp {
             ERROR_TOKEN_TRANSFER_FAILED
         );
 
-        _evaluatePended(_proposalId);
+        _evaluatePended(_proposalId, proposal_);
     }
 
     /**
@@ -313,7 +313,7 @@ contract HCVoting is ProposalBase, IForwarder, AragonApp {
         proposal_.resolved = true;
 
         if (support == Vote.Yea) {
-            _executeProposal(_proposalId);
+            _executeProposal(_proposalId, proposal_);
         }
 
         emit ProposalResolved(_proposalId);
@@ -373,12 +373,11 @@ contract HCVoting is ProposalBase, IForwarder, AragonApp {
 
     function getConsensus(uint256 _proposalId, bool _relative) public view returns (Vote) {
         uint256 yeaPPM = getSupport(_proposalId, true, _relative);
-        uint256 nayPPM = getSupport(_proposalId, false, _relative);
-
         if (yeaPPM > requiredSupport) {
             return Vote.Yea;
         }
 
+        uint256 nayPPM = getSupport(_proposalId, false, _relative);
         if (nayPPM > requiredSupport) {
             return Vote.Nay;
         }
@@ -425,40 +424,6 @@ contract HCVoting is ProposalBase, IForwarder, AragonApp {
         return getTimestamp64() >= proposal_.pendedDate.add(pendedPeriod);
     }
 
-    /* INTERNAL */
-
-    function _evaluatePended(uint256 _proposalId) internal {
-        Proposal storage proposal_ = _getProposal(_proposalId);
-
-        ProposalState state = getState(_proposalId);
-        if (state == ProposalState.Resolved || state == ProposalState.Boosted) {
-            return;
-        }
-
-        if (hasConfidence(_proposalId)) {
-            if (state == ProposalState.Queued) {
-                proposal_.pendedDate = getTimestamp64();
-            }
-        } else {
-            if (state == ProposalState.Pended) {
-                proposal_.pendedDate = 0;
-            }
-        }
-    }
-
-    function _executeProposal(uint256 _proposalId) internal {
-        Proposal storage proposal_ = _getProposal(_proposalId);
-        require(!proposal_.executed, ERROR_ALREADY_EXECUTED);
-
-        address[] memory blacklist = new address[](0);
-        bytes memory input = new bytes(0);
-        runScript(proposal_.executionScript, input, blacklist);
-
-        proposal_.executed = true;
-
-        emit ProposalExecuted(_proposalId);
-    }
-
     /* FORWARDING */
 
     function isForwarder() external pure returns (bool) {
@@ -490,5 +455,36 @@ contract HCVoting is ProposalBase, IForwarder, AragonApp {
     function changeRequiredSupport(uint256 _newRequiredSupport) public auth(CHANGE_SUPPORT_ROLE) {
         _validateRequiredSupport(_newRequiredSupport);
         requiredSupport = _newRequiredSupport;
+    }
+
+    /* INTERNAL */
+
+    function _evaluatePended(uint256 _proposalId, Proposal storage proposal_) internal {
+        ProposalState state = getState(_proposalId);
+        if (state == ProposalState.Resolved || state == ProposalState.Boosted) {
+            return;
+        }
+
+        if (hasConfidence(_proposalId)) {
+            if (state == ProposalState.Queued) {
+                proposal_.pendedDate = getTimestamp64();
+            }
+        } else {
+            if (state == ProposalState.Pended) {
+                proposal_.pendedDate = 0;
+            }
+        }
+    }
+
+    function _executeProposal(uint256 _proposalId, Proposal storage proposal_) internal {
+        require(!proposal_.executed, ERROR_ALREADY_EXECUTED);
+
+        address[] memory blacklist = new address[](0);
+        bytes memory input = new bytes(0);
+        runScript(proposal_.executionScript, input, blacklist);
+
+        proposal_.executed = true;
+
+        emit ProposalExecuted(_proposalId);
     }
 }

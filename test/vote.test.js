@@ -68,7 +68,7 @@ contract('HCVoting (vote)', ([appManager, voter1, voter2, voter3, voter4]) => {
       })
 
       it('should record the user\'s vote as Nay', async () => {
-        assert.equal((await app.getVote(0, voter1)).toNumber(), VOTE.NAY)
+        assert.equal((await app.getUserVote(0, voter1)).toNumber(), VOTE.NAY)
       })
 
       it('calculates the correct absolute support', async () => {
@@ -97,7 +97,7 @@ contract('HCVoting (vote)', ([appManager, voter1, voter2, voter3, voter4]) => {
         })
 
         it('should record the user\'s vote as Yea', async () => {
-          assert.equal((await app.getVote(0, voter2)).toNumber(), VOTE.YEA)
+          assert.equal((await app.getUserVote(0, voter2)).toNumber(), VOTE.YEA)
         })
 
         it('registers the correct totalYeas/totalNays', async () => {
@@ -163,10 +163,10 @@ contract('HCVoting (vote)', ([appManager, voter1, voter2, voter3, voter4]) => {
             })
 
             it('registers each user\'s vote', async () => {
-              assert.equal((await app.getVote(1, voter1)).toNumber(), VOTE.YEA)
-              assert.equal((await app.getVote(1, voter2)).toNumber(), VOTE.NAY)
-              assert.equal((await app.getVote(1, voter3)).toNumber(), VOTE.NAY)
-              assert.equal((await app.getVote(1, voter4)).toNumber(), VOTE.NAY)
+              assert.equal((await app.getUserVote(1, voter1)).toNumber(), VOTE.YEA)
+              assert.equal((await app.getUserVote(1, voter2)).toNumber(), VOTE.NAY)
+              assert.equal((await app.getUserVote(1, voter3)).toNumber(), VOTE.NAY)
+              assert.equal((await app.getUserVote(1, voter4)).toNumber(), VOTE.NAY)
             })
 
             it('calculates the correct absolute support', async () => {
@@ -203,7 +203,7 @@ contract('HCVoting (vote)', ([appManager, voter1, voter2, voter3, voter4]) => {
           })
 
           it('should record the user\'s vote as Yea', async () => {
-            assert.equal((await app.getVote(0, voter3)).toNumber(), VOTE.YEA)
+            assert.equal((await app.getUserVote(0, voter3)).toNumber(), VOTE.YEA)
           })
 
           it('registers the correct totalYeas/totalNays', async () => {

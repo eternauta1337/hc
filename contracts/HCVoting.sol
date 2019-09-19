@@ -82,6 +82,7 @@ contract HCVoting is ProposalBase, IForwarder, AragonApp {
     event ProposalExecuted(uint256 indexed proposalId);
     event ProposalBoosted(uint256 indexed proposalId);
     event ProposalResolved(uint256 indexed proposalId);
+    event RequiredSupportChanged(uint256 newSupport);
 
     /* INIT */
 
@@ -165,8 +166,7 @@ contract HCVoting is ProposalBase, IForwarder, AragonApp {
         require(userVotingPower > 0, ERROR_NO_VOTING_POWER);
 
         // Reject re-voting.
-        Vote previousVote = proposal_.votes[msg.sender];
-        require(previousVote == Vote.Absent, ERROR_ALREADY_VOTED);
+        require(getUserVote(_proposalId, msg.sender) == Vote.Absent, ERROR_ALREADY_VOTED);
 
         // See "Quiet endings" below.
         Vote relativeConsensusBeforeVote = Vote.Absent;
@@ -243,14 +243,14 @@ contract HCVoting is ProposalBase, IForwarder, AragonApp {
         require(state != ProposalState.Boosted, ERROR_PROPOSAL_IS_BOOSTED);
 
         if (_upstake) {
-            require(getUpstake(_proposalId, msg.sender) >= _amount, ERROR_INSUFFICIENT_STAKE);
+            require(getUserUpstake(_proposalId, msg.sender) >= _amount, ERROR_INSUFFICIENT_STAKE);
 
             proposal_.totalUpstake = proposal_.totalUpstake.sub(_amount);
             proposal_.upstakes[msg.sender] = proposal_.upstakes[msg.sender].sub(_amount);
 
             emit UpstakeWithdrawn(_proposalId, msg.sender, _amount);
         } else {
-            require(getDownstake(_proposalId, msg.sender) >= _amount, ERROR_INSUFFICIENT_STAKE);
+            require(getUserDownstake(_proposalId, msg.sender) >= _amount, ERROR_INSUFFICIENT_STAKE);
 
             proposal_.totalDownstake = proposal_.totalDownstake.sub(_amount);
             proposal_.downstakes[msg.sender] = proposal_.downstakes[msg.sender].sub(_amount);
@@ -455,6 +455,8 @@ contract HCVoting is ProposalBase, IForwarder, AragonApp {
     function changeRequiredSupport(uint256 _newRequiredSupport) public auth(CHANGE_SUPPORT_ROLE) {
         _validateRequiredSupport(_newRequiredSupport);
         requiredSupport = _newRequiredSupport;
+
+        emit RequiredSupportChanged(requiredSupport);
     }
 
     /* INTERNAL */

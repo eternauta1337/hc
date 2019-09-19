@@ -8,7 +8,11 @@ contract ProposalBase {
 
     /* DATA STRUCTURES */
 
-    enum Vote { Absent, Yea, Nay }
+    enum Vote {
+        Absent, // 0 -- default
+        Yea,
+        Nay
+    }
 
     struct Proposal {
         bool boosted;
@@ -35,17 +39,17 @@ contract ProposalBase {
 
     /* GETTERS */
 
-    function getVote(uint256 _proposalId, address _user) public view returns (Vote) {
+    function getUserVote(uint256 _proposalId, address _user) public view returns (Vote) {
         Proposal storage proposal_ = _getProposal(_proposalId);
         return proposal_.votes[_user];
     }
 
-    function getUpstake(uint256 _proposalId, address _user) public view returns (uint256) {
+    function getUserUpstake(uint256 _proposalId, address _user) public view returns (uint256) {
         Proposal storage proposal_ = _getProposal(_proposalId);
         return proposal_.upstakes[_user];
     }
 
-    function getDownstake(uint256 _proposalId, address _user) public view returns (uint256) {
+    function getUserDownstake(uint256 _proposalId, address _user) public view returns (uint256) {
         Proposal storage proposal_ = _getProposal(_proposalId);
         return proposal_.downstakes[_user];
     }

@@ -21,8 +21,8 @@ contract('HCVoting (stake)', ([appManager, voter, staker1, staker2]) => {
     })
 
     it('registers the user\'s stake in the proposal', async () => {
-      assert.equal((await app.getUpstake(proposalId, staker)).toNumber(), tracker.proposals[proposalId].upstakes[staker], 'invalid user upstake')
-      assert.equal((await app.getDownstake(proposalId, staker)).toNumber(), tracker.proposals[proposalId].downstakes[staker], 'invalid user downstake')
+      assert.equal((await app.getUserUpstake(proposalId, staker)).toNumber(), tracker.proposals[proposalId].upstakes[staker], 'invalid user upstake')
+      assert.equal((await app.getUserDownstake(proposalId, staker)).toNumber(), tracker.proposals[proposalId].downstakes[staker], 'invalid user downstake')
     })
   }
 

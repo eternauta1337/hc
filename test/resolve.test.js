@@ -5,17 +5,22 @@ const { encodeCallScript } = require('@aragon/test-helpers/evmScript')
 const { getEventAt } = require('@aragon/test-helpers/events')
 const { defaultParams, deployAllAndInitializeApp, VOTE, PROPOSAL_STATE } = require('./helpers/deployApp')
 
+const SomeContract = artifacts.require('SomeContract.sol')
+
 contract('HCVoting (resolve)', ([appManager, creator, voter1, voter2, voter3, voter4, staker]) => {
-  let app, voteToken, stakeToken
+  let app, voteToken, stakeToken, someContract
   let resolutionReceipt
   let proposalId = -1
 
-  const newRequiredSupport = 400000;
+  const NEW_VALUE = 42
 
   async function createProposalWithScript() {
-    const action = { to: app.address, calldata: app.contract.changeRequiredSupport.getData(newRequiredSupport) }
+    const action = {
+      to: someContract.address,
+      calldata: someContract.contract.setValue.getData(NEW_VALUE)
+    }
     const script = encodeCallScript([action])
-    await app.propose(script, 'Modify support')
+    await app.propose(script, 'Change value in SomeContract')
     proposalId++
   }
 
@@ -37,10 +42,6 @@ contract('HCVoting (resolve)', ([appManager, creator, voter1, voter2, voter3, vo
         resolutionReceipt = await app.resolve(proposalId)
       })
 
-      after('restore requiredSupport', async () => {
-        await app.changeRequiredSupport(defaultParams.requiredSupport)
-      })
-
       it('emits a ProposalResolved event', async () => {
         const resolutionEvent = getEventAt(resolutionReceipt, 'ProposalResolved')
         assert.equal(resolutionEvent.args.proposalId.toNumber(), proposalId, 'invalid proposal id')
@@ -54,8 +55,8 @@ contract('HCVoting (resolve)', ([appManager, creator, voter1, voter2, voter3, vo
         assert.equal(await app.getExecuted(proposalId), executes)
       })
 
-      it('changes requiredSupport if the proposal is supported', async () => {
-        assert.equal((await app.requiredSupport()).toNumber(), executes ? newRequiredSupport : defaultParams.requiredSupport)
+      it('changes value in SomeContract if the proposal is supported', async () => {
+        assert.equal((await someContract.value()).toNumber(), executes ? NEW_VALUE : 0)
       })
 
       it('reverts when trying to resolve the proposal a second time', async () => {
@@ -80,6 +81,7 @@ contract('HCVoting (resolve)', ([appManager, creator, voter1, voter2, voter3, vo
 
   describe('when trying to resolve a proposal with no consensus', () => {
     before('create proposal', async () => {
+      someContract = await SomeContract.new()
       await createProposalWithScript()
     })
 
@@ -98,6 +100,7 @@ contract('HCVoting (resolve)', ([appManager, creator, voter1, voter2, voter3, vo
   describe('when resolving proposals with absolute consensus', () => {
     describe('when a proposal has absolute negative consensus', () => {
       before('create proposal', async () => {
+        someContract = await SomeContract.new()
         await createProposalWithScript()
       })
 
@@ -112,6 +115,7 @@ contract('HCVoting (resolve)', ([appManager, creator, voter1, voter2, voter3, vo
 
     describe('when a proposal has absolute positive consensus', () => {
       before('create proposal', async () => {
+        someContract = await SomeContract.new()
         await createProposalWithScript()
       })
 
@@ -141,6 +145,7 @@ contract('HCVoting (resolve)', ([appManager, creator, voter1, voter2, voter3, vo
 
     describe('when a proposal has relative negative consensus', () => {
       before('create and boost a proposal', async () => {
+        someContract = await SomeContract.new()
         await createProposalWithScript()
         await quickBoostProposal()
       })

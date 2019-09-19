@@ -5,7 +5,7 @@ const { EMPTY_SCRIPT } = require('@aragon/test-helpers/evmScript')
 const { getEventAt } = require('@aragon/test-helpers/events')
 const { defaultParams, deployAllAndInitializeApp, PROPOSAL_STATE } = require('./helpers/deployApp')
 
-contract('HCVoting (boost)', ([appManager, voter1, voter2, voter3, staker]) => {
+contract('HCVoting (boost)', ([appManager, voter1, voter2, voter3, voter4, voter5, staker]) => {
   let app, voteToken, stakeToken
 
   before('deploy app and mint some vote tokens', async () => {
@@ -14,6 +14,8 @@ contract('HCVoting (boost)', ([appManager, voter1, voter2, voter3, staker]) => {
     await voteToken.generateTokens(voter1, 50)
     await voteToken.generateTokens(voter2, 50)
     await voteToken.generateTokens(voter3, 120)
+    await voteToken.generateTokens(voter4, 220)
+    await voteToken.generateTokens(voter5, 320)
   })
 
   describe('when no proposals exist', () => {
@@ -238,7 +240,7 @@ contract('HCVoting (boost)', ([appManager, voter1, voter2, voter3, staker]) => {
 
                     describe('when a new vote flips consensus', () => {
                       before('vote', async () => {
-                        await app.vote(0, false, { from: voter3 })
+                        await app.vote(0, false, { from: voter4 })
                       })
 
                       it('extends the proposal\'s lifetime', async () => {
@@ -246,14 +248,14 @@ contract('HCVoting (boost)', ([appManager, voter1, voter2, voter3, staker]) => {
                         assert.equal(newCloseDate, closeDate + defaultParams.endingPeriod)
                       })
 
-                      describe('when a new vote flips consensus', () => {
+                      describe('when yet another new vote flips consensus', () => {
                         before('shift time to the ending period', async () => {
                           closeDate = (await app.getCloseDate(0)).toNumber()
                           await app.mockSetTimestamp(closeDate - defaultParams.endingPeriod + 1)
                         })
 
                         before('vote', async () => {
-                          await app.vote(0, true, { from: voter3 })
+                          await app.vote(0, true, { from: voter5 })
                         })
 
                         it('extends the proposal\'s lifetime', async () => {

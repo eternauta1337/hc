@@ -30,7 +30,7 @@ contract HCVoting is ProposalBase, IForwarder, AragonApp {
     string internal constant ERROR_PROPOSAL_IS_RESOLVED  = "HCVOTING_PROPOSAL_IS_RESOLVED";
     string internal constant ERROR_PROPOSAL_IS_CLOSED    = "HCVOTING_PROPOSAL_IS_CLOSED";
     string internal constant ERROR_PROPOSAL_IS_BOOSTED   = "HCVOTING_PROPOSAL_IS_BOOSTED";
-    string internal constant ERROR_REDUNDANT_VOTE        = "HCVOTING_REDUNDANT_VOTE";
+    string internal constant ERROR_ALREADY_VOTED         = "HCVOTING_ALREADY_VOTED";
     string internal constant ERROR_NO_VOTING_POWER       = "HCVOTING_NO_VOTING_POWER";
     string internal constant ERROR_NO_CONSENSUS          = "HCVOTING_NO_CONSENSUS";
     string internal constant ERROR_TOKEN_TRANSFER_FAILED = "HCVOTING_TOKEN_TRANSFER_FAILED";
@@ -138,7 +138,7 @@ contract HCVoting is ProposalBase, IForwarder, AragonApp {
         uint256 proposalId = numProposals;
         numProposals++;
 
-        Proposal storage proposal_ = _getProposal(proposalId);
+        Proposal storage proposal_ = proposals[proposalId];
         proposal_.creationBlock = creationBlock;
         proposal_.executionScript = _executionScript;
 
@@ -164,6 +164,10 @@ contract HCVoting is ProposalBase, IForwarder, AragonApp {
         uint256 userVotingPower = voteToken.balanceOfAt(msg.sender, proposal_.creationBlock);
         require(userVotingPower > 0, ERROR_NO_VOTING_POWER);
 
+        // Reject re-voting.
+        Vote previousVote = proposal_.votes[msg.sender];
+        require(previousVote == Vote.Absent, ERROR_ALREADY_VOTED);
+
         // See "Quiet endings" below.
         Vote relativeConsensusBeforeVote = Vote.Absent;
         if (state == ProposalState.Boosted) {
@@ -172,29 +176,12 @@ contract HCVoting is ProposalBase, IForwarder, AragonApp {
             }
         }
 
-        // Reject redundant votes.
-        Vote previousVote = proposal_.votes[msg.sender];
-        require(
-            previousVote == Vote.Absent || !(previousVote == Vote.Yea && _supports || previousVote == Vote.Nay && !_supports),
-            ERROR_REDUNDANT_VOTE
-        );
-
-        if (previousVote == Vote.Absent) {
-            if (_supports) {
-                proposal_.totalYeas = proposal_.totalYeas.add(userVotingPower);
-            } else {
-                proposal_.totalNays = proposal_.totalNays.add(userVotingPower);
-            }
+        // Update user Vote and totalYeas/totalNays.
+        if (_supports) {
+            proposal_.totalYeas = proposal_.totalYeas.add(userVotingPower);
         } else {
-            if (previousVote == Vote.Yea && !_supports) {
-                proposal_.totalYeas = proposal_.totalYeas.sub(userVotingPower);
-                proposal_.totalNays = proposal_.totalNays.add(userVotingPower);
-            } else if (previousVote == Vote.Nay && _supports) {
-                proposal_.totalNays = proposal_.totalNays.sub(userVotingPower);
-                proposal_.totalYeas = proposal_.totalYeas.add(userVotingPower);
-            }
+            proposal_.totalNays = proposal_.totalNays.add(userVotingPower);
         }
-
         proposal_.votes[msg.sender] = _supports ? Vote.Yea : Vote.Nay;
 
         // Quite endings - Consensus flips in the ending period will cause closeDate extensions.

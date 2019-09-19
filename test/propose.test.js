@@ -5,7 +5,7 @@ const { EMPTY_SCRIPT } = require('@aragon/test-helpers/evmScript')
 const { getEventAt } = require('@aragon/test-helpers/events')
 const { defaultParams, deployAllAndInitializeApp } = require('./helpers/deployApp')
 
-contract('HCVoting (create)', ([appManager, user1, user2]) => {
+contract('HCVoting (propose)', ([appManager, user1, user2]) => {
   let app, voteToken
 
   before('deploy app', async () => {

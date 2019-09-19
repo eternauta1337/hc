@@ -19,6 +19,7 @@ contract HCVoting is ProposalBase, IForwarder, AragonApp {
 
     bytes32 public constant CREATE_PROPOSALS_ROLE = keccak256("CREATE_PROPOSALS_ROLE");
     bytes32 public constant CHANGE_SUPPORT_ROLE   = keccak256("CHANGE_SUPPORT_ROLE");
+    bytes32 public constant CHANGE_PERIOD_ROLE    = keccak256("CHANGE_PERIOD_ROLE");
 
     /* ERRORS */
 
@@ -82,7 +83,6 @@ contract HCVoting is ProposalBase, IForwarder, AragonApp {
     event ProposalExecuted(uint256 indexed proposalId);
     event ProposalBoosted(uint256 indexed proposalId);
     event ProposalResolved(uint256 indexed proposalId);
-    event RequiredSupportChanged(uint256 newSupport);
 
     /* INIT */
 
@@ -109,7 +109,8 @@ contract HCVoting is ProposalBase, IForwarder, AragonApp {
     {
         initialized();
 
-        _validateRequiredSupport(_requiredSupport);
+        require(_requiredSupport > 0, ERROR_BAD_REQUIRED_SUPPORT);
+        require(_requiredSupport <= MILLION, ERROR_BAD_REQUIRED_SUPPORT);
         require(_queuePeriod > 0, ERROR_BAD_QUEUE_PERIOD);
         require(_pendedPeriod > 0, ERROR_BAD_PENDED_PERIOD);
         require(_boostPeriod > 0, ERROR_BAD_BOOST_PERIOD);
@@ -437,26 +438,6 @@ contract HCVoting is ProposalBase, IForwarder, AragonApp {
 
     function canForward(address _sender, bytes) public view returns (bool) {
         return canPerform(_sender, CREATE_PROPOSALS_ROLE, arr());
-    }
-
-	/* VALIDATORS */
-
-    function _validateRequiredSupport(uint256 _requiredSupport) internal {
-        require(_requiredSupport > 0, ERROR_BAD_REQUIRED_SUPPORT);
-        require(_requiredSupport <= MILLION, ERROR_BAD_REQUIRED_SUPPORT);
-    }
-
-    /* SETTERS */
-
-    /**
-    * @notice Change required support to approve a proposal. Expressed in parts per million, i.e. 51% = 510000.
-    * @param _newRequiredSupport uint256 New required support
-    */
-    function changeRequiredSupport(uint256 _newRequiredSupport) public auth(CHANGE_SUPPORT_ROLE) {
-        _validateRequiredSupport(_newRequiredSupport);
-        requiredSupport = _newRequiredSupport;
-
-        emit RequiredSupportChanged(requiredSupport);
     }
 
     /* INTERNAL */

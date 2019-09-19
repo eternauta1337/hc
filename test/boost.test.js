@@ -29,7 +29,7 @@ contract('HCVoting (boost)', ([appManager, voter1, voter2, voter3, staker]) => {
     let creationDate
 
     before('create a proposal', async () => {
-      await app.create(EMPTY_SCRIPT, 'Proposal metadata')
+      await app.propose(EMPTY_SCRIPT, 'Proposal metadata')
       creationDate = (await app.getCreationDate(0)).toNumber()
     })
 

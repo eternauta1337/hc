@@ -57,7 +57,7 @@ contract('HCVoting (withdraw)', ([appManager, voter, winner1, winner2, looser]) 
 
   describe('when a proposal is resolved positively', () => {
     before('create proposal', async () => {
-      await app.create(EMPTY_SCRIPT, 'Proposal metadata')
+      await app.propose(EMPTY_SCRIPT, 'Proposal metadata')
     })
 
     describe('when the proposal is staked on', () => {
@@ -77,7 +77,7 @@ contract('HCVoting (withdraw)', ([appManager, voter, winner1, winner2, looser]) 
 
         describe('when a proposal is resolved negatively', () => {
           before('create proposal', async () => {
-            await app.create(EMPTY_SCRIPT, 'Proposal metadata')
+            await app.propose(EMPTY_SCRIPT, 'Proposal metadata')
           })
 
           describe('when the proposal is staked on', () => {

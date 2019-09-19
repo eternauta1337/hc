@@ -1,3 +1,5 @@
+pragma solidity ^0.4.24;
+
 import "./ProposalBase.sol";
 
 import "@aragon/os/contracts/apps/AragonApp.sol";
@@ -41,24 +43,12 @@ contract HCVoting is ProposalBase, IForwarder, AragonApp {
     string internal constant ERROR_NOT_RESOLVED          = "HCVOTING_NOT_RESOLVED";
     string internal constant ERROR_NO_WINNING_STAKE      = "HCVOTING_NO_WINNING_STAKE";
 
-    /* EVENTS */
-
-    event ProposalCreated(uint256 proposalId, address creator, string metadata);
-    event VoteCasted(uint256 proposalId, address voter, bool supports);
-    event ProposalUpstaked(uint256 proposalId, address staker, uint256 amount);
-    event ProposalDownstaked(uint256 proposalId, address staker, uint256 amount);
-    event UpstakeWithdrawn(uint256 proposalId, address staker, uint256 amount);
-    event DownstakeWithdrawn(uint256 proposalId, address staker, uint256 amount);
-    event ProposalExecuted(uint256 proposalId);
-    event ProposalBoosted(uint256 proposalId);
-    event ProposalResolved(uint256 proposalId);
-
     /* CONSTANTS */
 
     // Used to avoid integer precision loss in divisions.
     uint256 internal constant MILLION = 1000000;
 
-    /* Data strucures */
+    /* DATA STRUCURES */
 
     enum ProposalState {
         Queued,   // Proposal receiving votes and stake. Can be resolved with absolute consensus.
@@ -68,7 +58,7 @@ contract HCVoting is ProposalBase, IForwarder, AragonApp {
         Closed    // If boosted, proposal can be resolved. If not boosted, proposal expired and cannot receive votes or stake.
     }
 
-    /* Properties */
+    /* PROPERTIES */
 
     MiniMeToken public voteToken;
     MiniMeToken public stakeToken;
@@ -80,6 +70,18 @@ contract HCVoting is ProposalBase, IForwarder, AragonApp {
     uint64 public endingPeriod;
 
     uint256 public numBoostedProposals;
+
+    /* EVENTS */
+
+    event ProposalCreated(uint256 indexed proposalId, address indexed creator, string metadata);
+    event VoteCasted(uint256 indexed proposalId, address indexed voter, bool supports);
+    event ProposalUpstaked(uint256 indexed proposalId, address indexed staker, uint256 amount);
+    event ProposalDownstaked(uint256 indexed proposalId, address indexed staker, uint256 amount);
+    event UpstakeWithdrawn(uint256 indexed proposalId, address indexed staker, uint256 amount);
+    event DownstakeWithdrawn(uint256 indexed proposalId, address indexed staker, uint256 amount);
+    event ProposalExecuted(uint256 indexed proposalId);
+    event ProposalBoosted(uint256 indexed proposalId);
+    event ProposalResolved(uint256 indexed proposalId);
 
     /* INIT */
 
@@ -104,8 +106,9 @@ contract HCVoting is ProposalBase, IForwarder, AragonApp {
     )
         public onlyInit
     {
-        require(_requiredSupport > 0, ERROR_BAD_REQUIRED_SUPPORT);
-        require(_requiredSupport <= MILLION, ERROR_BAD_REQUIRED_SUPPORT);
+        initialized();
+
+        _validateRequiredSupport(_requiredSupport);
         require(_queuePeriod > 0, ERROR_BAD_QUEUE_PERIOD);
         require(_pendedPeriod > 0, ERROR_BAD_PENDED_PERIOD);
         require(_boostPeriod > 0, ERROR_BAD_BOOST_PERIOD);
@@ -119,8 +122,6 @@ contract HCVoting is ProposalBase, IForwarder, AragonApp {
         pendedPeriod = _pendedPeriod;
         boostPeriod = _boostPeriod;
         endingPeriod = _endingPeriod;
-
-        initialized();
     }
 
     /* PUBLIC */
@@ -130,7 +131,7 @@ contract HCVoting is ProposalBase, IForwarder, AragonApp {
     * @param _executionScript EVM script to be executed on approval
     * @param _metadata string metadata
     */
-    function create(bytes _executionScript, string _metadata) public auth(CREATE_PROPOSALS_ROLE) {
+    function propose(bytes _executionScript, string _metadata) public auth(CREATE_PROPOSALS_ROLE) {
         uint64 creationBlock = getBlockNumber64() - 1;
         require(voteToken.totalSupplyAt(creationBlock) > 0, ERROR_NO_VOTING_POWER);
 
@@ -479,11 +480,18 @@ contract HCVoting is ProposalBase, IForwarder, AragonApp {
 
     function forward(bytes _evmScript) public {
         require(canForward(msg.sender, _evmScript), ERROR_CAN_NOT_FORWARD);
-        create(_evmScript, "");
+        propose(_evmScript, "");
     }
 
     function canForward(address _sender, bytes) public view returns (bool) {
         return canPerform(_sender, CREATE_PROPOSALS_ROLE, arr());
+    }
+
+	/* VALIDATORS */
+
+    function _validateRequiredSupport(uint256 _requiredSupport) internal {
+        require(_requiredSupport > 0, ERROR_BAD_REQUIRED_SUPPORT);
+        require(_requiredSupport <= MILLION, ERROR_BAD_REQUIRED_SUPPORT);
     }
 
     /* SETTERS */
@@ -493,7 +501,7 @@ contract HCVoting is ProposalBase, IForwarder, AragonApp {
     * @param _newRequiredSupport uint256 New required support
     */
     function changeRequiredSupport(uint256 _newRequiredSupport) public auth(CHANGE_SUPPORT_ROLE) {
-        require(_newRequiredSupport > 0, ERROR_BAD_REQUIRED_SUPPORT);
+        _validateRequiredSupport(_newRequiredSupport);
         requiredSupport = _newRequiredSupport;
     }
 }

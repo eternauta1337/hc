@@ -40,7 +40,7 @@ contract('HCVoting (multiboost)', ([appManager, voter, staker]) => {
 
   describe('when proposal 1 is created', () => {
     before('create proposal', async () => {
-      await app.create(EMPTY_SCRIPT, 'Proposal metadata')
+      await app.propose(EMPTY_SCRIPT, 'Proposal metadata')
       proposalId = (await app.numProposals()).toNumber() - 1
     })
 
@@ -57,7 +57,7 @@ contract('HCVoting (multiboost)', ([appManager, voter, staker]) => {
 
       describe('when proposal 2 is created', () => {
         before('create proposal', async () => {
-          await app.create(EMPTY_SCRIPT, 'Proposal metadata')
+          await app.propose(EMPTY_SCRIPT, 'Proposal metadata')
           proposalId = (await app.numProposals()).toNumber() - 1
         })
 
@@ -74,7 +74,7 @@ contract('HCVoting (multiboost)', ([appManager, voter, staker]) => {
 
           describe('when proposal 3 is created', () => {
             before('create proposal', async () => {
-              await app.create(EMPTY_SCRIPT, 'Proposal metadata')
+              await app.propose(EMPTY_SCRIPT, 'Proposal metadata')
               proposalId = (await app.numProposals()).toNumber() - 1
             })
 
@@ -91,7 +91,7 @@ contract('HCVoting (multiboost)', ([appManager, voter, staker]) => {
 
               describe('when proposal 4 is created', () => {
                 before('create proposal', async () => {
-                  await app.create(EMPTY_SCRIPT, 'Proposal metadata')
+                  await app.propose(EMPTY_SCRIPT, 'Proposal metadata')
                   proposalId = (await app.numProposals()).toNumber() - 1
                 })
 

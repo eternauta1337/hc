@@ -24,7 +24,7 @@ contract('HCVoting (create)', ([appManager, user1, user2]) => {
   describe('when no vote tokens exist', () => {
     it('should revert when attempting to create a proposal when no vote tokens exist', async () => {
       await assertRevert(
-        app.create(EMPTY_SCRIPT, 'Proposal metadata'),
+        app.propose(EMPTY_SCRIPT, 'Proposal metadata'),
         'HCVOTING_NO_VOTING_POWER'
       )
     })
@@ -39,7 +39,7 @@ contract('HCVoting (create)', ([appManager, user1, user2]) => {
       let creationReceipt
 
       before('create a proposal', async () => {
-        creationReceipt = await app.create(EMPTY_SCRIPT, 'Proposal metadata 0', { from: user2 })
+        creationReceipt = await app.propose(EMPTY_SCRIPT, 'Proposal metadata 0', { from: user2 })
       })
 
       it('should store creationBlock', async () => {
@@ -73,7 +73,7 @@ contract('HCVoting (create)', ([appManager, user1, user2]) => {
 
       describe('when creating another proposal', () => {
         before('create another proposal', async () => {
-          creationReceipt = await app.create(EMPTY_SCRIPT, 'Proposal metadata 1', { from: user1 })
+          creationReceipt = await app.propose(EMPTY_SCRIPT, 'Proposal metadata 1', { from: user1 })
         })
 
         it('should emit a ProposalCreated event with the appropriate data', async () => {

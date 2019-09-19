@@ -7,9 +7,9 @@ module.exports = {
 
     balanceOf[app.address] = 0
 
-    async function create(proposalId, creator) {
+    async function propose(proposalId, creator) {
       await voteToken.generateTokens(creator, 1)
-      await app.create(EMPTY_SCRIPT, `Proposal metadata proposalId`)
+      await app.propose(EMPTY_SCRIPT, `Proposal metadata proposalId`)
 
       proposals[proposalId] = {
         totalUpstake: 0,
@@ -67,7 +67,7 @@ module.exports = {
     return {
       balanceOf,
       proposals,
-      create,
+      propose,
       mintStakeTokens,
       stake,
       unstake

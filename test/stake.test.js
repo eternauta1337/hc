@@ -47,7 +47,7 @@ contract('HCVoting (stake)', ([appManager, voter, staker1, staker2]) => {
 
     describe('when a proposal exists', () => {
       before('create a proposal', async () => {
-        await tracker.create(0, voter)
+        await tracker.propose(0, voter)
       })
 
       it('reverts when a user with no tokens attempts to stake', async () => {

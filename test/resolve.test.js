@@ -15,7 +15,7 @@ contract('HCVoting (resolve)', ([appManager, creator, voter1, voter2, voter3, vo
   async function createProposalWithScript() {
     const action = { to: app.address, calldata: app.contract.changeRequiredSupport.getData(newRequiredSupport) }
     const script = encodeCallScript([action])
-    await app.create(script, 'Modify support')
+    await app.propose(script, 'Modify support')
     proposalId++
   }
 

@@ -35,7 +35,7 @@ contract('HCVoting (vote)', ([appManager, voter1, voter2, voter3, voter4]) => {
     })
 
     before('create a proposal', async () => {
-      await app.create(EMPTY_SCRIPT, 'Proposal metadata 0')
+      await app.propose(EMPTY_SCRIPT, 'Proposal metadata 0')
       creationDate = (await app.getCreationDate(0)).toNumber()
     })
 
@@ -161,7 +161,7 @@ contract('HCVoting (vote)', ([appManager, voter1, voter2, voter3, voter4]) => {
 
             describe('when another proposal is created and multiple votes are casted on it', () => {
               before('create another proposal', async () => {
-                await app.create(EMPTY_SCRIPT, 'Proposal metadata 1')
+                await app.propose(EMPTY_SCRIPT, 'Proposal metadata 1')
               })
 
               before('cast multiple votes', async () => {

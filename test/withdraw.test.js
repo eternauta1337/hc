@@ -12,13 +12,13 @@ contract('HCVoting (withdraw)', ([appManager, voter, winner1, winner2, looser]) 
 
     await voteToken.generateTokens(voter, 1)
 
-    await stakeToken.generateTokens(winner1, 10000)
-    await stakeToken.generateTokens(winner2, 10000)
-    await stakeToken.generateTokens(looser, 10000)
+    await stakeToken.generateTokens(winner1, '10000e18')
+    await stakeToken.generateTokens(winner2, '10000e18')
+    await stakeToken.generateTokens(looser, '10000e18')
 
-    await stakeToken.approve(app.address, 1000000, { from: winner1 })
-    await stakeToken.approve(app.address, 1000000, { from: winner2 })
-    await stakeToken.approve(app.address, 1000000, { from: looser })
+    await stakeToken.approve(app.address, '1000000e18', { from: winner1 })
+    await stakeToken.approve(app.address, '1000000e18', { from: winner2 })
+    await stakeToken.approve(app.address, '1000000e18', { from: looser })
   })
 
   async function itHandlesRewardsProperly(proposalId, bet) {
@@ -41,19 +41,19 @@ contract('HCVoting (withdraw)', ([appManager, voter, winner1, winner2, looser]) 
     })
 
     it('allows winner1 to withdraw rewards', async () => {
-      const initBalance = (await stakeToken.balanceOf(winner1)).toNumber()
+      const initBalance = await stakeToken.balanceOf(winner1)
       await app.withdraw(proposalId, { from: winner1 })
-      assert.equal((await stakeToken.balanceOf(winner1)).toNumber(), initBalance + 1.5 * bet)
+      assert.deepEqual(await stakeToken.balanceOf(winner1), initBalance.plus(bet.mul(1.5)))
     })
 
     it('allows winner2 to withdraw rewards', async () => {
-      const initBalance = (await stakeToken.balanceOf(winner2)).toNumber()
+      const initBalance = await stakeToken.balanceOf(winner2)
       await app.withdraw(proposalId, { from: winner2 })
-      assert.equal((await stakeToken.balanceOf(winner2)).toNumber(), initBalance + 1.5 * bet)
+      assert.deepEqual(await stakeToken.balanceOf(winner2), initBalance.plus(bet.mul(1.5)))
     })
   }
 
-  const BET = 1000
+  const BET = web3.toBigNumber('1000e18')
 
   describe('when a proposal is resolved positively', () => {
     before('create proposal', async () => {

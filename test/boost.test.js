@@ -11,11 +11,11 @@ contract('HCVoting (boost)', ([appManager, voter1, voter2, voter3, voter4, voter
   before('deploy app and mint some vote tokens', async () => {
     ({ app, voteToken, stakeToken } = await deployAllAndInitializeApp(appManager))
 
-    await voteToken.generateTokens(voter1, 50)
-    await voteToken.generateTokens(voter2, 50)
-    await voteToken.generateTokens(voter3, 120)
-    await voteToken.generateTokens(voter4, 220)
-    await voteToken.generateTokens(voter5, 320)
+    await voteToken.generateTokens(voter1, '50e18')
+    await voteToken.generateTokens(voter2, '50e18')
+    await voteToken.generateTokens(voter3, '120e18')
+    await voteToken.generateTokens(voter4, '220e18')
+    await voteToken.generateTokens(voter5, '320e18')
   })
 
   describe('when no proposals exist', () => {
@@ -51,11 +51,11 @@ contract('HCVoting (boost)', ([appManager, voter1, voter2, voter3, voter4, voter
 
     describe('when the proposal is staked on', () => {
       before('stake on proposal', async () => {
-        await stakeToken.generateTokens(staker, 100000)
-        await stakeToken.approve(app.address, 10000000, { from: staker })
+        await stakeToken.generateTokens(staker, '100000e18')
+        await stakeToken.approve(app.address, '10000000e18', { from: staker })
 
-        await app.stake(0, 3000, true, { from: staker })
-        await app.stake(0, 1000, false, { from: staker })
+        await app.stake(0, '3000e18', true, { from: staker })
+        await app.stake(0, '1000e18', false, { from: staker })
       })
 
       it('correctly calculates the proposal\'s current confidence', async () => {
@@ -68,7 +68,7 @@ contract('HCVoting (boost)', ([appManager, voter1, voter2, voter3, voter4, voter
 
       describe('when a proposal reaches enough confidence', () => {
         before('stake on proposal so that confidence is reached', async () => {
-          await app.stake(0, 1000, true, { from: staker })
+          await app.stake(0, '1000e18', true, { from: staker })
         })
 
         it('has confidence', async () => {
@@ -85,7 +85,7 @@ contract('HCVoting (boost)', ([appManager, voter1, voter2, voter3, voter4, voter
 
         describe('when a proposal looses confidence', () => {
           before('withdraw stake', async () => {
-            await app.unstake(0, 1000, true, { from: staker })
+            await app.unstake(0, '1000e18', true, { from: staker })
           })
 
           it('sets the proposal\'s state back to Queued', async () => {
@@ -97,7 +97,7 @@ contract('HCVoting (boost)', ([appManager, voter1, voter2, voter3, voter4, voter
           })
 
           after('restore stake', async () => {
-            await app.stake(0, 1000, true, { from: staker })
+            await app.stake(0, '1000e18', true, { from: staker })
           })
         })
 

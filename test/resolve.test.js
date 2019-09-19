@@ -77,10 +77,10 @@ contract('HCVoting (resolve)', ([appManager, creator, voter1, voter2, voter3, vo
   })
 
   before('mint some tokens', async () => {
-    await voteToken.generateTokens(voter1, 100)
-    await voteToken.generateTokens(voter2, 100)
-    await voteToken.generateTokens(voter3, 100)
-    await voteToken.generateTokens(voter4, 100)
+    await voteToken.generateTokens(voter1, '100e18')
+    await voteToken.generateTokens(voter2, '100e18')
+    await voteToken.generateTokens(voter3, '100e18')
+    await voteToken.generateTokens(voter4, '100e18')
   })
 
   describe('when trying to resolve a proposal with no consensus', () => {
@@ -143,8 +143,8 @@ contract('HCVoting (resolve)', ([appManager, creator, voter1, voter2, voter3, vo
     }
 
     before('mint stake tokens', async () => {
-      await stakeToken.generateTokens(staker, 1000000)
-      await stakeToken.approve(app.address, 1000000, { from: staker })
+      await stakeToken.generateTokens(staker, '1000000e18')
+      await stakeToken.approve(app.address, '1000000e18', { from: staker })
     })
 
     describe('when a proposal has relative negative consensus', () => {

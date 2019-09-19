@@ -7,6 +7,7 @@ const { deployDAO } = require('./deployDAO.js')
 
 const HCVoting = artifacts.require('HCVotingTimeMock.sol')
 
+const BIG_ZERO = web3.toBigNumber(0)
 const ANY_ADDRESS = '0xffffffffffffffffffffffffffffffffffffffff'
 const HOURS = 60 * 60
 
@@ -118,5 +119,6 @@ module.exports = {
   deployAll,
   deployAllAndInitializeApp,
   VOTE,
-  PROPOSAL_STATE
+  PROPOSAL_STATE,
+  BIG_ZERO
 }

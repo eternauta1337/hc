@@ -34,8 +34,8 @@ contract('HCVoting (multiboost)', ([appManager, voter, staker]) => {
 
     await voteToken.generateTokens(voter, 1)
 
-    await stakeToken.generateTokens(staker, 10000)
-    await stakeToken.approve(app.address, 100000000, { from: staker })
+    await stakeToken.generateTokens(staker, '10000e18')
+    await stakeToken.approve(app.address, '100000000e18', { from: staker })
   })
 
   describe('when proposal 1 is created', () => {

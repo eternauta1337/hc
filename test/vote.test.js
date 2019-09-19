@@ -3,9 +3,9 @@
 const { assertRevert } = require('@aragon/test-helpers/assertThrow')
 const { EMPTY_SCRIPT } = require('@aragon/test-helpers/evmScript')
 const { getEventAt } = require('@aragon/test-helpers/events')
-const { defaultParams, deployAllAndInitializeApp, VOTE } = require('./helpers/deployApp')
+const { defaultParams, deployAllAndInitializeApp, VOTE, BIG_ZERO } = require('./helpers/deployApp')
 
-const VOTER_BALANCE = 100
+const VOTER_BALANCE = web3.toBigNumber('100e18')
 const MILLION = 1000000
 
 contract('HCVoting (vote)', ([appManager, voter1, voter2, voter3, voter4]) => {
@@ -63,8 +63,8 @@ contract('HCVoting (vote)', ([appManager, voter1, voter2, voter3, voter4]) => {
       })
 
       it('registers the correct totalYeas/totalNays', async () => {
-        assert.equal((await app.getTotalYeas(0)).toNumber(), 0, 'invalid yeas')
-        assert.equal((await app.getTotalNays(0)).toNumber(), VOTER_BALANCE, 'invalid nays')
+        assert.deepEqual(await app.getTotalYeas(0), BIG_ZERO, 'invalid yeas')
+        assert.deepEqual(await app.getTotalNays(0), VOTER_BALANCE, 'invalid nays')
       })
 
       it('should record the user\'s vote as Nay', async () => {
@@ -101,8 +101,8 @@ contract('HCVoting (vote)', ([appManager, voter1, voter2, voter3, voter4]) => {
         })
 
         it('registers the correct totalYeas/totalNays', async () => {
-          assert.equal((await app.getTotalYeas(0)).toNumber(), VOTER_BALANCE, 'invalid yeas')
-          assert.equal((await app.getTotalNays(0)).toNumber(), VOTER_BALANCE, 'invalid nays')
+          assert.deepEqual(await app.getTotalYeas(0), VOTER_BALANCE, 'invalid yeas')
+          assert.deepEqual(await app.getTotalNays(0), VOTER_BALANCE, 'invalid nays')
         })
 
         it('calculates the correct absolute support', async () => {
@@ -158,8 +158,8 @@ contract('HCVoting (vote)', ([appManager, voter1, voter2, voter3, voter4]) => {
             })
 
             it('registers the correct totalYeas/totalNays', async () => {
-              assert.equal((await app.getTotalYeas(1)).toNumber(), 1 * VOTER_BALANCE, 'invalid yeas')
-              assert.equal((await app.getTotalNays(1)).toNumber(), 3 * VOTER_BALANCE, 'invalid nays')
+              assert.deepEqual(await app.getTotalYeas(1), VOTER_BALANCE, 'invalid yeas')
+              assert.deepEqual(await app.getTotalNays(1), VOTER_BALANCE.mul(3), 'invalid nays')
             })
 
             it('registers each user\'s vote', async () => {
@@ -207,8 +207,8 @@ contract('HCVoting (vote)', ([appManager, voter1, voter2, voter3, voter4]) => {
           })
 
           it('registers the correct totalYeas/totalNays', async () => {
-            assert.equal((await app.getTotalYeas(0)).toNumber(), 2 * VOTER_BALANCE, 'invalid yeas')
-            assert.equal((await app.getTotalNays(0)).toNumber(), VOTER_BALANCE, 'invalid nays')
+            assert.deepEqual(await app.getTotalYeas(0), VOTER_BALANCE.mul(2), 'invalid yeas')
+            assert.deepEqual(await app.getTotalNays(0), VOTER_BALANCE, 'invalid nays')
           })
 
           it('calculates the correct absolute support', async () => {

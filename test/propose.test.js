@@ -13,16 +13,16 @@ contract('HCVoting (propose)', ([appManager, user1, user2]) => {
   })
 
   describe('when no proposals exist', () => {
-    it('should revert when attempting to retrieve a proposal that does not exist', async () => {
+    it('should revert when attempting to retrieve a proposal', async () => {
       await assertRevert(
-        app.getCreationDate(0),
+        app.getTotalYeas(0),
         'HCVOTING_PROPOSAL_DOES_NOT_EXIST'
       )
     })
   })
 
   describe('when no vote tokens exist', () => {
-    it('should revert when attempting to create a proposal when no vote tokens exist', async () => {
+    it('should revert when attempting to create a proposal', async () => {
       await assertRevert(
         app.propose(EMPTY_SCRIPT, 'Proposal metadata'),
         'HCVOTING_NO_VOTING_POWER'

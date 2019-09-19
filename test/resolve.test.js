@@ -51,6 +51,10 @@ contract('HCVoting (resolve)', ([appManager, creator, voter1, voter2, voter3, vo
         assert.equal((await app.getState(proposalId)).toNumber(), PROPOSAL_STATE.RESOLVED)
       })
 
+      it('correctly registers if the proposal is resolved', async () => {
+        assert.equal(await app.getResolved(proposalId), true)
+      })
+
       it('correctly registers if the proposal is executed', async () => {
         assert.equal(await app.getExecuted(proposalId), executes)
       })

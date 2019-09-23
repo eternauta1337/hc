@@ -4,6 +4,8 @@ import "@aragon/os/contracts/apps/AragonApp.sol";
 
 import "@aragon/os/contracts/lib/math/SafeMath.sol";
 
+import "@aragon/apps-shared-minime/contracts/MiniMeToken.sol";
+
 
 contract HCVoting is AragonApp {
     using SafeMath for uint256;
@@ -12,6 +14,7 @@ contract HCVoting is AragonApp {
 
     string internal constant ERROR_PROPOSAL_DOES_NOT_EXIST = "HCVOTING_PROPOSAL_DOES_NOT_EXIST";
     string internal constant ERROR_ALREADY_VOTED           = "HCVOTING_ALREADY_VOTED";
+    string internal constant ERROR_NO_VOTING_POWER         = "HCVOTING_NO_VOTING_POWER";
 
     /* DATA STRUCURES */
 
@@ -29,6 +32,8 @@ contract HCVoting is AragonApp {
 
     /* PROPERTIES */
 
+    MiniMeToken public voteToken;
+
     mapping (uint256 => Proposal) proposals;
     uint256 public numProposals;
 
@@ -39,8 +44,10 @@ contract HCVoting is AragonApp {
 
     /* INIT */
 
-    function initialize() public onlyInit {
+    function initialize(MiniMeToken _voteToken) public onlyInit {
         initialized();
+
+        voteToken = _voteToken;
     }
 
     /* PUBLIC */
@@ -53,14 +60,17 @@ contract HCVoting is AragonApp {
     function vote(uint256 _proposalId, bool _supports) public {
         Proposal storage proposal_ = _getProposal(_proposalId);
 
+        uint256 userVotingPower = voteToken.balanceOf(msg.sender);
+        require(userVotingPower > 0, ERROR_NO_VOTING_POWER);
+
         // Reject re-voting.
         require(getUserVote(_proposalId, msg.sender) == Vote.Absent, ERROR_ALREADY_VOTED);
 
         // Update user Vote and totalYeas/totalNays.
         if (_supports) {
-            proposal_.totalYeas = proposal_.totalYeas.add(1);
+            proposal_.totalYeas = proposal_.totalYeas.add(userVotingPower);
         } else {
-            proposal_.totalNays = proposal_.totalNays.add(1);
+            proposal_.totalNays = proposal_.totalNays.add(userVotingPower);
         }
         proposal_.votes[msg.sender] = _supports ? Vote.Yea : Vote.Nay;
 

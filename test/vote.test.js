@@ -2,13 +2,15 @@
 
 const { assertRevert } = require('@aragon/test-helpers/assertThrow')
 const { getEventAt } = require('@aragon/test-helpers/events')
-const { deployAllAndInitializeApp, VOTE } = require('./helpers/deployApp')
+const { deployAllAndInitializeApp, VOTE, BIG_ZERO } = require('./helpers/deployApp')
+
+const VOTER_BALANCE = web3.toBigNumber('100e18')
 
 contract('HCVoting (vote)', ([appManager, voter1, voter2, voter3, voter4]) => {
-  let app
+  let app, voteToken
 
   before('deploy app', async () => {
-    ({ app } = await deployAllAndInitializeApp(appManager))
+    ({ app, voteToken } = await deployAllAndInitializeApp(appManager))
   })
 
   it('should revert when voting on a proposal that doesn\'t exist', async () => {
@@ -19,8 +21,22 @@ contract('HCVoting (vote)', ([appManager, voter1, voter2, voter3, voter4]) => {
   })
 
   describe('when a proposal exists', () => {
+    before('mint some tokens', async () => {
+      await voteToken.generateTokens(voter1, VOTER_BALANCE)
+      await voteToken.generateTokens(voter2, VOTER_BALANCE)
+      // Intentionally not minting to voter3.
+      // Intentionally not minting to voter4.
+    })
+
     before('create a proposal', async () => {
       await app.propose('Proposal metadata 0')
+    })
+
+    it('should not allow a user with no voting power to vote', async () => {
+      await assertRevert(
+        app.vote(0, true, { from: voter4 }),
+        'HCVOTING_NO_VOTING_POWER'
+      )
     })
 
     describe('when voter1 casts a Nay vote on the proposal', () => {
@@ -38,8 +54,8 @@ contract('HCVoting (vote)', ([appManager, voter1, voter2, voter3, voter4]) => {
       })
 
       it('registers the correct totalYeas/totalNays', async () => {
-        assert.equal((await app.getTotalYeas(0)), 0, 'invalid yeas')
-        assert.equal((await app.getTotalNays(0)), 1, 'invalid nays')
+        assert.deepEqual(await app.getTotalYeas(0), BIG_ZERO, 'invalid yeas')
+        assert.deepEqual(await app.getTotalNays(0), VOTER_BALANCE, 'invalid nays')
       })
 
       it('should record the user\'s vote as Nay', async () => {
@@ -67,8 +83,8 @@ contract('HCVoting (vote)', ([appManager, voter1, voter2, voter3, voter4]) => {
         })
 
         it('registers the correct totalYeas/totalNays', async () => {
-          assert.equal((await app.getTotalYeas(0)), 1, 'invalid yeas')
-          assert.equal((await app.getTotalNays(0)), 1, 'invalid nays')
+          assert.deepEqual(await app.getTotalYeas(0), VOTER_BALANCE, 'invalid yeas')
+          assert.deepEqual(await app.getTotalNays(0), VOTER_BALANCE, 'invalid nays')
         })
       })
     })

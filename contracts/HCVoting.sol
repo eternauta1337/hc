@@ -374,12 +374,12 @@ contract HCVoting is ProposalBase, IForwarder, AragonApp {
 
     function getConsensus(uint256 _proposalId, bool _relative) public view returns (Vote) {
         uint256 yeaPPM = getSupport(_proposalId, true, _relative);
-        if (yeaPPM > requiredSupport) {
+        if (yeaPPM >= requiredSupport) {
             return Vote.Yea;
         }
 
         uint256 nayPPM = getSupport(_proposalId, false, _relative);
-        if (nayPPM > requiredSupport) {
+        if (nayPPM >= requiredSupport) {
             return Vote.Nay;
         }
 

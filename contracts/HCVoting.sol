@@ -52,8 +52,16 @@ contract HCVoting is ProposalBase, AragonApp {
     /* PUBLIC */
 
     function propose(string _metadata) public {
-        emit ProposalCreated(numProposals, msg.sender, _metadata);
+        uint64 creationBlock = getBlockNumber64() - 1;
+        require(voteToken.totalSupplyAt(creationBlock) > 0, ERROR_NO_VOTING_POWER);
+
+        uint256 proposalId = numProposals;
         numProposals++;
+
+        Proposal storage proposal_ = proposals[proposalId];
+        proposal_.creationBlock = creationBlock;
+
+        emit ProposalCreated(proposalId, msg.sender, _metadata);
     }
 
     function vote(uint256 _proposalId, bool _supports) public {
@@ -61,7 +69,7 @@ contract HCVoting is ProposalBase, AragonApp {
 
         require(!proposal_.resolved, ERROR_PROPOSAL_IS_RESOLVED);
 
-        uint256 userVotingPower = voteToken.balanceOf(msg.sender);
+        uint256 userVotingPower = voteToken.balanceOfAt(msg.sender, proposal_.creationBlock);
         require(userVotingPower > 0, ERROR_NO_VOTING_POWER);
 
         // Reject re-voting.
@@ -110,7 +118,7 @@ contract HCVoting is ProposalBase, AragonApp {
     function getSupport(uint _proposalId, bool _supports) public view returns (uint256) {
         Proposal storage proposal_ = _getProposal(_proposalId);
 
-        uint256 votingPower = voteToken.totalSupply();
+        uint256 votingPower = voteToken.totalSupplyAt(proposal_.creationBlock);
         uint256 votes = _supports ? proposal_.totalYeas : proposal_.totalNays;
 
         return votes.mul(MILLION).div(votingPower);

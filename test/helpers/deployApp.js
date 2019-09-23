@@ -74,20 +74,13 @@ const deployApp = async (dao, acl, appManager) => {
   )
 
   // Set up the app's permissions.
-  // await acl.createPermission(
-  //   ANY_ADDRESS, // entity (who?) - The entity or address that will have the permission.
-  //   app.address, // app (where?) - The app that holds the role involved in this permission.
-  //   await app.INCREMENT_ROLE(), // role (what?) - The particular role that the entity is being assigned to in this permission.
-  //   appManager, // manager - Can grant/revoke further permissions for this role.
-  //   { from: appManager }
-  // )
-  // await acl.createPermission(
-  //   ANY_ADDRESS,
-  //   app.address,
-  //   await app.DECREMENT_ROLE(),
-  //   appManager,
-  //   { from: appManager }
-  // )
+  await acl.createPermission(
+    ANY_ADDRESS, // entity (who?) - The entity or address that will have the permission.
+    app.address, // app (where?) - The app that holds the role involved in this permission.
+    await app.CREATE_PROPOSALS_ROLE(), // role (what?) - The particular role that the entity is being assigned to in this permission.
+    appManager, // manager - Can grant/revoke further permissions for this role.
+    { from: appManager }
+  )
 
   return app
 }

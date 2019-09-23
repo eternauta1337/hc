@@ -15,10 +15,12 @@ contract ProposalBase {
     }
 
     struct Proposal {
+        bool executed;
         bool resolved;
         uint64 creationBlock;
         uint256 totalYeas;
         uint256 totalNays;
+        bytes executionScript;
         mapping (address => Vote) votes;
     }
 
@@ -49,9 +51,19 @@ contract ProposalBase {
         return proposal_.resolved;
     }
 
+    function getExecuted(uint256 _proposalId) public view returns (bool) {
+        Proposal storage proposal_ = _getProposal(_proposalId);
+        return proposal_.executed;
+    }
+
     function getCreationBlock(uint256 _proposalId) public view returns (uint256) {
         Proposal storage proposal_ = _getProposal(_proposalId);
         return proposal_.creationBlock;
+    }
+
+    function getScript(uint256 _proposalId) public view returns (bytes) {
+        Proposal storage proposal_ = _getProposal(_proposalId);
+        return proposal_.executionScript;
     }
 
     /* INTERNAL */

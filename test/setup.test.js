@@ -1,6 +1,7 @@
 /* global contract beforeEach it assert */
 
 const { assertRevert } = require('@aragon/test-helpers/assertThrow')
+const { EMPTY_SCRIPT } = require('@aragon/test-helpers/evmScript')
 const { defaultParams, deployAll, initializeAppWithParams, deployAllAndInitializeApp } = require('./helpers/deployApp')
 
 contract('HCVoting (setup)', ([appManager]) => {

@@ -3,14 +3,19 @@ pragma solidity ^0.4.24;
 import "./ProposalBase.sol";
 
 import "@aragon/os/contracts/apps/AragonApp.sol";
+import "@aragon/os/contracts/common/IForwarder.sol";
 
 import "@aragon/os/contracts/lib/math/SafeMath.sol";
 
 import "@aragon/apps-shared-minime/contracts/MiniMeToken.sol";
 
 
-contract HCVoting is ProposalBase, AragonApp {
+contract HCVoting is ProposalBase, IForwarder, AragonApp {
     using SafeMath for uint256;
+
+    /* ROLES */
+
+    bytes32 public constant CREATE_PROPOSALS_ROLE = keccak256("CREATE_PROPOSALS_ROLE");
 
     /* ERRORS */
 
@@ -19,6 +24,8 @@ contract HCVoting is ProposalBase, AragonApp {
     string internal constant ERROR_ALREADY_VOTED         = "HCVOTING_ALREADY_VOTED";
     string internal constant ERROR_NO_VOTING_POWER       = "HCVOTING_NO_VOTING_POWER";
     string internal constant ERROR_NO_CONSENSUS          = "HCVOTING_NO_CONSENSUS";
+    string internal constant ERROR_CAN_NOT_FORWARD       = "HCVOTING_CAN_NOT_FORWARD";
+    string internal constant ERROR_ALREADY_EXECUTED      = "HCVOTING_ALREADY_EXECUTED";
 
     /* CONSTANTS */
 
@@ -35,6 +42,7 @@ contract HCVoting is ProposalBase, AragonApp {
 
     event ProposalCreated(uint256 proposalId, address creator, string metadata);
     event VoteCasted(uint256 proposalId, address voter, bool supports);
+    event ProposalExecuted(uint256 indexed proposalId);
     event ProposalResolved(uint256 indexed proposalId);
 
     /* INIT */
@@ -51,7 +59,7 @@ contract HCVoting is ProposalBase, AragonApp {
 
     /* PUBLIC */
 
-    function propose(string _metadata) public {
+    function propose(bytes _executionScript, string _metadata) public {
         uint64 creationBlock = getBlockNumber64() - 1;
         require(voteToken.totalSupplyAt(creationBlock) > 0, ERROR_NO_VOTING_POWER);
 
@@ -60,6 +68,7 @@ contract HCVoting is ProposalBase, AragonApp {
 
         Proposal storage proposal_ = proposals[proposalId];
         proposal_.creationBlock = creationBlock;
+        proposal_.executionScript = _executionScript;
 
         emit ProposalCreated(proposalId, msg.sender, _metadata);
     }
@@ -96,6 +105,10 @@ contract HCVoting is ProposalBase, AragonApp {
 
         proposal_.resolved = true;
 
+        if (support == Vote.Yea) {
+            _executeProposal(_proposalId, proposal_);
+        }
+
         emit ProposalResolved(_proposalId);
     }
 
@@ -122,5 +135,34 @@ contract HCVoting is ProposalBase, AragonApp {
         uint256 votes = _supports ? proposal_.totalYeas : proposal_.totalNays;
 
         return votes.mul(MILLION).div(votingPower);
+    }
+
+    /* FORWARDING */
+
+    function isForwarder() external pure returns (bool) {
+        return true;
+    }
+
+    function forward(bytes _evmScript) public {
+        require(canForward(msg.sender, _evmScript), ERROR_CAN_NOT_FORWARD);
+        propose(_evmScript, "");
+    }
+
+    function canForward(address _sender, bytes) public view returns (bool) {
+        return canPerform(_sender, CREATE_PROPOSALS_ROLE, arr());
+    }
+
+    /* INTERNAL */
+
+    function _executeProposal(uint256 _proposalId, Proposal storage proposal_) internal {
+        require(!proposal_.executed, ERROR_ALREADY_EXECUTED);
+
+        address[] memory blacklist = new address[](0);
+        bytes memory input = new bytes(0);
+        runScript(proposal_.executionScript, input, blacklist);
+
+        proposal_.executed = true;
+
+        emit ProposalExecuted(_proposalId);
     }
 }

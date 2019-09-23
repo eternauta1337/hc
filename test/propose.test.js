@@ -1,6 +1,7 @@
 /* global artifacts contract beforeEach it assert */
 
 const { assertRevert } = require('@aragon/test-helpers/assertThrow')
+const { EMPTY_SCRIPT } = require('@aragon/test-helpers/evmScript')
 const { getEventAt } = require('@aragon/test-helpers/events')
 const { deployAllAndInitializeApp } = require('./helpers/deployApp')
 
@@ -23,7 +24,7 @@ contract('HCVoting (propose)', ([appManager, user1, user2]) => {
   describe('when no vote tokens exist', () => {
     it('should revert when attempting to create a proposal', async () => {
       await assertRevert(
-        app.propose('Proposal metadata'),
+        app.propose(EMPTY_SCRIPT, 'Proposal metadata'),
         'HCVOTING_NO_VOTING_POWER'
       )
     })
@@ -38,11 +39,15 @@ contract('HCVoting (propose)', ([appManager, user1, user2]) => {
       let creationReceipt
 
       before('create a proposal', async () => {
-        creationReceipt = await app.propose('Proposal metadata 0', { from: user2 })
+        creationReceipt = await app.propose(EMPTY_SCRIPT, 'Proposal metadata 0', { from: user2 })
       })
 
       it('should store creationBlock', async () => {
         assert.equal((await app.getCreationBlock(0)).toNumber(), creationReceipt.receipt.blockNumber - 1)
+      })
+
+      it('should store execution script', async () => {
+        assert.equal(await app.getScript(0), EMPTY_SCRIPT)
       })
 
       it('should emit a ProposalCreated event with the appropriate data', async () => {
@@ -58,7 +63,7 @@ contract('HCVoting (propose)', ([appManager, user1, user2]) => {
 
       describe('when creating another proposal', () => {
         before('create another proposal', async () => {
-          creationReceipt = await app.propose('Proposal metadata 1', { from: user1 })
+          creationReceipt = await app.propose(EMPTY_SCRIPT, 'Proposal metadata 1', { from: user1 })
         })
 
         it('should emit a ProposalCreated event with the appropriate data', async () => {

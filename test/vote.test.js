@@ -1,6 +1,7 @@
 /* global contract beforeEach it assert */
 
 const { assertRevert } = require('@aragon/test-helpers/assertThrow')
+const { EMPTY_SCRIPT } = require('@aragon/test-helpers/evmScript')
 const { getEventAt } = require('@aragon/test-helpers/events')
 const { deployAllAndInitializeApp, VOTE, BIG_ZERO } = require('./helpers/deployApp')
 
@@ -34,7 +35,7 @@ contract('HCVoting (vote)', ([appManager, voter1, voter2, voter3, voter4]) => {
     })
 
     before('create a proposal', async () => {
-      await app.propose('Proposal metadata 0')
+      await app.propose(EMPTY_SCRIPT, 'Proposal metadata 0')
     })
 
     it('should not allow a user with no voting power to vote', async () => {
@@ -143,7 +144,7 @@ contract('HCVoting (vote)', ([appManager, voter1, voter2, voter3, voter4]) => {
 
           describe('when another proposal is created and multiple votes are casted on it', () => {
             before('create another proposal', async () => {
-              await app.propose('Proposal metadata 1')
+              await app.propose(EMPTY_SCRIPT, 'Proposal metadata 1')
             })
 
             before('cast multiple votes', async () => {

@@ -18,8 +18,6 @@ contract HCVoting is ProposalBase, IForwarder, AragonApp {
     /* ROLES */
 
     bytes32 public constant CREATE_PROPOSALS_ROLE = keccak256("CREATE_PROPOSALS_ROLE");
-    bytes32 public constant CHANGE_SUPPORT_ROLE   = keccak256("CHANGE_SUPPORT_ROLE");
-    bytes32 public constant CHANGE_PERIOD_ROLE    = keccak256("CHANGE_PERIOD_ROLE");
 
     /* ERRORS */
 

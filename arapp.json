@@ -4,11 +4,6 @@
       "name": "Creates a proposal",
       "id": "CREATE_PROPOSALS_ROLE",
       "params": []
-    },
-    {
-      "name": "Changes required support for proposals",
-      "id": "CHANGE_SUPPORT_ROLE",
-      "params": []
     }
   ],
   "environments": {

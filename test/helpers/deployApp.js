@@ -101,13 +101,6 @@ const deployApp = async (dao, acl, appManager) => {
     appManager, // manager - Can grant/revoke further permissions for this role.
     { from: appManager }
   )
-  await acl.createPermission(
-    ANY_ADDRESS,
-    app.address,
-    await app.CHANGE_SUPPORT_ROLE(),
-    appManager,
-    { from: appManager }
-  )
 
   return app
 }

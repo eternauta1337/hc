@@ -3,17 +3,7 @@ const MiniMeToken = artifacts.require('@aragon/apps-shared-minime/contracts/Mini
 const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000'
 
 const deployToken = async (name, symbol) => {
-  const token = await MiniMeToken.new(
-    ZERO_ADDRESS, // tokenFactory
-    ZERO_ADDRESS, // parentToken
-    0, // parentSnapShotBlock
-    'VoteToken', // tokenName
-    18, // decimalUnits
-    'VOT', // tokenSymbol
-    true // transfersEnabled
-  )
-
-  return token
+  return await MiniMeToken.new(ZERO_ADDRESS, ZERO_ADDRESS, 0, name, 18, symbol, true)
 }
 
 module.exports = async callback => {

@@ -30,9 +30,10 @@
   },
   "scripts": {
     "prepublishOnly": "aragon contracts compile",
+    "devchain": "aragon devchain --verbose",
     "start": "npm run start:ipfs",
-    "start:ipfs": "aragon run --files dist",
-    "start:http": "aragon run --http localhost:8001 --http-served-from ./dist",
+    "start:ipfs": "./scripts/run.sh ipfs",
+    "start:http": "./scripts/run.sh http",
     "start:ipfs:template": "npm run start:ipfs -- --template Template --template-init @ARAGON_ENS",
     "start:http:template": "npm run start:http -- --template Template --template-init @ARAGON_ENS",
     "prepare": "cd app && npm install && cd ..",

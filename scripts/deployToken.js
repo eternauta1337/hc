@@ -7,11 +7,10 @@ const deployToken = async (name, symbol) => {
 }
 
 module.exports = async callback => {
-  const voteToken = await deployToken('VoteToken', 'VOT')
-  const stakeToken = await deployToken('StakeToken', 'STK')
+  const name = process.argv[3]
+  const symbol = process.argv[4]
 
-  console.log(`vote token`, voteToken.address)
-  console.log(`stake token`, stakeToken.address)
-
+  const token = await deployToken(name, symbol)
+  console.log(token.address)
   callback()
 }

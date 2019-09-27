@@ -18,6 +18,21 @@ const deployVoteToken = async () => {
   return voteToken
 }
 
+const deployStakeToken = async () => {
+  voteToken = await MiniMeToken.new(
+    ZERO_ADDRESS,
+    ZERO_ADDRESS,
+    0,
+    'StakeToken',
+    18,
+    'STK',
+    true
+  )
+
+  return voteToken
+}
+
 module.exports = {
-  deployVoteToken
+  deployVoteToken,
+  deployStakeToken
 }

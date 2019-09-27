@@ -6,10 +6,10 @@ const { getEventAt } = require('@aragon/test-helpers/events')
 const { deployAllAndInitializeApp } = require('./helpers/deployApp')
 
 contract('HCVoting (propose)', ([appManager, user1, user2]) => {
-  let app
+  let app, voteToken
 
   before('deploy app', async () => {
-    ({ app } = await deployAllAndInitializeApp(appManager))
+    ({ app, voteToken } = await deployAllAndInitializeApp(appManager))
   })
 
   describe('when no proposals exist', () => {

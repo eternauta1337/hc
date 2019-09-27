@@ -20,8 +20,12 @@ contract ProposalBase {
         uint64 creationBlock;
         uint256 totalYeas;
         uint256 totalNays;
+        uint256 totalUpstake;
+        uint256 totalDownstake;
         bytes executionScript;
         mapping (address => Vote) votes;
+        mapping (address => uint256) upstakes;
+        mapping (address => uint256) downstakes;
     }
 
     /* PROPERTIES */
@@ -34,6 +38,26 @@ contract ProposalBase {
     function getUserVote(uint256 _proposalId, address _user) public view returns (Vote) {
         Proposal storage proposal_ = _getProposal(_proposalId);
         return proposal_.votes[_user];
+    }
+
+    function getUserUpstake(uint256 _proposalId, address _user) public view returns (uint256) {
+        Proposal storage proposal_ = _getProposal(_proposalId);
+        return proposal_.upstakes[_user];
+    }
+
+    function getUserDownstake(uint256 _proposalId, address _user) public view returns (uint256) {
+        Proposal storage proposal_ = _getProposal(_proposalId);
+        return proposal_.downstakes[_user];
+    }
+
+    function getTotalUpstake(uint256 _proposalId) public view returns (uint256) {
+        Proposal storage proposal_ = _getProposal(_proposalId);
+        return proposal_.totalUpstake;
+    }
+
+    function getTotalDownstake(uint256 _proposalId) public view returns (uint256) {
+        Proposal storage proposal_ = _getProposal(_proposalId);
+        return proposal_.totalDownstake;
     }
 
     function getTotalYeas(uint256 _proposalId) public view returns (uint256) {

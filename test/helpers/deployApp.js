@@ -2,7 +2,7 @@
 
 const { getEventArgument } = require('@aragon/test-helpers/events')
 const { hash } = require('eth-ens-namehash')
-const { deployVoteToken } = require('./deployTokens.js')
+const { deployVoteToken, deployStakeToken } = require('./deployTokens.js')
 const { deployDAO } = require('./deployDAO.js')
 
 const HCVoting = artifacts.require('HCVoting.sol')
@@ -23,6 +23,7 @@ const defaultParams = {
 const paramsObjToArr = (paramsObj) => {
   return [
     paramsObj.voteToken.address,
+    paramsObj.stakeToken.address,
     paramsObj.requiredSupport
   ]
 }
@@ -31,10 +32,11 @@ const deployAll = async (appManager) => {
   const { dao, acl } = await deployDAO(appManager)
 
   const voteToken = await deployVoteToken()
+  const stakeToken = await deployStakeToken()
 
   const app = await deployApp(dao, acl, appManager)
 
-  return { dao, acl, voteToken, app }
+  return { dao, acl, voteToken, stakeToken, app }
 }
 
 const deployAllAndInitializeApp = async (appManager, params) => {
@@ -45,6 +47,7 @@ const deployAllAndInitializeApp = async (appManager, params) => {
   const deployed = await deployAll(appManager)
 
   params.voteToken = deployed.voteToken
+  params.stakeToken = deployed.stakeToken
 
   await initializeAppWithParams(deployed.app, params)
 

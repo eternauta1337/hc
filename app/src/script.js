@@ -13,13 +13,13 @@ api.store(
 
     switch (event.event) {
       case INITIALIZATION_TRIGGER:
-        newState = { count: await getValue() }
+        newState = { numProposals: await getNumProposals() }
         break
       case 'Increment':
-        newState = { count: await getValue() }
+        newState = { numProposals: await getNumProposals() }
         break
       case 'Decrement':
-        newState = { count: await getValue() }
+        newState = { numProposals: await getNumProposals() }
         break
       default:
         newState = state
@@ -33,6 +33,6 @@ api.store(
   ]
 )
 
-async function getValue() {
-  return parseInt(await api.call('value').toPromise(), 10)
+async function getNumProposals() {
+  return parseInt(await api.call('numProposals').toPromise(), 10)
 }

@@ -7,6 +7,24 @@ echo Running app in MODE: \"$MODE\"
 # Exit script as soon as a command fails.
 set -o errexit
 
+# Executes cleanup function at script exit.
+trap cleanup EXIT
+
+cleanup() {
+  # Kill the RPC instance that we started (if we started one and if it's still running).
+  if [ -n "$pid" ] && ps -p $pid > /dev/null; then
+    kill -9 $pid
+  fi
+}
+
+startDevchain() {
+  echo Starting devchain
+  npx aragon devchain --verbose > /dev/null &
+  pid=$!
+  sleep 3
+  echo Running devchain with pid ${pid}
+}
+
 deployTokens() {
   echo Deploying tokens
   VOTE_TOKEN=$(npx truffle exec scripts/deployToken.js 'VoteToken' 'VOT' | tail -1)
@@ -37,6 +55,7 @@ runUsingHTTP() {
   npx aragon run --debug --http localhost:8001 --http-served-from ./dist --app-init-args ${VOTE_TOKEN} ${STAKE_TOKEN} ${REQUIRED_SUPPORT} ${QUEUE_PERIOD} ${PENDED_PERIOD} ${BOOST_PERIOD} ${ENDING_PERIOD}
 }
 
+startDevchain
 deployTokens
 prepareAppInitParams
 

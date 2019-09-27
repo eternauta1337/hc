@@ -2,21 +2,27 @@ import React from 'react'
 import { useAragonApi } from '@aragon/api-react'
 import { Main, Button } from '@aragon/ui'
 import styled from 'styled-components'
+import { EMPTY_SCRIPT } from '@aragon/test-helpers/evmScript'
 
 function App() {
   const { api, appState } = useAragonApi()
-  const { count, syncing } = appState
+  const { numProposals, syncing } = appState
   return (
     <Main>
       <BaseLayout>
         {syncing && <Syncing />}
-        <Count>Count: {count}</Count>
+        <Count>Existing proposals: {numProposals}</Count>
         <Buttons>
-          <Button mode="secondary" onClick={() => api.decrement(1)}>
-            Decrement
+          <Button mode="secondary" onClick={() => api.propose(EMPTY_SCRIPT, "Proposal metadata").toPromise()}>
+            Create proposal
           </Button>
-          <Button mode="secondary" onClick={() => api.increment(1)}>
-            Increment
+          <Button mode="secondary" onClick={
+            async () => {
+              const num = await api.call('numProposals').toPromise()
+              console.log(`NUM`, num)
+            }
+          }>
+            Read numProposals
           </Button>
         </Buttons>
       </BaseLayout>

@@ -17,6 +17,8 @@ contract ProposalBase {
     struct Proposal {
         bool executed;
         bool resolved;
+        uint64 creationDate;
+        uint64 closeDate;
         uint64 creationBlock;
         uint256 totalYeas;
         uint256 totalNays;
@@ -83,6 +85,11 @@ contract ProposalBase {
     function getCreationBlock(uint256 _proposalId) public view returns (uint256) {
         Proposal storage proposal_ = _getProposal(_proposalId);
         return proposal_.creationBlock;
+    }
+
+    function getCreationDate(uint256 _proposalId) public view returns (uint256) {
+        Proposal storage proposal_ = _getProposal(_proposalId);
+        return proposal_.creationDate;
     }
 
     function getScript(uint256 _proposalId) public view returns (bytes) {

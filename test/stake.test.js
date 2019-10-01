@@ -224,6 +224,30 @@ contract('HCVoting (stake)', ([appManager, voter, staker1, staker2]) => {
       })
     })
 
+    describe('when the proposal is closed', () => {
+      let creationDate
+
+      before('shift time to after queuePeriod', async () => {
+        creationDate = (await app.getCreationDate(0)).toNumber()
+        await app.mockSetTimestamp(creationDate + defaultParams.queuePeriod)
+      })
+
+      after('shift time back to when the proposal was created', async () => {
+        await app.mockSetTimestamp(creationDate)
+      })
+
+      it('reverts when staker1 attempts to stake', async () => {
+        await assertRevert(
+          app.stake(0, 1, true, { from: staker1 }),
+          'HCVOTING_PROPOSAL_IS_CLOSED'
+        )
+        await assertRevert(
+          app.stake(0, 1, false, { from: staker1 }),
+          'HCVOTING_PROPOSAL_IS_CLOSED'
+        )
+      })
+    })
+
     describe('when the proposal is resolved', () => {
       before('resolve proposal', async () => {
         await app.vote(0, true, { from: voter })

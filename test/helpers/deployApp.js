@@ -5,10 +5,11 @@ const { hash } = require('eth-ens-namehash')
 const { deployVoteToken, deployStakeToken } = require('./deployTokens.js')
 const { deployDAO } = require('./deployDAO.js')
 
-const HCVoting = artifacts.require('HCVoting.sol')
+const HCVoting = artifacts.require('HCVotingTimeMock.sol')
 
 const BIG_ZERO = web3.toBigNumber(0)
 const ANY_ADDRESS = '0xffffffffffffffffffffffffffffffffffffffff'
+const HOURS = 60 * 60
 
 const VOTE = {
   ABSENT: 0,
@@ -17,14 +18,16 @@ const VOTE = {
 }
 
 const defaultParams = {
-  requiredSupport: 510000
+  requiredSupport: 510000,
+  queuePeriod: 24 * HOURS,
 }
 
 const paramsObjToArr = (paramsObj) => {
   return [
     paramsObj.voteToken.address,
     paramsObj.stakeToken.address,
-    paramsObj.requiredSupport
+    paramsObj.requiredSupport,
+    paramsObj.queuePeriod
   ]
 }
 

@@ -24,6 +24,10 @@ contract('HCVoting (setup)', ([appManager]) => {
       assert.equal((await app.requiredSupport()).toNumber(), defaultParams.requiredSupport)
     })
 
+    it('has queuePeriod set', async () => {
+      assert.equal((await app.queuePeriod()).toNumber(), defaultParams.queuePeriod)
+    })
+
     it('reverts when attempting to re-initialize the app', async () => {
       await assertRevert(
         initializeAppWithParams(app, defaultParams),

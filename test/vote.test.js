@@ -3,7 +3,7 @@
 const { assertRevert } = require('@aragon/test-helpers/assertThrow')
 const { EMPTY_SCRIPT } = require('@aragon/test-helpers/evmScript')
 const { getEventAt } = require('@aragon/test-helpers/events')
-const { deployAllAndInitializeApp, VOTE, BIG_ZERO } = require('./helpers/deployApp')
+const { defaultParams, deployAllAndInitializeApp, VOTE, BIG_ZERO } = require('./helpers/deployApp')
 
 const VOTER_BALANCE = web3.toBigNumber('100e18')
 const MILLION = 1000000
@@ -23,6 +23,8 @@ contract('HCVoting (vote)', ([appManager, voter1, voter2, voter3, voter4]) => {
   })
 
   describe('when a proposal exists', () => {
+    let creationDate
+
     const calculateSupport = (numVotes, numVoters) => {
       return Math.floor(numVotes * MILLION / numVoters)
     }
@@ -36,6 +38,7 @@ contract('HCVoting (vote)', ([appManager, voter1, voter2, voter3, voter4]) => {
 
     before('create a proposal', async () => {
       await app.propose(EMPTY_SCRIPT, 'Proposal metadata 0')
+      creationDate = (await app.getCreationDate(0)).toNumber()
     })
 
     it('should not allow a user with no voting power to vote', async () => {
@@ -174,6 +177,23 @@ contract('HCVoting (vote)', ([appManager, voter1, voter2, voter3, voter4]) => {
             it('calculates the correct absolute consensus', async () => {
               assert.equal((await app.getConsensus(1)).toNumber(), VOTE.NAY, 'incorrect absolute consensus')
             })
+          })
+        })
+
+        describe('when the proposal is closed', () => {
+          before('shift time to after queuePeriod', async () => {
+            await app.mockSetTimestamp(creationDate + defaultParams.queuePeriod)
+          })
+
+          after('shift time back to when the proposal was created', async () => {
+            await app.mockSetTimestamp(creationDate)
+          })
+
+          it('reverts when voter3 attempts to vote', async () => {
+            await assertRevert(
+              app.vote(0, false, { from: voter3 }),
+              'HCVOTING_PROPOSAL_IS_CLOSED'
+            )
           })
         })
 

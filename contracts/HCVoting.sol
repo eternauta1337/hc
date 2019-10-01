@@ -25,6 +25,7 @@ contract HCVoting is ProposalBase, IForwarder, AragonApp {
     string internal constant ERROR_BAD_QUEUE_PERIOD      = "HCVOTING_BAD_QUEUE_PERIOD";
     string internal constant ERROR_BAD_PENDED_PERIOD     = "HCVOTING_BAD_PENDED_PERIOD";
     string internal constant ERROR_BAD_BOOST_PERIOD      = "HCVOTING_BAD_BOOST_PERIOD";
+    string internal constant ERROR_BAD_ENDING_PERIOD     = "HCVOTING_BAD_ENDING_PERIOD";
     string internal constant ERROR_PROPOSAL_IS_RESOLVED  = "HCVOTING_PROPOSAL_IS_RESOLVED";
     string internal constant ERROR_PROPOSAL_IS_CLOSED    = "HCVOTING_PROPOSAL_IS_CLOSED";
     string internal constant ERROR_PROPOSAL_IS_BOOSTED   = "HCVOTING_PROPOSAL_IS_BOOSTED";
@@ -38,6 +39,8 @@ contract HCVoting is ProposalBase, IForwarder, AragonApp {
     string internal constant ERROR_CAN_NOT_FORWARD       = "HCVOTING_CAN_NOT_FORWARD";
     string internal constant ERROR_TOKEN_TRANSFER_FAILED = "HCVOTING_TOKEN_TRANSFER_FAILED";
     string internal constant ERROR_ALREADY_EXECUTED      = "HCVOTING_ALREADY_EXECUTED";
+    string internal constant ERROR_NOT_RESOLVED          = "HCVOTING_NOT_RESOLVED";
+    string internal constant ERROR_NO_WINNING_STAKE      = "HCVOTING_NO_WINNING_STAKE";
 
     /* CONSTANTS */
 
@@ -63,13 +66,14 @@ contract HCVoting is ProposalBase, IForwarder, AragonApp {
     uint64 public queuePeriod;
     uint64 public pendedPeriod;
     uint64 public boostPeriod;
+    uint64 public endingPeriod;
 
     uint256 public numBoostedProposals;
 
     /* EVENTS */
 
-    event ProposalCreated(uint256 proposalId, address creator, string metadata);
-    event VoteCasted(uint256 proposalId, address voter, bool supports);
+    event ProposalCreated(uint256 indexed proposalId, address creator, string metadata);
+    event VoteCasted(uint256 indexed proposalId, address voter, bool supports);
     event ProposalUpstaked(uint256 indexed proposalId, address indexed staker, uint256 amount);
     event ProposalDownstaked(uint256 indexed proposalId, address indexed staker, uint256 amount);
     event UpstakeWithdrawn(uint256 indexed proposalId, address indexed staker, uint256 amount);
@@ -86,7 +90,8 @@ contract HCVoting is ProposalBase, IForwarder, AragonApp {
         uint256 _requiredSupport,
         uint64 _queuePeriod,
         uint64 _pendedPeriod,
-        uint64 _boostPeriod
+        uint64 _boostPeriod,
+        uint64 _endingPeriod
     )
         public onlyInit
     {
@@ -97,6 +102,8 @@ contract HCVoting is ProposalBase, IForwarder, AragonApp {
         require(_queuePeriod > 0, ERROR_BAD_QUEUE_PERIOD);
         require(_pendedPeriod > 0, ERROR_BAD_PENDED_PERIOD);
         require(_boostPeriod > 0, ERROR_BAD_BOOST_PERIOD);
+        require(_endingPeriod > 0, ERROR_BAD_ENDING_PERIOD);
+        require(_endingPeriod < _boostPeriod, ERROR_BAD_ENDING_PERIOD);
 
         voteToken = _voteToken;
         stakeToken = _stakeToken;
@@ -104,11 +111,12 @@ contract HCVoting is ProposalBase, IForwarder, AragonApp {
         queuePeriod = _queuePeriod;
         pendedPeriod = _pendedPeriod;
         boostPeriod = _boostPeriod;
+        endingPeriod = _endingPeriod;
     }
 
     /* PUBLIC */
 
-    function propose(bytes _executionScript, string _metadata) public {
+    function propose(bytes _executionScript, string _metadata) public auth(CREATE_PROPOSALS_ROLE) {
         uint64 creationBlock = getBlockNumber64() - 1;
         require(voteToken.totalSupplyAt(creationBlock) > 0, ERROR_NO_VOTING_POWER);
 
@@ -139,6 +147,14 @@ contract HCVoting is ProposalBase, IForwarder, AragonApp {
         // Reject re-voting.
         require(getUserVote(_proposalId, msg.sender) == Vote.Absent, ERROR_ALREADY_VOTED);
 
+        // See "Quiet endings" below.
+        Vote relativeConsensusBeforeVote = Vote.Absent;
+        if (state == ProposalState.Boosted) {
+            if (getTimestamp64() >= proposal_.closeDate.sub(endingPeriod)) {
+                relativeConsensusBeforeVote = getConsensus(_proposalId, true);
+            }
+        }
+
         // Update user Vote and totalYeas/totalNays.
         if (_supports) {
             proposal_.totalYeas = proposal_.totalYeas.add(userVotingPower);
@@ -146,6 +162,14 @@ contract HCVoting is ProposalBase, IForwarder, AragonApp {
             proposal_.totalNays = proposal_.totalNays.add(userVotingPower);
         }
         proposal_.votes[msg.sender] = _supports ? Vote.Yea : Vote.Nay;
+
+        // Quite endings - Consensus flips in the ending period will cause closeDate extensions.
+        if (relativeConsensusBeforeVote != Vote.Absent) {
+            Vote relativeConsensusAfterVote = getConsensus(_proposalId, true);
+            if (relativeConsensusAfterVote != relativeConsensusBeforeVote) {
+                proposal_.closeDate = proposal_.closeDate.add(endingPeriod);
+            }
+        }
 
         emit VoteCasted(_proposalId, msg.sender, _supports);
     }
@@ -228,8 +252,8 @@ contract HCVoting is ProposalBase, IForwarder, AragonApp {
     }
 
     function resolve(uint256 _proposalId) public {
-
         Proposal storage proposal_ = _getProposal(_proposalId);
+
         ProposalState state = getState(_proposalId);
         require(state != ProposalState.Resolved, ERROR_PROPOSAL_IS_RESOLVED);
 
@@ -252,6 +276,30 @@ contract HCVoting is ProposalBase, IForwarder, AragonApp {
         }
 
         emit ProposalResolved(_proposalId);
+    }
+
+    function withdraw(uint256 _proposalId) public {
+        Proposal storage proposal_ = proposals[_proposalId];
+
+        ProposalState state = getState(_proposalId);
+        require(state == ProposalState.Resolved, ERROR_NOT_RESOLVED);
+
+        bool supported = proposal_.totalYeas > proposal_.totalNays;
+
+        uint256 winningStake = supported ? proposal_.upstakes[msg.sender] : proposal_.downstakes[msg.sender];
+        require(winningStake > 0, ERROR_NO_WINNING_STAKE);
+
+        // Winners split the loosing pot pro-rata.
+        uint256 totalWinningStake = supported ? proposal_.totalUpstake : proposal_.totalDownstake;
+        uint256 totalLosingStake = supported ? proposal_.totalDownstake : proposal_.totalUpstake;
+        uint256 sendersWinningRatio = winningStake.mul(MILLION).div(totalWinningStake);
+        uint256 reward = sendersWinningRatio.mul(totalLosingStake).div(MILLION);
+        uint256 total = winningStake.add(reward);
+
+        require(
+            stakeToken.transfer(msg.sender, total),
+            ERROR_TOKEN_TRANSFER_FAILED
+        );
     }
 
     /* CALCULATED PROPERTIES */

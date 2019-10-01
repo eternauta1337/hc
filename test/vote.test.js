@@ -1,4 +1,4 @@
-// /* global contract beforeEach it assert */
+/* global contract beforeEach it assert */
 
 const { assertRevert } = require('@aragon/test-helpers/assertThrow')
 const { EMPTY_SCRIPT } = require('@aragon/test-helpers/evmScript')

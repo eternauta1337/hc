@@ -36,6 +36,10 @@ contract('HCVoting (setup)', ([appManager]) => {
       assert.equal((await app.boostPeriod()).toNumber(), defaultParams.boostPeriod)
     })
 
+    it('has endingPeriod set', async () => {
+      assert.equal((await app.endingPeriod()).toNumber(), defaultParams.endingPeriod)
+    })
+
     it('reverts when attempting to re-initialize the app', async () => {
       await assertRevert(
         initializeAppWithParams(app, defaultParams),
@@ -46,18 +50,18 @@ contract('HCVoting (setup)', ([appManager]) => {
 
   describe('when initializing the app with invalid parameters', () => {
     before('deploy', async () => {
-      ({ app, voteToken } = await deployAll(appManager))
+      ({ app, voteToken, stakeToken } = await deployAll(appManager))
     })
 
     it('reverts when using an invalid requiredSupport', async () => {
       await assertRevert(
-        initializeAppWithParams(app, { voteToken, ...defaultParams,
+        initializeAppWithParams(app, { voteToken, stakeToken, ...defaultParams,
           requiredSupport: 0
         }),
         'HCVOTING_BAD_REQUIRED_SUPPORT'
       )
       await assertRevert(
-        initializeAppWithParams(app, { voteToken, ...defaultParams,
+        initializeAppWithParams(app, { voteToken, stakeToken, ...defaultParams,
           requiredSupport: 1000001
         }),
         'HCVOTING_BAD_REQUIRED_SUPPORT'
@@ -88,6 +92,21 @@ contract('HCVoting (setup)', ([appManager]) => {
           boostPeriod: 0
         }),
         'HCVOTING_BAD_BOOST_PERIOD'
+      )
+    })
+
+    it('reverts when using an invalid endingPeriod', async () => {
+      await assertRevert(
+        initializeAppWithParams(app, { voteToken, stakeToken, ...defaultParams,
+          endingPeriod: 0
+        }),
+        'HCVOTING_BAD_ENDING_PERIOD'
+      )
+      await assertRevert(
+        initializeAppWithParams(app, { voteToken, stakeToken, ...defaultParams,
+          endingPeriod: defaultParams.boostPeriod + 1
+        }),
+        'HCVOTING_BAD_ENDING_PERIOD'
       )
     })
   })

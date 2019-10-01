@@ -219,6 +219,52 @@ contract('HCVoting (boost)', ([appManager, voter1, voter2, voter3, voter4, voter
                     )
                   })
 
+                  describe('when entering the ending period', () => {
+                    let closeDate
+
+                    before('shift time to the ending period', async () => {
+                      closeDate = (await app.getCloseDate(0)).toNumber()
+                      await app.mockSetTimestamp(closeDate - defaultParams.endingPeriod + 1)
+                    })
+
+                    describe('when a new vote does not flip consensus', () => {
+                      before('vote', async () => {
+                        await app.vote(0, true, { from: voter2 })
+                      })
+
+                      it('does not extend the proposal\'s lifetime', async () => {
+                        const newCloseDate = (await app.getCloseDate(0)).toNumber()
+                        assert.equal(newCloseDate, closeDate)
+                      })
+                    })
+
+                    describe('when a new vote flips consensus', () => {
+                      before('vote', async () => {
+                        await app.vote(0, false, { from: voter4 })
+                      })
+
+                      it('extends the proposal\'s lifetime', async () => {
+                        const newCloseDate = (await app.getCloseDate(0)).toNumber()
+                        assert.equal(newCloseDate, closeDate + defaultParams.endingPeriod)
+                      })
+
+                      describe('when yet another new vote flips consensus', () => {
+                        before('shift time to the ending period', async () => {
+                          closeDate = (await app.getCloseDate(0)).toNumber()
+                          await app.mockSetTimestamp(closeDate - defaultParams.endingPeriod + 1)
+                        })
+
+                        before('vote', async () => {
+                          await app.vote(0, true, { from: voter5 })
+                        })
+
+                        it('extends the proposal\'s lifetime', async () => {
+                          const newCloseDate = (await app.getCloseDate(0)).toNumber()
+                          assert.equal(newCloseDate, closeDate + defaultParams.endingPeriod)
+                        })
+                      })
+                    })
+                  })
                   describe('when the proposal\'s close date passes', () => {
                     before('shift time to past the close date', async () => {
                       const closeDate = (await app.getCloseDate(0)).toNumber()

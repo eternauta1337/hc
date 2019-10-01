@@ -30,6 +30,7 @@ const defaultParams = {
   queuePeriod: 24 * HOURS,
   pendedPeriod: 1 * HOURS,
   boostPeriod: 6 * HOURS,
+  endingPeriod: 0.5 * HOURS
 }
 
 const paramsObjToArr = (paramsObj) => {
@@ -40,6 +41,7 @@ const paramsObjToArr = (paramsObj) => {
     paramsObj.queuePeriod,
     paramsObj.pendedPeriod,
     paramsObj.boostPeriod,
+    paramsObj.endingPeriod
   ]
 }
 

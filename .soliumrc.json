@@ -23,13 +23,6 @@
     "security/enforce-explicit-visibility": ["error"],
     "consequent": 0,
     "error-reason": ["warning"],
-    "function-order": [
-      "error",
-      {
-        "ignore": {
-          "functions": ["initialize"]
-        }
-      }
-    ]
+    "function-order": 0
   }
 }

@@ -28,6 +28,14 @@ contract('HCVoting (setup)', ([appManager]) => {
       assert.equal((await app.queuePeriod()).toNumber(), defaultParams.queuePeriod)
     })
 
+    it('has pendedPeriod set', async () => {
+      assert.equal((await app.pendedPeriod()).toNumber(), defaultParams.pendedPeriod)
+    })
+
+    it('has boostPeriod set', async () => {
+      assert.equal((await app.boostPeriod()).toNumber(), defaultParams.boostPeriod)
+    })
+
     it('reverts when attempting to re-initialize the app', async () => {
       await assertRevert(
         initializeAppWithParams(app, defaultParams),
@@ -53,6 +61,33 @@ contract('HCVoting (setup)', ([appManager]) => {
           requiredSupport: 1000001
         }),
         'HCVOTING_BAD_REQUIRED_SUPPORT'
+      )
+    })
+
+    it('reverts when using an invalid queuePeriod', async () => {
+      await assertRevert(
+        initializeAppWithParams(app, { voteToken, stakeToken, ...defaultParams,
+          queuePeriod: 0
+        }),
+        'HCVOTING_BAD_QUEUE_PERIOD'
+      )
+    })
+
+    it('reverts when using an invalid pendedPeriod', async () => {
+      await assertRevert(
+        initializeAppWithParams(app, { voteToken, stakeToken, ...defaultParams,
+          pendedPeriod: 0
+        }),
+        'HCVOTING_BAD_PENDED_PERIOD'
+      )
+    })
+
+    it('reverts when using an invalid boostPeriod', async () => {
+      await assertRevert(
+        initializeAppWithParams(app, { voteToken, stakeToken, ...defaultParams,
+          boostPeriod: 0
+        }),
+        'HCVOTING_BAD_BOOST_PERIOD'
       )
     })
   })

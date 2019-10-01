@@ -17,9 +17,19 @@ const VOTE = {
   NAY: 2
 }
 
+const PROPOSAL_STATE = {
+  QUEUED: 0,
+  PENDED: 1,
+  BOOSTED: 2,
+  RESOLVED: 3,
+  CLOSED: 4
+}
+
 const defaultParams = {
   requiredSupport: 510000,
   queuePeriod: 24 * HOURS,
+  pendedPeriod: 1 * HOURS,
+  boostPeriod: 6 * HOURS,
 }
 
 const paramsObjToArr = (paramsObj) => {
@@ -27,7 +37,9 @@ const paramsObjToArr = (paramsObj) => {
     paramsObj.voteToken.address,
     paramsObj.stakeToken.address,
     paramsObj.requiredSupport,
-    paramsObj.queuePeriod
+    paramsObj.queuePeriod,
+    paramsObj.pendedPeriod,
+    paramsObj.boostPeriod,
   ]
 }
 
@@ -69,7 +81,7 @@ const deployApp = async (dao, acl, appManager) => {
 
   // Instantiate a proxy for the app, using the base contract as its logic implementation.
   const instanceReceipt = await dao.newAppInstance(
-    hash('hcvoting.aragonpm.test'), // appId - Unique identifier for each app installed in the DAO; can be any bytes32 string in the tests.
+    hash('hcvoting.open.aragonpm.test'), // appId - Unique identifier for each app installed in the DAO; can be any bytes32 string in the tests.
     appBase.address, // appBase - Location of the app's base implementation.
     '0x', // initializePayload - Used to instantiate and initialize the proxy in the same call (if given a non-empty bytes string).
     false, // setDefault - Whether the app proxy is the default proxy.
@@ -98,5 +110,6 @@ module.exports = {
   deployAll,
   deployAllAndInitializeApp,
   VOTE,
+  PROPOSAL_STATE,
   BIG_ZERO
 }

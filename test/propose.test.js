@@ -3,7 +3,7 @@
 const { assertRevert } = require('@aragon/test-helpers/assertThrow')
 const { EMPTY_SCRIPT } = require('@aragon/test-helpers/evmScript')
 const { getEventAt } = require('@aragon/test-helpers/events')
-const { deployAllAndInitializeApp } = require('./helpers/deployApp')
+const { defaultParams, deployAllAndInitializeApp } = require('./helpers/deployApp')
 
 contract('HCVoting (propose)', ([appManager, user1, user2]) => {
   let app, voteToken
@@ -40,6 +40,16 @@ contract('HCVoting (propose)', ([appManager, user1, user2]) => {
 
       before('create a proposal', async () => {
         creationReceipt = await app.propose(EMPTY_SCRIPT, 'Proposal metadata 0', { from: user2 })
+      })
+
+      it('should store creationDate', async () => {
+        assert.notEqual((await app.getCreationDate(0)).toNumber(), 0)
+      })
+
+      it('should store closeDate', async () => {
+        const creationDate = (await app.getCreationDate(0)).toNumber()
+        const closeDate = (await app.getCloseDate(0)).toNumber()
+        assert.equal(closeDate, creationDate + defaultParams.queuePeriod)
       })
 
       it('should store creationBlock', async () => {

@@ -6,7 +6,7 @@ contract ProposalBase {
 
     string internal constant ERROR_PROPOSAL_DOES_NOT_EXIST = "HCVOTING_PROPOSAL_DOES_NOT_EXIST";
 
-    /* DATA STRUCURES */
+    /* DATA STRUCTURES */
 
     enum Vote {
         Absent, // 0 -- default
@@ -15,10 +15,12 @@ contract ProposalBase {
     }
 
     struct Proposal {
+        bool boosted;
         bool executed;
         bool resolved;
         uint64 creationDate;
         uint64 closeDate;
+        uint64 pendedDate;
         uint64 creationBlock;
         uint256 totalYeas;
         uint256 totalNays;
@@ -82,6 +84,11 @@ contract ProposalBase {
         return proposal_.executed;
     }
 
+    function getBoosted(uint256 _proposalId) public view returns (bool) {
+        Proposal storage proposal_ = _getProposal(_proposalId);
+        return proposal_.boosted;
+    }
+
     function getCreationBlock(uint256 _proposalId) public view returns (uint256) {
         Proposal storage proposal_ = _getProposal(_proposalId);
         return proposal_.creationBlock;
@@ -90,6 +97,16 @@ contract ProposalBase {
     function getCreationDate(uint256 _proposalId) public view returns (uint256) {
         Proposal storage proposal_ = _getProposal(_proposalId);
         return proposal_.creationDate;
+    }
+
+    function getCloseDate(uint256 _proposalId) public view returns (uint256) {
+        Proposal storage proposal_ = _getProposal(_proposalId);
+        return proposal_.closeDate;
+    }
+
+    function getPendedDate(uint256 _proposalId) public view returns (uint256) {
+        Proposal storage proposal_ = _getProposal(_proposalId);
+        return proposal_.pendedDate;
     }
 
     function getScript(uint256 _proposalId) public view returns (bytes) {

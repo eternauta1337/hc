@@ -2,29 +2,48 @@ import React from 'react'
 import { useAragonApi } from '@aragon/api-react'
 import { Main, Button } from '@aragon/ui'
 import styled from 'styled-components'
+
 import { EMPTY_SCRIPT } from '@aragon/test-helpers/evmScript'
 
 function App() {
   const { api, appState } = useAragonApi()
-  const { numProposals, syncing } = appState
+  const {
+    voteToken,
+    stakeToken,
+    voteTokenBalance,
+    stakeTokenBalance,
+    numProposals,
+    isSyncing
+  } = appState
+  console.log(`state is`, appState)
+
   return (
     <Main>
       <BaseLayout>
-        {syncing && <Syncing />}
-        <Count>Existing proposals: {numProposals}</Count>
+        {isSyncing && <Syncing />}
         <Buttons>
-          <Button mode="secondary" onClick={() => api.propose(EMPTY_SCRIPT, "Proposal metadata").toPromise()}>
+          <Button mode="secondary" onClick={
+            () => api.propose(EMPTY_SCRIPT, "Proposal metadata").toPromise()
+          }>
             Create proposal
           </Button>
           <Button mode="secondary" onClick={
-            async () => {
-              const num = await api.call('numProposals').toPromise()
-              console.log(`NUM`, num)
-            }
+            // async () => {
+            //   const num = await api.call('numProposals').toPromise()
+            //   console.log(`NUM`, num)
+            // }
+            () => 0
           }>
             Read numProposals
           </Button>
         </Buttons>
+        <div>
+          <p>Vote token: {voteToken}, [{voteTokenBalance}]</p>
+          <p>Stake token: {stakeToken} [{stakeTokenBalance}]</p>
+        </div>
+        <div>
+          <p>Num proposals: {numProposals}</p>
+        </div>
       </BaseLayout>
     </Main>
   )

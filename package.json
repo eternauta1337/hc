@@ -1,12 +1,11 @@
 {
-  "name": "hc",
+  "name": "hcvoting",
   "version": "1.0.0",
   "description": "",
   "dependencies": {
     "@aragon/os": "^4.2.1",
     "@aragon/apps-shared-minime": "^1.0.1",
-    "@aragon/apps-token-manager": "2.1.0",
-    "@aragon/apps-voting": "2.1.0"
+    "@aragon/apps-token-manager": "2.1.0"
   },
   "devDependencies": {
     "@aragon/cli": "^6.0.0",
@@ -31,13 +30,10 @@
   "scripts": {
     "prepublishOnly": "aragon contracts compile",
     "devchain": "aragon devchain --verbose",
-    "start": "npm run start:ipfs",
     "start:ipfs": "./scripts/run.sh ipfs",
     "start:http": "./scripts/run.sh http",
-    "start:ipfs:template": "npm run start:ipfs -- --template Template --template-init @ARAGON_ENS",
-    "start:http:template": "npm run start:http -- --template Template --template-init @ARAGON_ENS",
-    "prepare": "cd app && npm install && cd ..",
     "start:app": "cd app && npm start && cd ..",
+    "prepare": "cd app && npm install && cd ..",
     "test": "cross-env TRUFFLE_TEST=true npm run ganache-cli:test",
     "compile": "aragon contracts compile",
     "build": "cd app && npm run build && cd ..",
